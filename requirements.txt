@@ -1,0 +1,23 @@
+# Save as: requirements.txt
+jax>=0.4.0
+jaxlib>=0.4.0
+numpyro>=0.12.0
+numpy>=1.24.0
+pandas>=2.0.0
+scanpy>=1.9.0
+matplotlib>=3.7.0
+```
+
+Directory structure:
+```
+trafficking_model/
+├── requirements.txt
+├── run_analysis.py
+└── src/
+    └── trafficking/
+        ├── __init__.py
+        ├── data.py
+        ├── models.py
+        ├── inference.py
+        ├── analysis.py
+        └── viz.py
