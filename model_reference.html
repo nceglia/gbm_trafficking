@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+  body { font-family: 'Helvetica Neue', sans-serif; background: #fafafa; margin: 20px; }
+  .container { max-width: 960px; margin: 0 auto; }
+  h2 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 8px; }
+  h3 { color: #34495e; margin-top: 28px; }
+  h4 { color: #555; margin-top: 20px; }
+  .plate { stroke-width: 1.5; fill: none; stroke-dasharray: 8,4; rx: 12; }
+  .plate-label { font-size: 11px; fill: #777; font-style: italic; }
+  .node-latent { fill: #fff; stroke: #2c3e50; stroke-width: 2; }
+  .node-observed { fill: #dce6f0; stroke: #2c3e50; stroke-width: 2; }
+  .node-param { fill: #f0e6dc; stroke: #8b5e3c; stroke-width: 1.5; }
+  .node-data { fill: #d5e8d4; stroke: #3a7d44; stroke-width: 2; }
+  .node-text { font-size: 13px; text-anchor: middle; dominant-baseline: central; font-weight: 600; }
+  .arrow { stroke: #555; stroke-width: 1.5; fill: none; marker-end: url(#arrowhead); }
+  .section { background: white; border-radius: 10px; padding: 20px 24px; margin-bottom: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+  .key-box { display: inline-block; width: 18px; height: 18px; border-radius: 4px; vertical-align: middle; margin-right: 6px; border: 1.5px solid #555; }
+  .legend { margin: 12px 0; line-height: 2; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+  th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid #e0e0e0; font-size: 14px; }
+  th { background: #f5f7fa; font-weight: 600; color: #2c3e50; }
+  .bio { background: #f0f7f0; border-left: 4px solid #3a7d44; padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 12px 0; font-size: 14px; }
+  .math { background: #f5f0fa; border-left: 4px solid #7b5ea7; padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 12px 0; font-size: 14px; font-family: 'Georgia', serif; }
+  .warn { background: #fef5e7; border-left: 4px solid #e67e22; padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 12px 0; font-size: 14px; }
+  .option { background: #eef2f7; border-left: 4px solid #2980b9; padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 12px 0; font-size: 14px; }
+  .pro { color: #27ae60; font-weight: 600; }
+  .con { color: #c0392b; font-weight: 600; }
+  code { background: #f0f2f5; padding: 2px 6px; border-radius: 3px; font-size: 13px; }
+  .dim { background: #e8f4fd; padding: 1px 5px; border-radius: 3px; font-size: 12px; color: #2471a3; font-weight: 600; }
+  .star { color: #e67e22; }
+  hr { border: none; border-top: 1px solid #e0e0e0; margin: 24px 0; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h2>Bayesian Transition Model — Complete Reference</h2>
+
+<!-- ============================================================ -->
+<div class="section">
+<h3>1. Dimension Index</h3>
+
+<table>
+  <tr><th>Symbol</th><th>Meaning</th><th>Your Data</th><th>Example Values</th></tr>
+  <tr><td><span class="dim">K</span></td><td><b>Number of phenotypes</b> in the lineage being modeled</td><td>CD8: K=7, CD4: K=5</td><td>TEMRA, TEXeff, TEXterm, TRM, Memory, Naive, TEXprog</td></tr>
+  <tr><td><span class="dim">P</span></td><td><b>Number of patients</b></td><td>P=6</td><td>DFCI1–DFCI5, MSK1</td></tr>
+  <tr><td><span class="dim">N</span></td><td><b>Number of shared clones</b> (observations) — clones found in both source and destination tissue</td><td>~500 for CD8 PBMC→TP</td><td>Each clone is one data point</td></tr>
+</table>
+
+<div class="warn">
+<b>Important:</b> K is NOT tissues. K is phenotypes. The model is run <b>per tissue pair</b> — you choose source and destination (e.g., PBMC→TP), then the model learns how K phenotypes transition between those two tissues. Tissues are not a dimension inside the model; they define which model you're running.
+</div>
+</div>
+
+<!-- ============================================================ -->
+<div class="section">
+<h3>2. Graphical Model (Annotated with Dimensions)</h3>
+
+<svg viewBox="0 0 800 540" width="800" height="540">
+  <defs>
+    <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#555"/>
+    </marker>
+  </defs>
+
+  <!-- Plate: patients P -->
+  <rect x="210" y="80" width="560" height="160" class="plate" stroke="#c0392b"/>
+  <text x="750" y="230" class="plate-label" fill="#c0392b">p = 1…P (6 patients)</text>
+
+  <!-- Plate: source states K (global) -->
+  <rect x="30" y="100" width="155" height="120" class="plate" stroke="#2980b9"/>
+  <text x="35" y="210" class="plate-label" fill="#2980b9">k = 1…K (7 phenotypes)</text>
+
+  <!-- Plate: source states K (patient) -->
+  <rect x="340" y="100" width="175" height="120" class="plate" stroke="#2980b9"/>
+  <text x="345" y="210" class="plate-label" fill="#2980b9">k = 1…K (7 phenotypes)</text>
+
+  <!-- Plate: clones N -->
+  <rect x="210" y="280" width="560" height="230" class="plate" stroke="#27ae60"/>
+  <text x="750" y="500" class="plate-label" fill="#27ae60">c = 1…N (~500 clones)</text>
+
+  <!-- α (fixed hyperparameter) -->
+  <rect x="78" y="35" width="40" height="24" rx="4" class="node-param"/>
+  <text x="98" y="47" class="node-text" font-size="11">α</text>
+  <text x="148" y="47" font-size="10" fill="#8b5e3c">(K,) = ones</text>
+
+  <!-- T_global -->
+  <circle cx="98" cy="160" r="28" class="node-latent"/>
+  <text x="98" y="152" class="node-text" font-size="11">T</text>
+  <text x="98" y="167" class="node-text" font-size="8" fill="#777">global</text>
+  <text x="98" y="200" font-size="10" fill="#2471a3" text-anchor="middle" font-weight="600">(K, K)</text>
+
+  <!-- Arrow: α → T_global -->
+  <line x1="98" y1="59" x2="98" y2="130" class="arrow"/>
+
+  <!-- κ -->
+  <circle cx="270" cy="50" r="22" class="node-latent"/>
+  <text x="270" y="52" class="node-text" font-size="12">κ</text>
+  <text x="305" y="52" font-size="10" fill="#2471a3" font-weight="600">scalar</text>
+
+  <!-- T_patient -->
+  <circle cx="430" cy="160" r="28" class="node-latent"/>
+  <text x="430" y="152" class="node-text" font-size="11">T</text>
+  <text x="430" y="167" class="node-text" font-size="8" fill="#777">patient</text>
+  <text x="430" y="200" font-size="10" fill="#2471a3" text-anchor="middle" font-weight="600">(P, K, K)</text>
+
+  <!-- Arrow: T_global → T_patient -->
+  <line x1="128" y1="160" x2="400" y2="160" class="arrow"/>
+
+  <!-- Arrow: κ → T_patient -->
+  <line x1="270" y1="72" x2="420" y2="132" class="arrow"/>
+
+  <!-- p_c (patient index) -->
+  <circle cx="620" cy="160" r="22" class="node-data"/>
+  <text x="620" y="162" class="node-text" font-size="10">patient<tspan font-size="8" dy="3">c</tspan></text>
+  <text x="660" y="162" font-size="10" fill="#3a7d44" font-weight="600">(N,)</text>
+
+  <!-- Arrow: p_c → T_patient lookup -->
+  <line x1="598" y1="160" x2="460" y2="160" class="arrow"/>
+
+  <!-- θ source -->
+  <circle cx="290" cy="390" r="28" class="node-data"/>
+  <text x="290" y="383" class="node-text" font-size="11">θ</text>
+  <text x="290" y="398" class="node-text" font-size="8" fill="#3a7d44">source</text>
+  <text x="290" y="430" font-size="10" fill="#3a7d44" text-anchor="middle" font-weight="600">(N, K)</text>
+
+  <!-- π expected (deterministic) -->
+  <circle cx="430" cy="390" r="24" class="node-latent" stroke-dasharray="4,3"/>
+  <text x="430" y="383" class="node-text" font-size="11">π</text>
+  <text x="430" y="398" class="node-text" font-size="8" fill="#777">expected</text>
+  <text x="430" y="425" font-size="10" fill="#2471a3" text-anchor="middle" font-weight="600">(N, K)</text>
+
+  <!-- Arrow: T_patient → π -->
+  <line x1="430" y1="190" x2="430" y2="364" class="arrow"/>
+
+  <!-- Arrow: θ → π -->
+  <line x1="318" y1="390" x2="404" y2="390" class="arrow"/>
+
+  <!-- n_c -->
+  <circle cx="570" cy="330" r="22" class="node-data"/>
+  <text x="570" y="332" class="node-text" font-size="10">n<tspan font-size="8" dy="3">c</tspan></text>
+  <text x="610" y="332" font-size="10" fill="#3a7d44" font-weight="600">(N,)</text>
+
+  <!-- dst observed -->
+  <circle cx="570" cy="440" r="28" class="node-observed"/>
+  <text x="570" y="433" class="node-text" font-size="11">dst</text>
+  <text x="570" y="448" class="node-text" font-size="8" fill="#2c3e50">observed</text>
+  <text x="570" y="480" font-size="10" fill="#2471a3" text-anchor="middle" font-weight="600">(N, K)</text>
+
+  <!-- Arrow: π → dst -->
+  <line x1="454" y1="398" x2="540" y2="430" class="arrow"/>
+
+  <!-- Arrow: n_c → dst -->
+  <line x1="570" y1="352" x2="570" y2="410" class="arrow"/>
+
+  <!-- Equation -->
+  <text x="430" y="310" font-size="12" fill="#555" text-anchor="middle" font-style="italic">
+    π = θ · T_patient[patient_c]
+  </text>
+  <text x="570" y="398" font-size="10" fill="#555" text-anchor="middle" font-style="italic">
+    Multinomial(n_c, π)
+  </text>
+
+</svg>
+
+<div class="legend">
+  <span class="key-box" style="background: white;"></span> Latent (learned by inference) &nbsp;&nbsp;
+  <span class="key-box" style="background: #dce6f0;"></span> Observed outcome &nbsp;&nbsp;
+  <span class="key-box" style="background: #d5e8d4; border-color: #3a7d44;"></span> Input data &nbsp;&nbsp;
+  <span class="key-box" style="background: #f0e6dc; border-color: #8b5e3c;"></span> Fixed hyperparameter &nbsp;&nbsp;
+  <span class="key-box" style="background: white; border-style: dashed;"></span> Deterministic (computed, not sampled)
+</div>
+</div>
+
+<!-- ============================================================ -->
+<div class="section">
+<h3>3. Why n<sub>c</sub>?</h3>
+
+<div class="math">
+The Multinomial distribution needs two parameters: <b>total count</b> and <b>probabilities</b>.<br><br>
+
+<code>dst_c ~ Multinomial(n_c, π_c)</code><br><br>
+
+• <b>π_c</b> = "what fraction should go to each phenotype" (from the transition matrix)<br>
+• <b>n_c</b> = "how many cells total are we distributing" (observed count in destination)<br><br>
+
+Without n_c, the model can't distinguish between a clone with 2 cells in tumor vs 200. The Multinomial says "draw n_c balls from K bins with probabilities π_c." More balls = tighter fit to the expected proportions = more informative observation.
+</div>
+
+<div class="bio">
+<b>Biologically:</b> A clone with 200 cells in tumor that are 90% TEXterm is <i>much</i> stronger evidence for the TEMRA→TEXterm transition than a clone with 2 cells that happen to both be TEXterm. n_c encodes this — larger clones contribute more to the posterior because their phenotype distribution is less noisy.
+</div>
+</div>
+
+<!-- ============================================================ -->
+<div class="section">
+<h3>4. The π Node</h3>
+
+<div class="math">
+π (pi, not sigma) is the <b>expected phenotype distribution</b> in the destination tissue. It's deterministic — not sampled — computed as:<br><br>
+
+<code>π_c = θ_c @ T_patient[patient_c]</code> &nbsp;&nbsp;← matrix-vector product<br><br>
+
+If clone c is 100% TEMRA in PBMC, then θ_c = [0, 0, 0, 1, 0, 0, 0] (one-hot at TEMRA index), and π_c simply equals row 3 of T — the transition probabilities from TEMRA.<br><br>
+
+If clone c is 60% TEMRA + 40% TEXeff in PBMC, then π_c is a <b>weighted mixture</b> of those two rows of T. This is why the model handles mixed clones naturally.
+</div>
+</div>
+
+<!-- ============================================================ -->
+<div class="section">
+<h3>5. The Hierarchy: T_global → T_patient</h3>
+
+<div class="math">
+T_global[k, :] ~ Dirichlet(α) &nbsp;&nbsp;&nbsp; — the "consensus" transition row for phenotype k<br>
+T_patient[p, k, :] ~ Dirichlet(κ · T_global[k, :]) &nbsp;&nbsp;&nbsp; — patient p's version<br><br>
+
+κ controls the "wiggle room":<br>
+• <b>κ = 1:</b> T_patient can be anything — essentially ignores T_global<br>
+• <b>κ = 10:</b> T_patient stays close to T_global but can deviate<br>
+• <b>κ = 100:</b> T_patient ≈ T_global for all patients (no heterogeneity)<br><br>
+
+The Dirichlet concentration trick: if T_global[k,:] = [0.3, 0.5, 0.2] and κ=10, then T_patient[p,k,:] ~ Dirichlet([3, 5, 2]) — peaked around [0.3, 0.5, 0.2] but with room to vary.
+</div>
+</div>
+
+<!-- ============================================================ -->
+<div class="section">
+<h3>6. Simulation / Generation</h3>
+
+<div class="bio">
+<b>Yes!</b> Once you have posterior samples of T_global, you can simulate:<br><br>
+1. Create a synthetic clone with any source phenotype mix θ<br>
+2. Compute π = θ @ T_global<br>
+3. Draw destination counts: dst ~ Multinomial(n, π)<br><br>
+This lets you ask: "If I had a clone that was 100% Naive in blood, what would it look like in tumor?" — and get a full posterior predictive distribution with uncertainty bounds. This is exactly the forward generative model.
+</div>
+</div>
+
+<hr>
+
+<!-- ============================================================ -->
+<h2>Extensions</h2>
+
+<!-- ============================================================ -->
+<div class="section">
+<h3>7. Timepoint — Currently Missing</h3>
+
+<div class="warn">
+<b>Current model:</b> Pools all timepoints. A clone observed at T1→T2 and another at T5→T6 contribute equally to the same T matrix. This assumes the transition rules are time-invariant — probably wrong for GBM where the TME evolves.
+</div>
+
+<h4>Option A: Separate Observations Per Timepoint Transition <span class="star">★ Your Instinct — Recommended Start</span></h4>
+<div class="option">
+Treat each consecutive timepoint pair as a separate observation. A clone seen at T1 and T3 gives you one observation for the T1→T3 transition (or two: T1→T2 and T2→T3 if it's also at T2).<br><br>
+
+<b>Implementation:</b> Keep the same model, but add a <code>timepoint_pair</code> column and run separately per pair, or add a plate over timepoint transitions.<br><br>
+
+<span class="pro">+</span> Simple. Always forward in time. Each transition matrix is interpretable.<br>
+<span class="pro">+</span> Can chain: T_overall = T(1→2) @ T(2→3) @ T(3→4) to get cumulative transitions.<br>
+<span class="con">−</span> Fewer observations per matrix (splits your N clones across pairs).<br>
+<span class="con">−</span> Uncertainty compounds when chaining — T(1→6) will have very wide posteriors.<br>
+<span class="con">−</span> Doesn't share strength across similar timepoint transitions.
+</div>
+
+<h4>Option B: Hierarchical Time — One Global T + Per-Timepoint Deviation</h4>
+<div class="option">
+Same idea as the patient hierarchy, but now over time:<br><br>
+
+<code>T_global[k,:] ~ Dirichlet(α)</code><br>
+<code>T_time[t, k,:] ~ Dirichlet(κ_t · T_global[k,:])</code><br><br>
+
+Each timepoint transition gets its own T, but they're regularized toward a shared global T.<br><br>
+
+<span class="pro">+</span> Shares strength across timepoints — even pairs with few clones get reasonable estimates.<br>
+<span class="pro">+</span> κ_t tells you whether the transition rules are changing over time.<br>
+<span class="con">−</span> Doesn't enforce temporal ordering — T(1→2) and T(5→6) are treated as exchangeable.<br>
+<span class="con">−</span> Model complexity increases: now T is (T_pairs, K, K).
+</div>
+
+<h4>Option C: Autoregressive / GP Prior on T Over Time</h4>
+<div class="option">
+Place a Gaussian Process or AR(1) prior on the transition probabilities over time, so T(t→t+1) smoothly evolves:<br><br>
+
+<code>logit(T_time[t]) = logit(T_time[t-1]) + ε_t</code> where <code>ε_t ~ Normal(0, σ²)</code><br><br>
+
+Or in Dirichlet space: the concentration parameters evolve smoothly.<br><br>
+
+<span class="pro">+</span> Enforces temporal smoothness — transitions at T3→T4 are informed by T2→T3.<br>
+<span class="pro">+</span> Can extrapolate (with uncertainty) to predict future transitions.<br>
+<span class="pro">+</span> σ tells you the rate of change of trafficking biology over time.<br>
+<span class="con">−</span> Harder to implement in Pyro (need to work in unconstrained space + transform).<br>
+<span class="con">−</span> Assumes smooth change — may miss sudden shifts (e.g., treatment effects).
+</div>
+
+<h4>Option D: Continuous-Time Markov Chain (CTMC)</h4>
+<div class="option">
+Instead of discrete transition matrices, learn a <b>rate matrix Q</b> where T(Δt) = exp(Q · Δt):<br><br>
+
+<code>Q[i,j] ≥ 0 for i≠j</code> (transition rates)<br>
+<code>Q[i,i] = -Σ_{j≠i} Q[i,j]</code> (rows sum to 0)<br><br>
+
+The actual transition matrix for any time gap is computed via matrix exponential.<br><br>
+
+<span class="pro">+</span> Handles irregular time gaps naturally (T1→T3 vs T2→T3).<br>
+<span class="pro">+</span> Single Q captures all temporal dynamics — very parsimonious.<br>
+<span class="pro">+</span> Biologically interpretable: Q[i,j] = "rate of switching from phenotype i to j per unit time."<br>
+<span class="con">−</span> Assumes time-homogeneous rates (same Q at all times).<br>
+<span class="con">−</span> Matrix exponential is expensive in the inner loop of SVI.<br>
+<span class="con">−</span> Hard to combine with patient hierarchy.
+</div>
+
+<h4>Option E: Tensor Factorization — T(patient, time, source, dest)</h4>
+<div class="option">
+The full transition tensor is (P × Τ × K × K). Factor it as:<br><br>
+
+<code>T[p,t,k,:] = softmax(U_patient[p] + V_time[t] + W_global[k])</code><br><br>
+
+Where U, V, W are low-rank factors that capture patient effects, time effects, and baseline transitions separately.<br><br>
+
+<span class="pro">+</span> Very flexible — can capture patient×time interactions.<br>
+<span class="pro">+</span> Low-rank keeps parameters manageable.<br>
+<span class="con">−</span> Less interpretable — what does "latent factor 3" mean biologically?<br>
+<span class="con">−</span> Needs more data to fit well.
+</div>
+
+<h4>Recommendation</h4>
+<div class="bio">
+<b>Start with Option A</b> (your instinct) — it's clean, interpretable, always forward in time. Then examine the per-pair T matrices. If they look similar across pairs, the biology is time-invariant and you're done. If they clearly evolve, upgrade to <b>Option B</b> (hierarchical time) to borrow strength. <b>Option D</b> (CTMC) is the most elegant if you have irregular time gaps, but save it for a second pass.<br><br>
+
+For chaining with compounding uncertainty: sample from posterior of each T, multiply the samples, and report the resulting distribution. The uncertainty <i>should</i> compound — that's honest.
+</div>
+</div>
+
+<!-- ============================================================ -->
+<div class="section">
+<h3>8. Clone Expansion — Currently Missing</h3>
+
+<div class="warn">
+<b>Current model:</b> n_c (destination cell count) is observed but not modeled. We treat it as given. The model says "given this many cells in tumor, here's the phenotype breakdown." It does NOT predict <i>how many</i> cells end up in tumor.
+</div>
+
+<h4>Option A: Auxiliary Expansion Model <span class="star">★ Simplest</span></h4>
+<div class="option">
+Separate model: <code>log(n_dst) ~ Normal(f(θ_src, tissue_context), σ²)</code><br><br>
+Where f() is a small neural net or linear model that maps source phenotype distribution → expected expansion.<br><br>
+
+<span class="pro">+</span> Decoupled from transition model — easy to implement and interpret separately.<br>
+<span class="pro">+</span> Can answer: "Clones that are TEMRA in blood expand 5× more in tumor than Naive clones."<br>
+<span class="con">−</span> Doesn't capture interaction between expansion and phenotype switching.
+</div>
+
+<h4>Option B: Joint Dirichlet-Multinomial with Learned Counts</h4>
+<div class="option">
+Model both <i>what phenotype</i> and <i>how many cells</i>:<br><br>
+
+<code>n_dst_c ~ NegativeBinomial(μ_c, r)</code> where <code>μ_c = g(θ_src_c)</code><br>
+<code>dst_c ~ Multinomial(n_dst_c, π_c)</code><br><br>
+
+Now the model jointly predicts expansion and differentiation.<br><br>
+
+<span class="pro">+</span> Can ask: "Does a clone that switches to TEXterm also expand more?"<br>
+<span class="pro">+</span> Single coherent generative model.<br>
+<span class="con">−</span> NegBin + Multinomial = more complex inference.<br>
+<span class="con">−</span> Harder to disentangle expansion vs. sampling depth effects.
+</div>
+
+<h4>Option C: Expansion as a Covariate on T</h4>
+<div class="option">
+Let the transition matrix depend on how much the clone expanded:<br><br>
+
+<code>T[k,:] = Dirichlet(α + β · log(expansion_ratio_c))</code><br><br>
+
+Clones that expand a lot might show different transitions than clones that don't.<br><br>
+
+<span class="pro">+</span> Directly tests: "Does expansion change where cells end up phenotypically?"<br>
+<span class="con">−</span> Expansion ratio is a post-hoc measurement, not a biological input — causality is ambiguous.
+</div>
+
+<h4>Recommendation</h4>
+<div class="bio">
+<b>Start with Option A</b> — train a simple regression of log(n_dst/n_src) on θ_src. This immediately tells you which source phenotypes predict expansion. Then consider Option B if you want a unified generative model for the paper.
+</div>
+</div>
+
+<!-- ============================================================ -->
+<div class="section">
+<h3>9. Myeloid Covariates — The Most Exciting Extension</h3>
+
+<div class="warn">
+<b>The idea:</b> The transition matrix shouldn't be fixed — it should depend on the <i>microenvironment</i> the T cell encounters. If the tumor has lots of M2 macrophages, maybe TEMRA→TEXterm happens faster. If there are more DCs, maybe TEMRA→TRM is favored. The myeloid composition at source/target is a <b>covariate on T</b>.
+</div>
+
+<h4>Option A: Covariate-Dependent Dirichlet <span class="star">★ Most Natural</span></h4>
+<div class="option">
+Let the Dirichlet concentration depend on the myeloid vector:<br><br>
+
+<code>T[k,:] ~ Dirichlet(softplus(W_k · m + b_k))</code><br><br>
+
+Where <b>m</b> is the myeloid composition vector (e.g., % M1, % M2, % DC, % MDSC) at the destination tissue for that patient×timepoint, and W_k is a learned weight matrix.<br><br>
+
+<span class="pro">+</span> Directly answers: "How does myeloid composition shape T cell fate?"<br>
+<span class="pro">+</span> W_k is interpretable: each row tells you how each myeloid cell type pushes transitions.<br>
+<span class="pro">+</span> Can simulate: "What if we depleted MDSCs? How would T cell transitions change?"<br>
+<span class="con">−</span> Need myeloid composition per patient×timepoint×tissue (do you have this?).<br>
+<span class="con">−</span> More parameters — need enough patient×timepoint combinations to fit.
+</div>
+
+<h4>The Graphical Model with Myeloid Covariates</h4>
+
+<svg viewBox="0 0 800 500" width="800" height="500">
+  <defs>
+    <marker id="arrowhead2" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#555"/>
+    </marker>
+  </defs>
+
+  <!-- Plate: patients×timepoints -->
+  <rect x="60" y="30" width="700" height="200" class="plate" stroke="#c0392b"/>
+  <text x="740" y="220" class="plate-label" fill="#c0392b">p,t (patient × timepoint)</text>
+
+  <!-- m_source -->
+  <circle cx="150" cy="100" r="26" class="node-data"/>
+  <text x="150" y="93" class="node-text" font-size="10">m</text>
+  <text x="150" y="108" class="node-text" font-size="8" fill="#3a7d44">source</text>
+
+  <!-- m_dest -->
+  <circle cx="150" cy="180" r="26" class="node-data"/>
+  <text x="150" y="173" class="node-text" font-size="10">m</text>
+  <text x="150" y="188" class="node-text" font-size="8" fill="#3a7d44">dest</text>
+
+  <!-- olink -->
+  <circle cx="300" cy="60" r="22" class="node-data"/>
+  <text x="300" y="62" class="node-text" font-size="10">olink</text>
+
+  <!-- W (learned weights) -->
+  <circle cx="400" cy="60" r="22" class="node-latent"/>
+  <text x="400" y="62" class="node-text" font-size="11">W</text>
+
+  <!-- T_context -->
+  <circle cx="400" cy="150" r="30" class="node-latent"/>
+  <text x="400" y="143" class="node-text" font-size="11">T</text>
+  <text x="400" y="158" class="node-text" font-size="8" fill="#777">context</text>
+
+  <!-- Arrows to T_context -->
+  <line x1="176" y1="100" x2="368" y2="140" class="arrow" marker-end="url(#arrowhead2)"/>
+  <line x1="176" y1="175" x2="368" y2="155" class="arrow" marker-end="url(#arrowhead2)"/>
+  <line x1="322" y1="65" x2="378" y2="65" class="arrow" marker-end="url(#arrowhead2)"/>
+  <line x1="400" y1="82" x2="400" y2="118" class="arrow" marker-end="url(#arrowhead2)"/>
+
+  <!-- Clone plate -->
+  <rect x="250" y="280" width="460" height="180" class="plate" stroke="#27ae60"/>
+  <text x="690" y="450" class="plate-label" fill="#27ae60">c = 1…N (clones)</text>
+
+  <!-- θ -->
+  <circle cx="350" cy="370" r="26" class="node-data"/>
+  <text x="350" y="363" class="node-text" font-size="11">θ</text>
+  <text x="350" y="378" class="node-text" font-size="8" fill="#3a7d44">source</text>
+
+  <!-- π -->
+  <circle cx="470" cy="370" r="22" class="node-latent" stroke-dasharray="4,3"/>
+  <text x="470" y="372" class="node-text" font-size="11">π</text>
+
+  <!-- dst -->
+  <circle cx="590" cy="410" r="28" class="node-observed"/>
+  <text x="590" y="403" class="node-text" font-size="11">dst</text>
+  <text x="590" y="418" class="node-text" font-size="8" fill="#2c3e50">observed</text>
+
+  <!-- n_c -->
+  <circle cx="590" cy="320" r="20" class="node-data"/>
+  <text x="590" y="322" class="node-text" font-size="10">n_c</text>
+
+  <!-- Arrows -->
+  <line x1="400" y1="182" x2="460" y2="348" class="arrow" marker-end="url(#arrowhead2)"/>
+  <line x1="376" y1="370" x2="446" y2="370" class="arrow" marker-end="url(#arrowhead2)"/>
+  <line x1="490" y1="378" x2="560" y2="400" class="arrow" marker-end="url(#arrowhead2)"/>
+  <line x1="590" y1="340" x2="590" y2="380" class="arrow" marker-end="url(#arrowhead2)"/>
+
+  <!-- Label -->
+  <text x="480" y="260" font-size="11" fill="#555" text-anchor="middle" font-style="italic">
+    T depends on microenvironment
+  </text>
+</svg>
+
+<h4>Option B: Additive Effects in Log-Space</h4>
+<div class="option">
+<code>log_conc[k,j] = β_0[k,j] + β_myeloid[k,j] · m_dest + β_olink[k,j] · olink + β_patient[p,k,j]</code><br>
+<code>T[k,:] ~ Dirichlet(softplus(log_conc[k,:]))</code><br><br>
+
+Each covariate shifts the transition probabilities additively in log-concentration space. Multiple covariates combine linearly.<br><br>
+
+<span class="pro">+</span> Cleanly separates effects: "M2 macrophages push transitions toward TEXterm by β=0.3"<br>
+<span class="pro">+</span> Can include Olink proteins as additional covariates in the same framework.<br>
+<span class="pro">+</span> Simulating interventions = just change m and re-compute T.<br>
+<span class="con">−</span> Linear assumption may be too simple for complex interactions.
+</div>
+
+<h4>Option C: Neural Amortized Transition</h4>
+<div class="option">
+Use a small neural network to map all context (myeloid, Olink, patient, timepoint) to T:<br><br>
+
+<code>T[k,:] = Dirichlet(neural_net([m_source, m_dest, olink, patient_embedding]))</code><br><br>
+
+<span class="pro">+</span> Can capture arbitrary nonlinear interactions.<br>
+<span class="con">−</span> Black box — harder to interpret.<br>
+<span class="con">−</span> Needs more data.
+</div>
+
+<h4>What You Can Do With This</h4>
+<div class="bio">
+<b>1. T cell–myeloid coupling:</b> If W has large coefficients, T cell transitions are strongly shaped by myeloid context. If W ≈ 0, they're independent — T cells follow an intrinsic program regardless of myeloid environment.<br><br>
+
+<b>2. Simulate interventions:</b> "What if we depleted MDSCs (set MDSC fraction to 0)?" → Recompute T → See how T cell fates change. If TEXterm probability drops, MDSCs are driving exhaustion.<br><br>
+
+<b>3. Olink integration:</b> Same framework — Olink protein levels per patient×timepoint are just additional columns in the covariate vector. You'd learn which circulating proteins predict trafficking patterns.<br><br>
+
+<b>4. Identify therapeutic targets:</b> Myeloid cell types with the largest |W| coefficients on the TEMRA→TEXterm transition are the strongest drivers of exhaustion — and therefore the best targets for combination therapy with checkpoint blockade.
+</div>
+</div>
+
+<!-- ============================================================ -->
+<div class="section">
+<h3>10. Data Requirements Summary</h3>
+
+<table>
+  <tr><th>Extension</th><th>Data Needed</th><th>You Have It?</th><th>Granularity</th></tr>
+  <tr><td>Base model</td><td>TCR + phenotype + tissue + patient</td><td>✅ Yes</td><td>Per cell</td></tr>
+  <tr><td>Time</td><td>Timepoint per cell</td><td>✅ Yes</td><td>Per cell</td></tr>
+  <tr><td>Expansion</td><td>Clone sizes (already in dst counts)</td><td>✅ Yes</td><td>Per clone</td></tr>
+  <tr><td>Myeloid covariates</td><td>Myeloid cell type fractions per patient×timepoint×tissue</td><td>❓ Need to compute from non-T cells</td><td>Per sample</td></tr>
+  <tr><td>Olink</td><td>Protein levels per patient×timepoint</td><td>❓ If available</td><td>Per sample</td></tr>
+</table>
+</div>
+
+</div>
+</body>
+</html>
