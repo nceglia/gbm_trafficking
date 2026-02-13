@@ -1,4 +1,7 @@
+<<<<<<< HEAD
 # %%
+=======
+>>>>>>> origin/main
 import pickle
 import pandas as pd
 import numpy as np
@@ -13,7 +16,11 @@ warnings.filterwarnings('ignore')
 TISSUE_PAIRS = [("PBMC", "TP"), ("PBMC", "CSF"), ("CSF", "TP")]
 PAIR_LABELS = {"PBMC_TP": "PBMC vs Tumor", "PBMC_CSF": "PBMC vs CSF", "CSF_TP": "CSF vs Tumor"}
 PAIR_KEYS = ["PBMC_TP", "PBMC_CSF", "CSF_TP"]
+<<<<<<< HEAD
 # %%
+=======
+
+>>>>>>> origin/main
 # ============================================================
 # Load cached Augur results
 # ============================================================
@@ -40,13 +47,21 @@ auc_mat = pd.DataFrame(index=all_phenos, columns=PAIR_KEYS, dtype=float)
 for pk in PAIR_KEYS:
     for pheno in augur_auc[pk].index:
         auc_mat.loc[pheno, pk] = augur_auc[pk][pheno]
+<<<<<<< HEAD
 # %%
+=======
+
+>>>>>>> origin/main
 # ============================================================
 # Load GSEA results (recompute Wilcoxon-based per-phenotype)
 # ============================================================
 
 import scanpy as sc
+<<<<<<< HEAD
 adata = sc.read("/Users/ceglian/Codebase/GitHub/gbm_trafficking/data/objects/GBM_TCR_POS_TCELLS.h5ad")
+=======
+adata = sc.read("GBM_TCR_POS_TCELLS.h5ad")
+>>>>>>> origin/main
 
 TISSUES = ["PBMC", "CSF", "TP"]
 GENE_SETS = ['MSigDB_Hallmark_2020']
@@ -79,7 +94,11 @@ for pheno in phenotypes:
     sub = sub[sub.obs["tissue"].isin(valid)]
     print(f"  {pheno}: {len(sub)} cells")
     pheno_gsea[pheno] = run_wilcoxon_gsea(sub, tissues=valid)
+<<<<<<< HEAD
 # %%
+=======
+
+>>>>>>> origin/main
 # Build delta NES: for each tissue pair, compute |NES_t1 - NES_t2| averaged across pathways
 delta_nes_records = []
 for pheno, tissue_res in pheno_gsea.items():
@@ -102,7 +121,11 @@ for pheno, tissue_res in pheno_gsea.items():
 
 delta_df = pd.DataFrame(delta_nes_records)
 delta_mat = delta_df.pivot_table(index="phenotype", columns="pair", values="mean_abs_delta_NES")
+<<<<<<< HEAD
 # %%
+=======
+
+>>>>>>> origin/main
 # ============================================================
 # FIGURE 1: Combined Augur AUC + GSEA delta NES
 # ============================================================
@@ -224,7 +247,11 @@ plt.tight_layout()
 plt.savefig("augur_gsea_combined.png", dpi=200, bbox_inches="tight")
 plt.show()
 print("Saved: augur_gsea_combined.png")
+<<<<<<< HEAD
 # %%
+=======
+
+>>>>>>> origin/main
 # ============================================================
 # AUGUR GENE PATHWAY ENRICHMENT
 # ============================================================
@@ -277,16 +304,26 @@ for pk in PAIR_KEYS:
             print(f"  {pheno}: enrichr failed ({e})")
 
     augur_pathway_results[pk] = pair_results
+<<<<<<< HEAD
 # %%
+=======
+
+>>>>>>> origin/main
 # ============================================================
 # FIGURE 2: Augur gene pathway heatmap
 # ============================================================
 
+<<<<<<< HEAD
+=======
+print("\nGenerating Augur pathway heatmaps...")
+
+>>>>>>> origin/main
 for pk in PAIR_KEYS:
     pair_res = augur_pathway_results.get(pk, {})
     if not pair_res:
         continue
 
+<<<<<<< HEAD
     records = []
     for pheno, sig in pair_res.items():
         for _, row in sig.head(15).iterrows():
@@ -315,12 +352,53 @@ for pk in PAIR_KEYS:
                 cbar_kws={"label": "-log10(adj p)"}, vmin=0)
     ax.set_title(f"Augur Top Gene Enrichment: {PAIR_LABELS[pk]}\n"
                  f"(top {TOP_N} discriminating genes per phenotype)",
+=======
+    # Collect all significant Hallmark terms
+    hallmark_records = []
+    for pheno, sig in pair_res.items():
+        hallmark = sig[sig["Term"].str.contains("Hallmark", case=False)]
+        for _, row in hallmark.iterrows():
+            hallmark_records.append({
+                "phenotype": pheno,
+                "term": row["Term"].replace("MSigDB_Hallmark_2020__", ""),
+                "neg_log_p": -np.log10(row["Adjusted P-value"] + 1e-10),
+                "odds_ratio": row.get("Odds Ratio", row.get("odds_ratio", np.nan)),
+            })
+
+    if not hallmark_records:
+        continue
+
+    hdf = pd.DataFrame(hallmark_records)
+    piv = hdf.pivot_table(index="term", columns="phenotype", values="neg_log_p")
+    piv.columns = [c.replace("CD8_Activated_", "CD8a_").replace("CD8_Quiescent_", "CD8q_")
+                   .replace("CD4_", "CD4_") for c in piv.columns]
+
+    # Keep terms enriched in >=2 phenotypes or very significant
+    keep = piv.index[(piv.notna().sum(axis=1) >= 2) | (piv.max(axis=1) > 3)]
+    if len(keep) == 0:
+        keep = piv.index[piv.max(axis=1) > 1]
+    piv = piv.loc[keep].fillna(0)
+
+    if len(piv) == 0:
+        continue
+
+    fig, ax = plt.subplots(figsize=(max(8, len(piv.columns) * 1.3), max(5, len(piv) * 0.35)))
+    sns.heatmap(piv, annot=True, fmt=".1f", cmap="YlOrRd", linewidths=0.5, ax=ax,
+                cbar_kws={"label": "-log10(adj p)"}, vmin=0)
+    ax.set_title(f"Augur Top Gene Enrichment: {PAIR_LABELS[pk]}\n"
+                 f"(Hallmark pathways from top {TOP_N} discriminating genes per phenotype)",
+>>>>>>> origin/main
                  fontsize=11, fontweight="bold")
     ax.set_ylabel("")
     plt.tight_layout()
     plt.savefig(f"augur_gene_pathways_{pk}.png", dpi=200, bbox_inches="tight")
     plt.show()
+<<<<<<< HEAD
 # %%
+=======
+    print(f"Saved: augur_gene_pathways_{pk}.png")
+
+>>>>>>> origin/main
 # ============================================================
 # Summary: top Augur-derived pathways per phenotype × pair
 # ============================================================
@@ -345,4 +423,8 @@ for pk in PAIR_KEYS:
             print(f"    {term}: p={row['Adjusted P-value']:.4f}, "
                   f"genes={row.get('Genes', row.get('genes', 'N/A'))[:60]}")
 
+<<<<<<< HEAD
 print("\nDone.")
+=======
+print("\nDone.")
+>>>>>>> origin/main

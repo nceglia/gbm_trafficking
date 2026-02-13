@@ -11,7 +11,11 @@ from modules.clone_helpers import (
     shorten_phenotype_label,
 )
 
+<<<<<<< HEAD
 adata = sc.read("/Users/ceglian/Codebase/GitHub/gbm_trafficking/data/objects/GBM_TCR_POS_TCELLS.h5ad")
+=======
+adata = sc.read("GBM_TCR_POS_TCELLS.h5ad")
+>>>>>>> origin/main
 tcr = adata.obs[adata.obs["trb"].notna()].copy()
 tcr["tissue"] = tcr["tissue"].astype(str)
 tcr["phenotype"] = tcr["phenotype"].astype(str)

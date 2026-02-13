@@ -9,7 +9,7 @@ def _clean_tcr(adata, lineage, clone_key, phenotype_key, tissue_key):
     tcr = adata.obs[adata.obs[clone_key].notna()].copy()
     tcr["_lin"] = tcr[phenotype_key].apply(lambda x: "CD8" if "CD8" in x else "CD4")
     # remove lineage-switching clones
-    cl = tcr.groupby(clone_key)["_lin"].nunique()
+    cl = tcr.groupby(clone_key, observed=True)["_lin"].nunique()
     tcr = tcr[~tcr[clone_key].isin(cl[cl > 1].index)]
     tcr = tcr[tcr["_lin"] == lineage]
     tcr["pheno"] = (tcr[phenotype_key]
@@ -33,7 +33,7 @@ def extract_transitions(adata, t1, t2, lineage="CD8", clone_key="trb",
     """Extract per-clone phenotype count vectors between two tissues, pooling all timepoints."""
     tcr = _clean_tcr(adata, lineage, clone_key, phenotype_key, tissue_key)
 
-    clone_tissues = tcr.groupby(clone_key)[tissue_key].apply(set)
+    clone_tissues = tcr.groupby(clone_key, observed=True)[tissue_key].apply(set)
     shared = clone_tissues[clone_tissues.apply(lambda s: t1 in s and t2 in s)].index
     phenotypes = sorted(tcr["pheno"].unique())
     K = len(phenotypes)
@@ -73,7 +73,9 @@ def extract_temporal_transitions(adata, t1, t2, lineage="CD8", clone_key="trb",
 
     # for each clone, find timepoints where it appears in BOTH tissues
     records = []
-    for clone, grp in tcr.groupby(clone_key):
+    for clone, grp in tcr.groupby(clone_key, observed=True):
+        if len(grp) == 0:
+            continue
         pat = grp[patient_key].iloc[0] if patient_key in grp.columns else "unknown"
         # timepoints with cells in source tissue
         src_tps = set(grp[grp[tissue_key] == t1][time_key].unique())
