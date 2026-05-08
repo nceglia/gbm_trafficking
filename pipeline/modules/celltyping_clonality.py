@@ -13,10 +13,13 @@ from modules.clone_helpers import (
     infer_lineage_from_phenotype,
     shorten_phenotype_label,
 )
+from modules.style import (
+    PATIENT_MARKERS,
+    TISSUE_COLORS,
+    TISSUE_ORDER as TISSUES,
+)
 
-TISSUES = ("PBMC", "CSF", "TP")
-TISSUE_LABELS = ("PBMC", "CSF", "Tumor")
-TISSUE_COLORS = {"PBMC": "#f0bd00", "CSF": "#cd442a", "TP": "#7e9437"}
+TISSUE_LABELS = tuple({"PBMC": "PBMC", "CSF": "CSF", "TP": "Tumor"}[t] for t in TISSUES)
 
 def compute_clonality_patient(
     adata,
@@ -331,8 +334,7 @@ def plot_top_correlations(corr_df, df, n_top=12, figsize=(18, 12), savepath=None
     fig, axes = plt.subplots(nrows, ncols, figsize=figsize)
     axes = axes.flatten()
 
-    patient_markers = {'DFCI1': 'o', 'DFCI2': 's', 'DFCI3': '^',
-                       'DFCI4': 'D', 'DFCI5': 'v', 'MSK1': 'P'}
+    patient_markers = PATIENT_MARKERS
 
     for idx, (_, row) in enumerate(top.iterrows()):
         ax = axes[idx]

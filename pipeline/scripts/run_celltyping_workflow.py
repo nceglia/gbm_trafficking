@@ -42,6 +42,7 @@ from modules.celltyping_geometry import plot_clone_simplex, plot_clone_transitio
 from modules.celltyping_io import load_directory_manual, load_directory_scirpy
 from modules.celltyping_validation import run_validation_plots
 from modules.clone_helpers import infer_lineage_from_phenotype, shorten_phenotype_label
+from modules.style import TISSUE_COLORS as _STYLE_TISSUE_COLORS
 
 
 def parse_args():
@@ -259,7 +260,7 @@ def main(args):
     stcr.pl.clonality(cd4, groupby = "patient", s=10, figsize=(12,5), rotation=90)
     stcr.pl.clonality(cd8, groupby = "patient", s=10, figsize=(12,5), rotation=90)
     logging.getLogger('matplotlib').setLevel(logging.WARNING)
-    TISSUE_COLORS = {'CSF': '#cd442a', 'PBMC': '#f0bd00', 'TP': '#7e9437'}
+    TISSUE_COLORS = _STYLE_TISSUE_COLORS
     TISSUES = ("PBMC", "CSF", "TP")
     TISSUE_LABELS = ("PBMC", "CSF", "Tumor")
     df = compute_clonality_patient(adata)
@@ -289,7 +290,7 @@ def main(args):
         ["combo1", "combo2", "rho", "pval_adj", "n_obs"]].to_string(index=False))
     plot_correlation_heatmap(corr_df, savepath="clonality_correlation_heatmap.png")
     plot_top_correlations(corr_df, df, savepath="clonality_top_correlations.png")
-    tissue_colors = dict(zip(tissues, tcri.pl.tcri_colors))
+    tissue_colors = _STYLE_TISSUE_COLORS
     cd8_groups = {
         "Circulating\n(TEMRA/Naive)": ["TEMRA", "Naive"],
         "Exhaustion\n(TEXprog/eff/term)": ["TEXprog", "TEXeff", "TEXterm"],
@@ -300,7 +301,7 @@ def main(args):
         "Exhausted/Effector\n(Exh/Th1/Th2)": ["Exhausted", "Th1_polarized", "Th2_polarized"],
         "Treg": ["Treg"],
     }
-    tissue_colors = {'CSF': '#cd442a', 'PBMC': '#f0bd00', 'TP': '#7e9437'}
+    tissue_colors = _STYLE_TISSUE_COLORS
     cd8_df = plot_clone_simplex(adata, cd8_groups, tissue_colors=tissue_colors, lineage="CD8", a=50, b=1.8)
     cd4_df = plot_clone_simplex(adata, cd4_groups, tissue_colors=tissue_colors, lineage="CD4", a=50, b=1.8)
     plot_clone_transitions(adata, cd8_groups, "TP", "CSF", lineage="CD8",
@@ -427,7 +428,7 @@ def main(args):
                 # Sankey-style summary: group by unique trajectory, show top N
                 fig, ax = plt.subplots(figsize=(10, 6))
                 top_traj = all3["trajectory"].value_counts().head(15)
-                top_traj.plot.barh(ax=ax, color="#7e9437")
+                top_traj.plot.barh(ax=ax, color=_STYLE_TISSUE_COLORS["TP"])
                 ax.set_title(f"{lineage}: Top 3-Compartment Trajectories (PBMC → CSF → Tumor)\n"
                              f"n={len(all3)} clones in all 3 tissues",
                              fontsize=12, fontweight='bold')

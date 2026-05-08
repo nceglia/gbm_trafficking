@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 
 from modules.clone_helpers import infer_lineage_from_phenotype, shorten_phenotype_label
+from modules.style import TISSUE_COLORS as _TISSUE_COLORS
 
 def freq_to_size_scaling(freq, a, b):
     return a * (freq ** (1 / b))
@@ -58,7 +59,7 @@ def plot_clone_simplex(
     seed=42,
 ):
     if tissue_colors is None:
-        tissue_colors = dict(zip(tissues, ["#4A90D9", "#50C878", "#D94A4A"]))
+        tissue_colors = _TISSUE_COLORS
     if title is None:
         title = lineage
 
@@ -151,8 +152,8 @@ def plot_clone_transitions(
     arrow_width=0.003,
     arrow_head_width=0.012,
     arrow_head_length=0.008,
-    point_color_from="#4A90D9",
-    point_color_to="#D94A4A",
+    point_color_from=None,
+    point_color_to=None,
     remove_switching=True,
     title=None,
     seed=42,
@@ -160,6 +161,10 @@ def plot_clone_transitions(
 ):
     if tissue_labels is None:
         tissue_labels = (tissue_from, tissue_to)
+    if point_color_from is None:
+        point_color_from = _TISSUE_COLORS.get(tissue_from, "#4A90D9")
+    if point_color_to is None:
+        point_color_to = _TISSUE_COLORS.get(tissue_to, "#D94A4A")
     if title is None:
         title = f"{lineage}: {tissue_labels[0]} → {tissue_labels[1]}"
 
