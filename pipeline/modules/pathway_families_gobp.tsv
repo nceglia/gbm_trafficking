@@ -1,0 +1,891 @@
+term	go_id	family
+'De Novo' Post-Translational Protein Folding (GO:0051084)	GO:0051084	cellular organization
+3'-UTR-mediated mRNA Destabilization (GO:0061158)	GO:0061158	regulation of DNA-templated transcription
+3'-UTR-mediated mRNA Stabilization (GO:0070935)	GO:0070935	regulation of DNA-templated transcription
+ATP Biosynthetic Process (GO:0006754)	GO:0006754	metabolic process
+ATP Metabolic Process (GO:0046034)	GO:0046034	metabolic process
+Actin Filament-Based Transport (GO:0099515)	GO:0099515	transmembrane transport
+Acylglycerol Metabolic Process (GO:0006639)	GO:0006639	metabolic process
+Aerobic Electron Transport Chain (GO:0019646)	GO:0019646	metabolic process
+Aerobic Respiration (GO:0009060)	GO:0009060	metabolic process
+Alpha-Beta T Cell Activation (GO:0046631)	GO:0046631	immune — activation
+Amide Transport (GO:0042886)	GO:0042886	transmembrane transport
+Amino Acid Import Across Plasma Membrane (GO:0089718)	GO:0089718	transmembrane transport
+Amino Acid Transport (GO:0006865)	GO:0006865	metabolic process
+Amyloid Precursor Protein Catabolic Process (GO:0042987)	GO:0042987	metabolic process
+Anaphase-Promoting Complex-Dependent Catabolic Process (GO:0031145)	GO:0031145	cellular organization
+Anterograde Synaptic Vesicle Transport (GO:0048490)	GO:0048490	cellular organization
+Antibacterial Humoral Response (GO:0019731)	GO:0019731	defense response to other organism
+Antigen Processing And Presentation Of Endogenous Peptide Antigen (GO:0002483)	GO:0002483	immune — antigen presentation
+Antigen Processing And Presentation Of Endogenous Peptide Antigen Via MHC Class I Via ER Pathway (GO:0002484)	GO:0002484	immune — antigen presentation
+Antigen Processing And Presentation Of Endogenous Peptide Antigen Via MHC Class I Via ER Pathway, TAP-independent (GO:0002486)	GO:0002486	immune — antigen presentation
+Antigen Processing And Presentation Of Endogenous Peptide Antigen Via MHC Class Ib (GO:0002476)	GO:0002476	immune — antigen presentation
+Antigen Processing And Presentation Of Exogenous Peptide Antigen (GO:0002478)	GO:0002478	immune — antigen presentation
+Antigen Processing And Presentation Of Exogenous Peptide Antigen Via MHC Class II (GO:0019886)	GO:0019886	immune — antigen presentation
+Antigen Processing And Presentation Of Peptide Antigen Via MHC Class I (GO:0002474)	GO:0002474	immune — antigen presentation
+Antigen Processing And Presentation Of Peptide Antigen Via MHC Class II (GO:0002495)	GO:0002495	immune — antigen presentation
+Antigen Processing And Presentation Of Peptide Antigen Via MHC Class Ib (GO:0002428)	GO:0002428	immune — antigen presentation
+Antigen Receptor-Mediated Signaling Pathway (GO:0050851)	GO:0050851	immune — other
+Antimicrobial Humoral Response (GO:0019730)	GO:0019730	defense response to other organism
+Antiviral Innate Immune Response (GO:0140374)	GO:0140374	defense response to other organism
+Apoptotic Mitochondrial Changes (GO:0008637)	GO:0008637	cellular organization
+Apoptotic Process (GO:0006915)	GO:0006915	programmed cell death
+Astrocyte Activation (GO:0048143)	GO:0048143	cell differentiation
+Astrocyte Development (GO:0014002)	GO:0014002	anatomical structure development
+Attachment Of Mitotic Spindle Microtubules To Kinetochore (GO:0051315)	GO:0051315	cell cycle
+Autophagosome Assembly (GO:0000045)	GO:0000045	cellular organization
+Autophagosome Maturation (GO:0097352)	GO:0097352	cellular organization
+Autophagosome Organization (GO:1905037)	GO:1905037	anatomical structure development
+Axonal Transport (GO:0098930)	GO:0098930	cellular organization
+B Cell Receptor Signaling Pathway (GO:0050853)	GO:0050853	immune — other
+Base Conversion Or Substitution Editing (GO:0016553)	GO:0016553	regulation of DNA-templated transcription
+Blood Vessel Endothelial Cell Migration (GO:0043534)	GO:0043534	cell motility
+Blood Vessel Morphogenesis (GO:0048514)	GO:0048514	anatomical structure development
+COPII Vesicle Coating (GO:0048208)	GO:0048208	cellular organization
+Canonical Wnt Signaling Pathway (GO:0060070)	GO:0060070	anatomical structure development
+Carbohydrate Catabolic Process (GO:0016052)	GO:0016052	metabolic process
+Carboxylic Acid Transport (GO:0046942)	GO:0046942	transmembrane transport
+Cardiac Ventricle Morphogenesis (GO:0003208)	GO:0003208	anatomical structure development
+Cell Migration Involved In Sprouting Angiogenesis (GO:0002042)	GO:0002042	cell motility
+Cellular Respiration (GO:0045333)	GO:0045333	metabolic process
+Cellular Response To Arsenic-Containing Substance (GO:0071243)	GO:0071243	other biological process
+Cellular Response To Cadmium Ion (GO:0071276)	GO:0071276	other biological process
+Cellular Response To Catecholamine Stimulus (GO:0071870)	GO:0071870	metabolic process
+Cellular Response To Chemokine (GO:1990869)	GO:1990869	immune — other
+Cellular Response To Copper Ion (GO:0071280)	GO:0071280	other biological process
+Cellular Response To Corticosteroid Stimulus (GO:0071384)	GO:0071384	metabolic process
+Cellular Response To Cytokine Stimulus (GO:0071345)	GO:0071345	immune — other
+Cellular Response To Decreased Oxygen Levels (GO:0036294)	GO:0036294	other biological process
+Cellular Response To Epidermal Growth Factor Stimulus (GO:0071364)	GO:0071364	signaling — growth factor
+Cellular Response To Fibroblast Growth Factor Stimulus (GO:0044344)	GO:0044344	signaling — growth factor
+Cellular Response To Glucocorticoid Stimulus (GO:0071385)	GO:0071385	metabolic process
+Cellular Response To Glucose Starvation (GO:0042149)	GO:0042149	metabolic process
+Cellular Response To Growth Factor Stimulus (GO:0071363)	GO:0071363	signaling — growth factor
+Cellular Response To Heat (GO:0034605)	GO:0034605	other biological process
+Cellular Response To Hydrogen Peroxide (GO:0070301)	GO:0070301	other biological process
+Cellular Response To Hypoxia (GO:0071456)	GO:0071456	other biological process
+Cellular Response To Inorganic Substance (GO:0071241)	GO:0071241	anatomical structure development
+Cellular Response To Insulin Stimulus (GO:0032869)	GO:0032869	metabolic process
+Cellular Response To Interferon-Beta (GO:0035458)	GO:0035458	immune — other
+Cellular Response To Interleukin-1 (GO:0071347)	GO:0071347	immune — cytokine
+Cellular Response To Interleukin-15 (GO:0071350)	GO:0071350	immune — cytokine
+Cellular Response To Lipid (GO:0071396)	GO:0071396	metabolic process
+Cellular Response To Lipopolysaccharide (GO:0071222)	GO:0071222	metabolic process
+Cellular Response To Metal Ion (GO:0071248)	GO:0071248	other biological process
+Cellular Response To Misfolded Protein (GO:0071218)	GO:0071218	other biological process
+Cellular Response To Molecule Of Bacterial Origin (GO:0071219)	GO:0071219	other biological process
+Cellular Response To Nerve Growth Factor Stimulus (GO:1990090)	GO:1990090	signaling — growth factor
+Cellular Response To Nitrogen Compound (GO:1901699)	GO:1901699	other biological process
+Cellular Response To Organic Cyclic Compound (GO:0071407)	GO:0071407	anatomical structure development
+Cellular Response To Oxidative Stress (GO:0034599)	GO:0034599	metabolic process
+Cellular Response To Oxygen-Containing Compound (GO:1901701)	GO:1901701	other biological process
+Cellular Response To Peptide Hormone Stimulus (GO:0071375)	GO:0071375	metabolic process
+Cellular Response To Reactive Oxygen Species (GO:0034614)	GO:0034614	metabolic process
+Cellular Response To Salt (GO:1902075)	GO:1902075	other biological process
+Cellular Response To Starvation (GO:0009267)	GO:0009267	other biological process
+Cellular Response To Superoxide (GO:0071451)	GO:0071451	other biological process
+Cellular Response To Transforming Growth Factor Beta Stimulus (GO:0071560)	GO:0071560	signaling — growth factor
+Cellular Response To Tumor Necrosis Factor (GO:0071356)	GO:0071356	signaling — immune
+Cellular Response To Type I Interferon (GO:0071357)	GO:0071357	immune — other
+Cellular Response To Type II Interferon (GO:0071346)	GO:0071346	immune — other
+Cellular Response To Vascular Endothelial Growth Factor Stimulus (GO:0035924)	GO:0035924	signaling — growth factor
+Cellular Response To Virus (GO:0098586)	GO:0098586	defense response to other organism
+Centromere Complex Assembly (GO:0034508)	GO:0034508	cellular organization
+Ceramide Catabolic Process (GO:0046514)	GO:0046514	metabolic process
+Chaperone Cofactor-Dependent Protein Refolding (GO:0051085)	GO:0051085	cellular organization
+Chemokine-Mediated Signaling Pathway (GO:0070098)	GO:0070098	immune — other
+Cholesterol Efflux (GO:0033344)	GO:0033344	metabolic process
+Cholesterol Metabolic Process (GO:0008203)	GO:0008203	metabolic process
+Cholesterol Transport (GO:0030301)	GO:0030301	metabolic process
+Chromatin Organization (GO:0006325)	GO:0006325	cellular organization
+Chromosome Condensation (GO:0030261)	GO:0030261	other biological process
+Cyclic-Nucleotide-Mediated Signaling (GO:0019935)	GO:0019935	other biological process
+Cytokine-Mediated Signaling Pathway (GO:0019221)	GO:0019221	immune — other
+Cytoplasmic Sequestering Of Protein (GO:0051220)	GO:0051220	other biological process
+Cytoplasmic Sequestering Of Transcription Factor (GO:0042994)	GO:0042994	regulation of DNA-templated transcription
+Cytoplasmic Translation (GO:0002181)	GO:0002181	other biological process
+Cytoplasmic Translational Initiation (GO:0002183)	GO:0002183	other biological process
+Cytoskeleton Organization (GO:0007010)	GO:0007010	cellular organization
+Cytoskeleton-Dependent Cytokinesis (GO:0061640)	GO:0061640	signaling — immune
+Cytoskeleton-Dependent Intracellular Transport (GO:0030705)	GO:0030705	transmembrane transport
+DNA Conformation Change (GO:0071103)	GO:0071103	other biological process
+DNA Damage Response, Signal Transduction By P53 Class Mediator (GO:0030330)	GO:0030330	DNA repair
+DNA Damage Response, Signal Transduction By P53 Class Mediator Resulting In Cell Cycle Arrest (GO:0006977)	GO:0006977	cell cycle
+DNA Duplex Unwinding (GO:0032508)	GO:0032508	other biological process
+DNA Geometric Change (GO:0032392)	GO:0032392	other biological process
+DNA Integrity Checkpoint Signaling (GO:0031570)	GO:0031570	other biological process
+DNA Metabolic Process (GO:0006259)	GO:0006259	metabolic process
+DNA Recombination (GO:0006310)	GO:0006310	DNA repair
+DNA Repair (GO:0006281)	GO:0006281	DNA repair
+DNA Replication (GO:0006260)	GO:0006260	DNA repair
+DNA Replication Checkpoint Signaling (GO:0000076)	GO:0000076	cell cycle
+DNA Replication Initiation (GO:0006270)	GO:0006270	cell cycle
+DNA Strand Elongation (GO:0022616)	GO:0022616	other biological process
+DNA Strand Elongation Involved In DNA Replication (GO:0006271)	GO:0006271	cell cycle
+DNA Unwinding Involved In DNA Replication (GO:0006268)	GO:0006268	cell cycle
+DNA-templated DNA Replication (GO:0006261)	GO:0006261	DNA repair
+DNA-templated DNA Replication Maintenance Of Fidelity (GO:0045005)	GO:0045005	cell cycle
+DNA-templated Transcription Elongation (GO:0006354)	GO:0006354	regulation of DNA-templated transcription
+Defense Response To Fungus (GO:0050832)	GO:0050832	defense response to other organism
+Defense Response To Symbiont (GO:0140546)	GO:0140546	defense response to other organism
+Defense Response To Virus (GO:0051607)	GO:0051607	defense response to other organism
+Dendritic Cell Chemotaxis (GO:0002407)	GO:0002407	cell motility
+Dendritic Cell Differentiation (GO:0097028)	GO:0097028	cell differentiation
+Dendritic Cell Migration (GO:0036336)	GO:0036336	cell motility
+Determination Of Bilateral Symmetry (GO:0009855)	GO:0009855	other biological process
+Dolichol Metabolic Process (GO:0019348)	GO:0019348	metabolic process
+Double-Strand Break Repair (GO:0006302)	GO:0006302	DNA repair
+Double-Strand Break Repair Via Break-Induced Replication (GO:0000727)	GO:0000727	DNA repair
+Double-Strand Break Repair Via Homologous Recombination (GO:0000724)	GO:0000724	DNA repair
+Double-Strand Break Repair Via Nonhomologous End Joining (GO:0006303)	GO:0006303	DNA repair
+ERK1 And ERK2 Cascade (GO:0070371)	GO:0070371	other biological process
+Embryonic Heart Tube Morphogenesis (GO:0003143)	GO:0003143	anatomical structure development
+Embryonic Organ Development (GO:0048568)	GO:0048568	anatomical structure development
+Endoderm Development (GO:0007492)	GO:0007492	anatomical structure development
+Endoderm Formation (GO:0001706)	GO:0001706	other biological process
+Endoplasmic Reticulum To Cytosol Transport (GO:1903513)	GO:1903513	transmembrane transport
+Endosomal Lumen Acidification (GO:0048388)	GO:0048388	other biological process
+Endosomal Vesicle Fusion (GO:0034058)	GO:0034058	cellular organization
+Endosome To Lysosome Transport Via Multivesicular Body Sorting Pathway (GO:0032510)	GO:0032510	cellular organization
+Endosome Transport Via Multivesicular Body Sorting Pathway (GO:0032509)	GO:0032509	cellular organization
+Energy Derivation By Oxidation Of Organic Compounds (GO:0015980)	GO:0015980	metabolic process
+Entrainment Of Circadian Clock By Photoperiod (GO:0043153)	GO:0043153	other biological process
+Eosinophil Chemotaxis (GO:0048245)	GO:0048245	cell motility
+Eosinophil Migration (GO:0072677)	GO:0072677	cell motility
+Epithelial Tube Morphogenesis (GO:0060562)	GO:0060562	anatomical structure development
+Establishment Of Endothelial Barrier (GO:0061028)	GO:0061028	anatomical structure development
+Establishment Of Endothelial Intestinal Barrier (GO:0090557)	GO:0090557	anatomical structure development
+Establishment Of Mitotic Spindle Localization (GO:0040001)	GO:0040001	cellular organization
+Establishment Of Mitotic Spindle Orientation (GO:0000132)	GO:0000132	cellular organization
+Establishment Of Protein Localization To Endoplasmic Reticulum (GO:0072599)	GO:0072599	other biological process
+Establishment Of Protein Localization To Mitochondrion (GO:0072655)	GO:0072655	other biological process
+Establishment Of Protein Localization To Plasma Membrane (GO:0061951)	GO:0061951	cellular organization
+Establishment Of Spindle Localization (GO:0051293)	GO:0051293	cellular organization
+Establishment Of Spindle Orientation (GO:0051294)	GO:0051294	cellular organization
+Exit From Mitosis (GO:0010458)	GO:0010458	other biological process
+Extrinsic Apoptotic Signaling Pathway (GO:0097191)	GO:0097191	programmed cell death
+Extrinsic Apoptotic Signaling Pathway In Absence Of Ligand (GO:0097192)	GO:0097192	programmed cell death
+Extrinsic Apoptotic Signaling Pathway Via Death Domain Receptors (GO:0008625)	GO:0008625	programmed cell death
+Fat Cell Differentiation (GO:0045444)	GO:0045444	cell differentiation
+Fatty Acid Derivative Biosynthetic Process (GO:1901570)	GO:1901570	metabolic process
+Ganglioside Metabolic Process (GO:0001573)	GO:0001573	metabolic process
+Generation Of Neurons (GO:0048699)	GO:0048699	cell differentiation
+Gland Development (GO:0048732)	GO:0048732	anatomical structure development
+Glial Cell Differentiation (GO:0010001)	GO:0010001	cell differentiation
+Gluconeogenesis (GO:0006094)	GO:0006094	metabolic process
+Glucose Metabolic Process (GO:0006006)	GO:0006006	metabolic process
+Glucose Transmembrane Transport (GO:1904659)	GO:1904659	transmembrane transport
+Glycolytic Process (GO:0006096)	GO:0006096	metabolic process
+Glycosaminoglycan Catabolic Process (GO:0006027)	GO:0006027	metabolic process
+Golgi To Endosome Transport (GO:0006895)	GO:0006895	cellular organization
+Golgi To Plasma Membrane Protein Transport (GO:0043001)	GO:0043001	cellular organization
+Golgi To Plasma Membrane Transport (GO:0006893)	GO:0006893	cellular organization
+Granulocyte Chemotaxis (GO:0071621)	GO:0071621	cell motility
+Heart Looping (GO:0001947)	GO:0001947	other biological process
+Hepaticobiliary System Development (GO:0061008)	GO:0061008	anatomical structure development
+Heterochromatin Formation (GO:0031507)	GO:0031507	cellular organization
+Heterochromatin Organization (GO:0070828)	GO:0070828	cellular organization
+Hexose Biosynthetic Process (GO:0019319)	GO:0019319	metabolic process
+Histone H2A Acetylation (GO:0043968)	GO:0043968	cellular organization
+Histone H2A Ubiquitination (GO:0033522)	GO:0033522	cellular organization
+Histone H3-K4 Methylation (GO:0051568)	GO:0051568	cellular organization
+Histone Lysine Methylation (GO:0034968)	GO:0034968	cellular organization
+Histone mRNA Catabolic Process (GO:0071044)	GO:0071044	metabolic process
+I-kappaB kinase/NF-kappaB Signaling (GO:0007249)	GO:0007249	signaling — immune
+Immunoglobulin Mediated Immune Response (GO:0016064)	GO:0016064	immune — other
+Immunoglobulin Production Involved In Immunoglobulin-Mediated Immune Response (GO:0002381)	GO:0002381	immune — other
+Import Into Cell (GO:0098657)	GO:0098657	other biological process
+Inflammatory Response (GO:0006954)	GO:0006954	immune — other
+Integrated Stress Response Signaling (GO:0140467)	GO:0140467	other biological process
+Interferon-Mediated Signaling Pathway (GO:0140888)	GO:0140888	immune — other
+Interleukin-15-Mediated Signaling Pathway (GO:0035723)	GO:0035723	immune — cytokine
+Interstrand Cross-Link Repair (GO:0036297)	GO:0036297	DNA repair
+Intracellular Monoatomic Cation Homeostasis (GO:0030003)	GO:0030003	metabolic process
+Intracellular Potassium Ion Homeostasis (GO:0030007)	GO:0030007	transmembrane transport
+Intracellular Sodium Ion Homeostasis (GO:0006883)	GO:0006883	transmembrane transport
+Intracellular Sterol Transport (GO:0032366)	GO:0032366	metabolic process
+Intracellular pH Reduction (GO:0051452)	GO:0051452	other biological process
+Intrinsic Apoptotic Signaling Pathway (GO:0097193)	GO:0097193	programmed cell death
+Intrinsic Apoptotic Signaling Pathway By P53 Class Mediator (GO:0072332)	GO:0072332	programmed cell death
+Intrinsic Apoptotic Signaling Pathway In Response To Endoplasmic Reticulum Stress (GO:0070059)	GO:0070059	programmed cell death
+Kinetochore Organization (GO:0051383)	GO:0051383	anatomical structure development
+L-alpha-amino Acid Transmembrane Transport (GO:1902475)	GO:1902475	transmembrane transport
+L-amino Acid Transport (GO:0015807)	GO:0015807	metabolic process
+Late Endosome To Vacuole Transport (GO:0045324)	GO:0045324	cellular organization
+Left/Right Pattern Formation (GO:0060972)	GO:0060972	anatomical structure development
+Leukocyte Adhesion To Vascular Endothelial Cell (GO:0061756)	GO:0061756	other biological process
+Leukocyte Cell-Cell Adhesion (GO:0007159)	GO:0007159	other biological process
+Leukocyte Tethering Or Rolling (GO:0050901)	GO:0050901	other biological process
+Lipopolysaccharide-Mediated Signaling Pathway (GO:0031663)	GO:0031663	other biological process
+Liver Development (GO:0001889)	GO:0001889	anatomical structure development
+Long-Term Synaptic Potentiation (GO:0060291)	GO:0060291	nervous system process
+Lymphocyte Chemotaxis (GO:0048247)	GO:0048247	cell motility
+Lymphocyte Migration (GO:0072676)	GO:0072676	cell motility
+Lysosomal Lumen Acidification (GO:0007042)	GO:0007042	other biological process
+Lysosome Localization (GO:0032418)	GO:0032418	cellular organization
+MAPK Cascade (GO:0000165)	GO:0000165	signaling — growth factor
+MHC Class II Protein Complex Assembly (GO:0002399)	GO:0002399	cellular organization
+Macrophage Activation (GO:0042116)	GO:0042116	immune — other
+Macrophage Activation Involved In Immune Response (GO:0002281)	GO:0002281	immune — other
+Macrophage Differentiation (GO:0030225)	GO:0030225	cell differentiation
+Maintenance Of Protein Localization In Organelle (GO:0072595)	GO:0072595	cellular organization
+Maintenance Of Protein Location In Nucleus (GO:0051457)	GO:0051457	other biological process
+Maturation Of 5.8S rRNA (GO:0000460)	GO:0000460	other biological process
+Melanosome Localization (GO:0032400)	GO:0032400	other biological process
+Membrane Protein Ectodomain Proteolysis (GO:0006509)	GO:0006509	metabolic process
+Membrane Protein Proteolysis (GO:0033619)	GO:0033619	metabolic process
+Metal Ion Transport (GO:0030001)	GO:0030001	transmembrane transport
+Metaphase Plate Congression (GO:0051310)	GO:0051310	other biological process
+Microglial Cell Activation (GO:0001774)	GO:0001774	immune — other
+Microtubule Cytoskeleton Organization Involved In Mitosis (GO:1902850)	GO:1902850	cellular organization
+Microtubule Depolymerization (GO:0007019)	GO:0007019	cellular organization
+Mismatch Repair (GO:0006298)	GO:0006298	DNA repair
+Mitochondrial ATP Synthesis Coupled Electron Transport (GO:0042775)	GO:0042775	metabolic process
+Mitochondrial Calcium Ion Homeostasis (GO:0051560)	GO:0051560	metabolic process
+Mitochondrial Calcium Ion Transmembrane Transport (GO:0006851)	GO:0006851	transmembrane transport
+Mitochondrial Electron Transport, Cytochrome C To Oxygen (GO:0006123)	GO:0006123	metabolic process
+Mitochondrial Electron Transport, NADH To Ubiquinone (GO:0006120)	GO:0006120	metabolic process
+Mitochondrial Fusion (GO:0008053)	GO:0008053	cellular organization
+Mitochondrial Membrane Organization (GO:0007006)	GO:0007006	cellular organization
+Mitochondrial Respiratory Chain Complex I Assembly (GO:0032981)	GO:0032981	cellular organization
+Mitochondrial Transport (GO:0006839)	GO:0006839	metabolic process
+Mitochondrion Disassembly (GO:0061726)	GO:0061726	other biological process
+Mitochondrion Organization (GO:0007005)	GO:0007005	cellular organization
+Mitotic Cell Cycle Checkpoint Signaling (GO:0007093)	GO:0007093	cell cycle
+Mitotic Chromosome Condensation (GO:0007076)	GO:0007076	cell cycle
+Mitotic Cytokinesis (GO:0000281)	GO:0000281	signaling — immune
+Mitotic DNA Damage Checkpoint Signaling (GO:0044773)	GO:0044773	cell cycle
+Mitotic DNA Replication (GO:1902969)	GO:1902969	DNA repair
+Mitotic G1 DNA Damage Checkpoint Signaling (GO:0031571)	GO:0031571	cell cycle
+Mitotic G2 DNA Damage Checkpoint Signaling (GO:0007095)	GO:0007095	cell cycle
+Mitotic G2/M Transition Checkpoint (GO:0044818)	GO:0044818	cell cycle
+Mitotic Metaphase Plate Congression (GO:0007080)	GO:0007080	cell cycle
+Mitotic Nuclear Division (GO:0140014)	GO:0140014	cell cycle
+Mitotic Recombination (GO:0006312)	GO:0006312	DNA repair
+Mitotic Sister Chromatid Cohesion (GO:0007064)	GO:0007064	cell cycle
+Mitotic Sister Chromatid Segregation (GO:0000070)	GO:0000070	cell cycle
+Mitotic Spindle Assembly (GO:0090307)	GO:0090307	cellular organization
+Mitotic Spindle Assembly Checkpoint Signaling (GO:0007094)	GO:0007094	cell cycle
+Mitotic Spindle Checkpoint Signaling (GO:0071174)	GO:0071174	cell cycle
+Mitotic Spindle Organization (GO:0007052)	GO:0007052	cellular organization
+Modulation By Host Of Symbiont Process (GO:0051851)	GO:0051851	other biological process
+Monocyte Chemotaxis (GO:0002548)	GO:0002548	cell motility
+Multivesicular Body Assembly (GO:0036258)	GO:0036258	other biological process
+Multivesicular Body Organization (GO:0036257)	GO:0036257	anatomical structure development
+Myelination (GO:0042552)	GO:0042552	other biological process
+Myeloid Cell Development (GO:0061515)	GO:0061515	anatomical structure development
+Myeloid Cell Differentiation (GO:0030099)	GO:0030099	cell differentiation
+Myeloid Leukocyte Differentiation (GO:0002573)	GO:0002573	cell differentiation
+NADH Dehydrogenase Complex Assembly (GO:0010257)	GO:0010257	cellular organization
+NIK/NF-kappaB Signaling (GO:0038061)	GO:0038061	signaling — immune
+Natural Killer Cell Activation (GO:0030101)	GO:0030101	immune — other
+Natural Killer Cell Mediated Cytotoxicity (GO:0042267)	GO:0042267	defense response to other organism
+Natural Killer Cell Mediated Immunity (GO:0002228)	GO:0002228	defense response to other organism
+Negative Regulation By Host Of Viral Transcription (GO:0043922)	GO:0043922	defense response to other organism
+Negative Regulation Of Amyloid Fibril Formation (GO:1905907)	GO:1905907	metabolic process
+Negative Regulation Of Antigen Receptor-Mediated Signaling Pathway (GO:0050858)	GO:0050858	immune — other
+Negative Regulation Of Apoptotic Process (GO:0043066)	GO:0043066	programmed cell death
+Negative Regulation Of Apoptotic Signaling Pathway (GO:2001234)	GO:2001234	programmed cell death
+Negative Regulation Of B Cell Activation (GO:0050869)	GO:0050869	immune — activation
+Negative Regulation Of BMP Signaling Pathway (GO:0030514)	GO:0030514	anatomical structure development
+Negative Regulation Of Blood Vessel Endothelial Cell Migration (GO:0043537)	GO:0043537	cell motility
+Negative Regulation Of Blood Vessel Morphogenesis (GO:2000181)	GO:2000181	anatomical structure development
+Negative Regulation Of Cell Cycle (GO:0045786)	GO:0045786	cell cycle
+Negative Regulation Of Cell Differentiation (GO:0045596)	GO:0045596	anatomical structure development
+Negative Regulation Of Cell Growth (GO:0030308)	GO:0030308	other biological process
+Negative Regulation Of Cell Population Proliferation (GO:0008285)	GO:0008285	signaling — growth factor
+Negative Regulation Of Cell Projection Organization (GO:0031345)	GO:0031345	anatomical structure development
+Negative Regulation Of Cell-Cell Adhesion (GO:0022408)	GO:0022408	other biological process
+Negative Regulation Of Cellular Biosynthetic Process (GO:0031327)	GO:0031327	metabolic process
+Negative Regulation Of Cellular Component Organization (GO:0051129)	GO:0051129	anatomical structure development
+Negative Regulation Of Cellular Process (GO:0048523)	GO:0048523	other biological process
+Negative Regulation Of Cellular Response To Growth Factor Stimulus (GO:0090288)	GO:0090288	signaling — growth factor
+Negative Regulation Of Cyclin-Dependent Protein Kinase Activity (GO:1904030)	GO:1904030	metabolic process
+Negative Regulation Of Cyclin-Dependent Protein Serine/Threonine Kinase Activity (GO:0045736)	GO:0045736	metabolic process
+Negative Regulation Of Cysteine-Type Endopeptidase Activity Involved In Apoptotic Process (GO:0043154)	GO:0043154	programmed cell death
+Negative Regulation Of Cytokine Production (GO:0001818)	GO:0001818	immune — cytokine
+Negative Regulation Of Cytokine Production Involved In Immune Response (GO:0002719)	GO:0002719	immune — cytokine
+Negative Regulation Of DNA Biosynthetic Process (GO:2000279)	GO:2000279	metabolic process
+Negative Regulation Of Dephosphorylation (GO:0035305)	GO:0035305	metabolic process
+Negative Regulation Of Developmental Growth (GO:0048640)	GO:0048640	anatomical structure development
+Negative Regulation Of ERK1 And ERK2 Cascade (GO:0070373)	GO:0070373	signaling — growth factor
+Negative Regulation Of Endoplasmic Reticulum Stress-Induced Intrinsic Apoptotic Signaling Pathway (GO:1902236)	GO:1902236	programmed cell death
+Negative Regulation Of Endoplasmic Reticulum Unfolded Protein Response (GO:1900102)	GO:1900102	cellular organization
+Negative Regulation Of Endothelial Cell Apoptotic Process (GO:2000352)	GO:2000352	programmed cell death
+Negative Regulation Of Endothelial Cell Migration (GO:0010596)	GO:0010596	cell motility
+Negative Regulation Of Endothelial Cell Proliferation (GO:0001937)	GO:0001937	signaling — growth factor
+Negative Regulation Of Epithelial Cell Apoptotic Process (GO:1904036)	GO:1904036	programmed cell death
+Negative Regulation Of Epithelial Cell Migration (GO:0010633)	GO:0010633	cell motility
+Negative Regulation Of Epithelial Cell Proliferation (GO:0050680)	GO:0050680	signaling — growth factor
+Negative Regulation Of Epithelial To Mesenchymal Transition (GO:0010719)	GO:0010719	anatomical structure development
+Negative Regulation Of Extrinsic Apoptotic Signaling Pathway (GO:2001237)	GO:2001237	programmed cell death
+Negative Regulation Of Extrinsic Apoptotic Signaling Pathway In Absence Of Ligand (GO:2001240)	GO:2001240	programmed cell death
+Negative Regulation Of Extrinsic Apoptotic Signaling Pathway Via Death Domain Receptors (GO:1902042)	GO:1902042	programmed cell death
+Negative Regulation Of Fat Cell Differentiation (GO:0045599)	GO:0045599	immune — activation
+Negative Regulation Of G2/M Transition Of Mitotic Cell Cycle (GO:0010972)	GO:0010972	cell cycle
+Negative Regulation Of GTPase Activity (GO:0034260)	GO:0034260	other biological process
+Negative Regulation Of Gene Expression (GO:0010629)	GO:0010629	regulation of DNA-templated transcription
+Negative Regulation Of Gene Expression, Epigenetic (GO:0045814)	GO:0045814	cellular organization
+Negative Regulation Of Growth (GO:0045926)	GO:0045926	other biological process
+Negative Regulation Of I-kappaB kinase/NF-kappaB Signaling (GO:0043124)	GO:0043124	signaling — immune
+Negative Regulation Of Immune System Process (GO:0002683)	GO:0002683	immune — other
+Negative Regulation Of Interleukin-1 Beta Production (GO:0032691)	GO:0032691	immune — cytokine
+Negative Regulation Of Interleukin-2 Production (GO:0032703)	GO:0032703	immune — cytokine
+Negative Regulation Of Interleukin-6 Production (GO:0032715)	GO:0032715	immune — cytokine
+Negative Regulation Of Intracellular Signal Transduction (GO:1902532)	GO:1902532	other biological process
+Negative Regulation Of Intrinsic Apoptotic Signaling Pathway (GO:2001243)	GO:2001243	programmed cell death
+Negative Regulation Of JNK Cascade (GO:0046329)	GO:0046329	signaling — growth factor
+Negative Regulation Of JUN Kinase Activity (GO:0043508)	GO:0043508	signaling — growth factor
+Negative Regulation Of Leukocyte Chemotaxis (GO:0002689)	GO:0002689	immune — other
+Negative Regulation Of Leukocyte Mediated Cytotoxicity (GO:0001911)	GO:0001911	other biological process
+Negative Regulation Of Lipid Metabolic Process (GO:0045833)	GO:0045833	metabolic process
+Negative Regulation Of Lipid Storage (GO:0010888)	GO:0010888	metabolic process
+Negative Regulation Of Locomotion (GO:0040013)	GO:0040013	cell motility
+Negative Regulation Of Lymphocyte Activation (GO:0051250)	GO:0051250	immune — activation
+Negative Regulation Of MAP Kinase Activity (GO:0043407)	GO:0043407	signaling — growth factor
+Negative Regulation Of MAPK Cascade (GO:0043409)	GO:0043409	signaling — growth factor
+Negative Regulation Of Macromolecule Biosynthetic Process (GO:0010558)	GO:0010558	metabolic process
+Negative Regulation Of Macromolecule Metabolic Process (GO:0010605)	GO:0010605	metabolic process
+Negative Regulation Of Microtubule Depolymerization (GO:0007026)	GO:0007026	cellular organization
+Negative Regulation Of Microtubule Polymerization Or Depolymerization (GO:0031111)	GO:0031111	cellular organization
+Negative Regulation Of Mitochondrion Organization (GO:0010823)	GO:0010823	anatomical structure development
+Negative Regulation Of Mitotic Cell Cycle (GO:0045930)	GO:0045930	cell cycle
+Negative Regulation Of Mitotic Metaphase/Anaphase Transition (GO:0045841)	GO:0045841	cell cycle
+Negative Regulation Of Mononuclear Cell Migration (GO:0071676)	GO:0071676	cell motility
+Negative Regulation Of Multicellular Organismal Process (GO:0051241)	GO:0051241	anatomical structure development
+Negative Regulation Of Myeloid Cell Differentiation (GO:0045638)	GO:0045638	anatomical structure development
+Negative Regulation Of Myeloid Leukocyte Differentiation (GO:0002762)	GO:0002762	immune — other
+Negative Regulation Of NF-kappaB Transcription Factor Activity (GO:0032088)	GO:0032088	regulation of DNA-templated transcription
+Negative Regulation Of Natural Killer Cell Mediated Cytotoxicity (GO:0045953)	GO:0045953	signaling — immune
+Negative Regulation Of Neuron Death (GO:1901215)	GO:1901215	nervous system process
+Negative Regulation Of Neuron Projection Development (GO:0010977)	GO:0010977	anatomical structure development
+Negative Regulation Of Nucleic Acid-Templated Transcription (GO:1903507)	GO:1903507	regulation of DNA-templated transcription
+Negative Regulation Of Ossification (GO:0030279)	GO:0030279	other biological process
+Negative Regulation Of Osteoclast Differentiation (GO:0045671)	GO:0045671	anatomical structure development
+Negative Regulation Of Peptidyl-Threonine Phosphorylation (GO:0010801)	GO:0010801	metabolic process
+Negative Regulation Of Peptidyl-Tyrosine Phosphorylation (GO:0050732)	GO:0050732	metabolic process
+Negative Regulation Of Phosphatase Activity (GO:0010923)	GO:0010923	metabolic process
+Negative Regulation Of Phosphate Metabolic Process (GO:0045936)	GO:0045936	metabolic process
+Negative Regulation Of Phosphoprotein Phosphatase Activity (GO:0032515)	GO:0032515	metabolic process
+Negative Regulation Of Phosphorylation (GO:0042326)	GO:0042326	metabolic process
+Negative Regulation Of Programmed Cell Death (GO:0043069)	GO:0043069	programmed cell death
+Negative Regulation Of Protein Binding (GO:0032091)	GO:0032091	other biological process
+Negative Regulation Of Protein Dephosphorylation (GO:0035308)	GO:0035308	metabolic process
+Negative Regulation Of Protein Depolymerization (GO:1901880)	GO:1901880	other biological process
+Negative Regulation Of Protein Metabolic Process (GO:0051248)	GO:0051248	metabolic process
+Negative Regulation Of Protein Modification By Small Protein Conjugation Or Removal (GO:1903321)	GO:1903321	metabolic process
+Negative Regulation Of Protein Secretion (GO:0050709)	GO:0050709	cellular organization
+Negative Regulation Of Protein Serine/Threonine Kinase Activity (GO:0071901)	GO:0071901	metabolic process
+Negative Regulation Of Protein Ubiquitination (GO:0031397)	GO:0031397	metabolic process
+Negative Regulation Of RNA Splicing (GO:0033119)	GO:0033119	regulation of DNA-templated transcription
+Negative Regulation Of Receptor Signaling Pathway Via JAK-STAT (GO:0046426)	GO:0046426	other biological process
+Negative Regulation Of Receptor Signaling Pathway Via STAT (GO:1904893)	GO:1904893	other biological process
+Negative Regulation Of Release Of Cytochrome C From Mitochondria (GO:0090201)	GO:0090201	other biological process
+Negative Regulation Of Reproductive Process (GO:2000242)	GO:2000242	other biological process
+Negative Regulation Of Response To Endoplasmic Reticulum Stress (GO:1903573)	GO:1903573	cellular organization
+Negative Regulation Of Signal Transduction (GO:0009968)	GO:0009968	other biological process
+Negative Regulation Of Signal Transduction In Absence Of Ligand (GO:1901099)	GO:1901099	other biological process
+Negative Regulation Of Smooth Muscle Cell Proliferation (GO:0048662)	GO:0048662	signaling — growth factor
+Negative Regulation Of Stress-Activated MAPK Cascade (GO:0032873)	GO:0032873	signaling — growth factor
+Negative Regulation Of T Cell Differentiation (GO:0045581)	GO:0045581	immune — activation
+Negative Regulation Of T Cell Receptor Signaling Pathway (GO:0050860)	GO:0050860	immune — other
+Negative Regulation Of T-helper Cell Differentiation (GO:0045623)	GO:0045623	anatomical structure development
+Negative Regulation Of Telomere Maintenance Via Telomerase (GO:0032211)	GO:0032211	metabolic process
+Negative Regulation Of Telomere Maintenance Via Telomere Lengthening (GO:1904357)	GO:1904357	metabolic process
+Negative Regulation Of Transferase Activity (GO:0051348)	GO:0051348	other biological process
+Negative Regulation Of Translational Initiation (GO:0045947)	GO:0045947	metabolic process
+Negative Regulation Of Type I Interferon-Mediated Signaling Pathway (GO:0060339)	GO:0060339	immune — other
+Negative Regulation Of Type II Interferon Production (GO:0032689)	GO:0032689	immune — cytokine
+Negative Regulation Of Ubiquitin-Protein Transferase Activity (GO:0051444)	GO:0051444	metabolic process
+Negative Regulation Of Vascular Associated Smooth Muscle Cell Proliferation (GO:1904706)	GO:1904706	signaling — growth factor
+Negative Regulation Of Viral Entry Into Host Cell (GO:0046597)	GO:0046597	immune — other
+Negative Regulation Of Viral Genome Replication (GO:0045071)	GO:0045071	defense response to other organism
+Negative Regulation Of Viral Life Cycle (GO:1903901)	GO:1903901	defense response to other organism
+Negative Regulation Of Viral Process (GO:0048525)	GO:0048525	defense response to other organism
+Negative Regulation Of Viral-Induced Cytoplasmic Pattern Recognition Receptor Signaling Pathway (GO:0039532)	GO:0039532	defense response to other organism
+Negative Regulation Of Wound Healing (GO:0061045)	GO:0061045	other biological process
+Negative Regulation Of mRNA Processing (GO:0050686)	GO:0050686	regulation of DNA-templated transcription
+Negative Regulation Of mRNA Splicing, Via Spliceosome (GO:0048025)	GO:0048025	regulation of DNA-templated transcription
+Neuron Differentiation (GO:0030182)	GO:0030182	cell differentiation
+Neuron Maturation (GO:0042551)	GO:0042551	nervous system process
+Neuron Projection Extension (GO:1990138)	GO:1990138	nervous system process
+Neurotransmitter Transport (GO:0006836)	GO:0006836	transmembrane transport
+Neurotrophin Signaling Pathway (GO:0038179)	GO:0038179	other biological process
+Neutral Amino Acid Transport (GO:0015804)	GO:0015804	metabolic process
+Neutrophil Mediated Immunity (GO:0002446)	GO:0002446	immune — other
+Nuclear Chromosome Segregation (GO:0098813)	GO:0098813	cell cycle
+Nuclear Envelope Organization (GO:0006998)	GO:0006998	cellular organization
+Nuclear Export (GO:0051168)	GO:0051168	transmembrane transport
+Nuclear Membrane Organization (GO:0071763)	GO:0071763	cellular organization
+Nuclear Pore Complex Assembly (GO:0051292)	GO:0051292	cellular organization
+Nuclear Pore Organization (GO:0006999)	GO:0006999	anatomical structure development
+Nuclear Transport (GO:0051169)	GO:0051169	transmembrane transport
+Nuclear-Transcribed mRNA poly(A) Tail Shortening (GO:0000289)	GO:0000289	metabolic process
+Nucleic Acid Phosphodiester Bond Hydrolysis (GO:0090305)	GO:0090305	other biological process
+Nucleocytoplasmic Transport (GO:0006913)	GO:0006913	transmembrane transport
+Nucleosome Assembly (GO:0006334)	GO:0006334	cellular organization
+Nucleosome Disassembly (GO:0006337)	GO:0006337	cellular organization
+Nucleosome Organization (GO:0034728)	GO:0034728	cellular organization
+Nucleus Organization (GO:0006997)	GO:0006997	anatomical structure development
+Oligosaccharide Biosynthetic Process (GO:0009312)	GO:0009312	metabolic process
+Oligosaccharide Metabolic Process (GO:0009311)	GO:0009311	metabolic process
+Oligosaccharide-Lipid Intermediate Biosynthetic Process (GO:0006490)	GO:0006490	metabolic process
+Organelle Transport Along Microtubule (GO:0072384)	GO:0072384	cellular organization
+Oxidative Phosphorylation (GO:0006119)	GO:0006119	metabolic process
+P-body Assembly (GO:0033962)	GO:0033962	other biological process
+Peptide Antigen Assembly With MHC Class II Protein Complex (GO:0002503)	GO:0002503	cellular organization
+Peptide Antigen Assembly With MHC Protein Complex (GO:0002501)	GO:0002501	cellular organization
+Peptidyl-Threonine Dephosphorylation (GO:0035970)	GO:0035970	metabolic process
+Peptidyl-Tyrosine Dephosphorylation (GO:0035335)	GO:0035335	metabolic process
+Peripheral Nervous System Development (GO:0007422)	GO:0007422	anatomical structure development
+Phosphatidylcholine Biosynthetic Process (GO:0006656)	GO:0006656	metabolic process
+Phosphatidylinositol-3-Phosphate Biosynthetic Process (GO:0036092)	GO:0036092	metabolic process
+Photoperiodism (GO:0009648)	GO:0009648	other biological process
+Plasma Membrane Repair (GO:0001778)	GO:0001778	cellular organization
+Platelet Aggregation (GO:0070527)	GO:0070527	other biological process
+Polyamine Metabolic Process (GO:0006595)	GO:0006595	metabolic process
+Pore Complex Assembly (GO:0046931)	GO:0046931	cellular organization
+Positive Regulation By Host Of Viral Transcription (GO:0043923)	GO:0043923	defense response to other organism
+Positive Regulation Of Actin Filament Bundle Assembly (GO:0032233)	GO:0032233	cellular organization
+Positive Regulation Of Acute Inflammatory Response (GO:0002675)	GO:0002675	immune — other
+Positive Regulation Of Adaptive Immune Response Based On Somatic Recombination Of Immune Receptors Built From Immunoglobulin Superfamily Domains (GO:0002824)	GO:0002824	immune — other
+Positive Regulation Of Alpha-Beta T Cell Activation (GO:0046635)	GO:0046635	immune — activation
+Positive Regulation Of Alpha-Beta T Cell Proliferation (GO:0046641)	GO:0046641	immune — other
+Positive Regulation Of Amide Metabolic Process (GO:0034250)	GO:0034250	metabolic process
+Positive Regulation Of Amyloid Precursor Protein Catabolic Process (GO:1902993)	GO:1902993	metabolic process
+Positive Regulation Of Amyloid-Beta Formation (GO:1902004)	GO:1902004	metabolic process
+Positive Regulation Of Angiogenesis (GO:0045766)	GO:0045766	anatomical structure development
+Positive Regulation Of Antigen Receptor-Mediated Signaling Pathway (GO:0050857)	GO:0050857	immune — other
+Positive Regulation Of Apoptotic Process (GO:0043065)	GO:0043065	programmed cell death
+Positive Regulation Of Apoptotic Signaling Pathway (GO:2001235)	GO:2001235	programmed cell death
+Positive Regulation Of CD4-positive, Alpha-Beta T Cell Activation (GO:2000516)	GO:2000516	immune — activation
+Positive Regulation Of Carbohydrate Metabolic Process (GO:0045913)	GO:0045913	metabolic process
+Positive Regulation Of Catabolic Process (GO:0009896)	GO:0009896	metabolic process
+Positive Regulation Of Cell Cycle G2/M Phase Transition (GO:1902751)	GO:1902751	cell cycle
+Positive Regulation Of Cell Cycle Process (GO:0090068)	GO:0090068	cell cycle
+Positive Regulation Of Cell Death (GO:0010942)	GO:0010942	programmed cell death
+Positive Regulation Of Cellular Biosynthetic Process (GO:0031328)	GO:0031328	metabolic process
+Positive Regulation Of Cellular Catabolic Process (GO:0031331)	GO:0031331	metabolic process
+Positive Regulation Of Cellular Component Biogenesis (GO:0044089)	GO:0044089	other biological process
+Positive Regulation Of Cellular Component Organization (GO:0051130)	GO:0051130	anatomical structure development
+Positive Regulation Of Cellular Metabolic Process (GO:0031325)	GO:0031325	metabolic process
+Positive Regulation Of Cellular Respiration (GO:1901857)	GO:1901857	metabolic process
+Positive Regulation Of Cellular Response To Transforming Growth Factor Beta Stimulus (GO:1903846)	GO:1903846	signaling — growth factor
+Positive Regulation Of Chemokine Production (GO:0032722)	GO:0032722	immune — cytokine
+Positive Regulation Of Cholesterol Efflux (GO:0010875)	GO:0010875	metabolic process
+Positive Regulation Of Cholesterol Transport (GO:0032376)	GO:0032376	metabolic process
+Positive Regulation Of Chromosome Organization (GO:2001252)	GO:2001252	anatomical structure development
+Positive Regulation Of Chromosome Segregation (GO:0051984)	GO:0051984	cell cycle
+Positive Regulation Of Chromosome Separation (GO:1905820)	GO:1905820	other biological process
+Positive Regulation Of Cyclin-Dependent Protein Kinase Activity (GO:1904031)	GO:1904031	metabolic process
+Positive Regulation Of Cyclin-Dependent Protein Serine/Threonine Kinase Activity (GO:0045737)	GO:0045737	metabolic process
+Positive Regulation Of Cysteine-Type Endopeptidase Activity Involved In Apoptotic Process (GO:0043280)	GO:0043280	programmed cell death
+Positive Regulation Of Cytokine Production Involved In Inflammatory Response (GO:1900017)	GO:1900017	immune — cytokine
+Positive Regulation Of Cytokinesis (GO:0032467)	GO:0032467	immune — other
+Positive Regulation Of DNA Repair (GO:0045739)	GO:0045739	DNA repair
+Positive Regulation Of DNA Replication (GO:0045740)	GO:0045740	cell cycle
+Positive Regulation Of DNA-directed DNA Polymerase Activity (GO:1900264)	GO:1900264	metabolic process
+Positive Regulation Of Defense Response (GO:0031349)	GO:0031349	defense response to other organism
+Positive Regulation Of Double-Strand Break Repair (GO:2000781)	GO:2000781	DNA repair
+Positive Regulation Of ERAD Pathway (GO:1904294)	GO:1904294	metabolic process
+Positive Regulation Of ERK1 And ERK2 Cascade (GO:0070374)	GO:0070374	signaling — growth factor
+Positive Regulation Of Endocytosis (GO:0045807)	GO:0045807	cellular organization
+Positive Regulation Of Endothelial Cell Proliferation (GO:0001938)	GO:0001938	signaling — growth factor
+Positive Regulation Of Epithelial Cell Proliferation (GO:0050679)	GO:0050679	signaling — growth factor
+Positive Regulation Of Erythrocyte Differentiation (GO:0045648)	GO:0045648	anatomical structure development
+Positive Regulation Of Establishment Of Protein Localization (GO:1904951)	GO:1904951	other biological process
+Positive Regulation Of Exosomal Secretion (GO:1903543)	GO:1903543	cellular organization
+Positive Regulation Of Extrinsic Apoptotic Signaling Pathway (GO:2001238)	GO:2001238	programmed cell death
+Positive Regulation Of Fat Cell Differentiation (GO:0045600)	GO:0045600	immune — activation
+Positive Regulation Of G2/M Transition Of Mitotic Cell Cycle (GO:0010971)	GO:0010971	cell cycle
+Positive Regulation Of Glial Cell Differentiation (GO:0045687)	GO:0045687	anatomical structure development
+Positive Regulation Of Histone Acetylation (GO:0035066)	GO:0035066	cellular organization
+Positive Regulation Of Hydrolase Activity (GO:0051345)	GO:0051345	other biological process
+Positive Regulation Of Immune System Process (GO:0002684)	GO:0002684	immune — other
+Positive Regulation Of Immunoglobulin Production (GO:0002639)	GO:0002639	signaling — immune
+Positive Regulation Of Inflammatory Response (GO:0050729)	GO:0050729	immune — other
+Positive Regulation Of Interferon-Alpha Production (GO:0032727)	GO:0032727	immune — other
+Positive Regulation Of Interleukin-1 Beta Production (GO:0032731)	GO:0032731	immune — cytokine
+Positive Regulation Of Interleukin-1 Production (GO:0032732)	GO:0032732	immune — cytokine
+Positive Regulation Of Interleukin-2 Production (GO:0032743)	GO:0032743	immune — cytokine
+Positive Regulation Of Intracellular Signal Transduction (GO:1902533)	GO:1902533	other biological process
+Positive Regulation Of Intrinsic Apoptotic Signaling Pathway (GO:2001244)	GO:2001244	programmed cell death
+Positive Regulation Of Leukocyte Cell-Cell Adhesion (GO:1903039)	GO:1903039	immune — other
+Positive Regulation Of Leukocyte Chemotaxis (GO:0002690)	GO:0002690	immune — other
+Positive Regulation Of Leukocyte Mediated Cytotoxicity (GO:0001912)	GO:0001912	other biological process
+Positive Regulation Of Leukocyte Migration (GO:0002687)	GO:0002687	immune — other
+Positive Regulation Of Lipid Kinase Activity (GO:0090218)	GO:0090218	metabolic process
+Positive Regulation Of Lipid Storage (GO:0010884)	GO:0010884	metabolic process
+Positive Regulation Of Locomotion (GO:0040017)	GO:0040017	cell motility
+Positive Regulation Of Lymphocyte Chemotaxis (GO:0140131)	GO:0140131	immune — other
+Positive Regulation Of MAPK Cascade (GO:0043410)	GO:0043410	signaling — growth factor
+Positive Regulation Of Macromolecule Biosynthetic Process (GO:0010557)	GO:0010557	metabolic process
+Positive Regulation Of Macromolecule Metabolic Process (GO:0010604)	GO:0010604	metabolic process
+Positive Regulation Of Macrophage Migration (GO:1905523)	GO:1905523	immune — other
+Positive Regulation Of Membrane Protein Ectodomain Proteolysis (GO:0051044)	GO:0051044	metabolic process
+Positive Regulation Of Metabolic Process (GO:0009893)	GO:0009893	metabolic process
+Positive Regulation Of Microtubule Polymerization (GO:0031116)	GO:0031116	cellular organization
+Positive Regulation Of Microtubule Polymerization Or Depolymerization (GO:0031112)	GO:0031112	cellular organization
+Positive Regulation Of Mitotic Cell Cycle Spindle Assembly Checkpoint (GO:0090267)	GO:0090267	cell cycle
+Positive Regulation Of Mitotic Sister Chromatid Separation (GO:1901970)	GO:1901970	cell cycle
+Positive Regulation Of Monooxygenase Activity (GO:0032770)	GO:0032770	other biological process
+Positive Regulation Of Myeloid Leukocyte Cytokine Production Involved In Immune Response (GO:0061081)	GO:0061081	immune — cytokine
+Positive Regulation Of NIK/NF-kappaB Signaling (GO:1901224)	GO:1901224	signaling — immune
+Positive Regulation Of Natural Killer Cell Mediated Immunity (GO:0002717)	GO:0002717	signaling — immune
+Positive Regulation Of Neuron Apoptotic Process (GO:0043525)	GO:0043525	programmed cell death
+Positive Regulation Of Neuron Death (GO:1901216)	GO:1901216	nervous system process
+Positive Regulation Of Nitric Oxide Biosynthetic Process (GO:0045429)	GO:0045429	metabolic process
+Positive Regulation Of Nitric Oxide Metabolic Process (GO:1904407)	GO:1904407	metabolic process
+Positive Regulation Of Nitric-Oxide Synthase Activity (GO:0051000)	GO:0051000	other biological process
+Positive Regulation Of Nitrogen Compound Metabolic Process (GO:0051173)	GO:0051173	metabolic process
+Positive Regulation Of Nuclear Division (GO:0051785)	GO:0051785	other biological process
+Positive Regulation Of Nuclear-Transcribed mRNA Catabolic Process, Deadenylation-Dependent Decay (GO:1900153)	GO:1900153	metabolic process
+Positive Regulation Of Nuclear-Transcribed mRNA poly(A) Tail Shortening (GO:0060213)	GO:0060213	metabolic process
+Positive Regulation Of Osteoclast Differentiation (GO:0045672)	GO:0045672	anatomical structure development
+Positive Regulation Of Oxidoreductase Activity (GO:0051353)	GO:0051353	other biological process
+Positive Regulation Of Pathway-Restricted SMAD Protein Phosphorylation (GO:0010862)	GO:0010862	other biological process
+Positive Regulation Of Peptidyl-Serine Phosphorylation (GO:0033138)	GO:0033138	metabolic process
+Positive Regulation Of Phosphatase Activity (GO:0010922)	GO:0010922	metabolic process
+Positive Regulation Of Phospholipase Activity (GO:0010518)	GO:0010518	other biological process
+Positive Regulation Of Production Of Molecular Mediator Of Immune Response (GO:0002702)	GO:0002702	immune — other
+Positive Regulation Of Programmed Cell Death (GO:0043068)	GO:0043068	programmed cell death
+Positive Regulation Of Protein Catabolic Process (GO:0045732)	GO:0045732	metabolic process
+Positive Regulation Of Protein Dephosphorylation (GO:0035307)	GO:0035307	metabolic process
+Positive Regulation Of Protein Kinase Activity (GO:0045860)	GO:0045860	metabolic process
+Positive Regulation Of Protein Localization To Chromosome, Telomeric Region (GO:1904816)	GO:1904816	other biological process
+Positive Regulation Of Protein Localization To Membrane (GO:1905477)	GO:1905477	cellular organization
+Positive Regulation Of Protein Localization To Nucleus (GO:1900182)	GO:1900182	other biological process
+Positive Regulation Of Protein Localization To Plasma Membrane (GO:1903078)	GO:1903078	cellular organization
+Positive Regulation Of Protein Metabolic Process (GO:0051247)	GO:0051247	metabolic process
+Positive Regulation Of Protein Modification By Small Protein Conjugation Or Removal (GO:1903322)	GO:1903322	metabolic process
+Positive Regulation Of Protein Processing (GO:0010954)	GO:0010954	metabolic process
+Positive Regulation Of Protein Secretion (GO:0050714)	GO:0050714	cellular organization
+Positive Regulation Of Protein Serine/Threonine Kinase Activity (GO:0071902)	GO:0071902	metabolic process
+Positive Regulation Of Protein Ubiquitination (GO:0031398)	GO:0031398	metabolic process
+Positive Regulation Of Proteolysis (GO:0045862)	GO:0045862	metabolic process
+Positive Regulation Of RNA Metabolic Process (GO:0051254)	GO:0051254	metabolic process
+Positive Regulation Of RNA Splicing (GO:0033120)	GO:0033120	regulation of DNA-templated transcription
+Positive Regulation Of Reactive Oxygen Species Metabolic Process (GO:2000379)	GO:2000379	metabolic process
+Positive Regulation Of Regulatory T Cell Differentiation (GO:0045591)	GO:0045591	immune — activation
+Positive Regulation Of Response To Endoplasmic Reticulum Stress (GO:1905898)	GO:1905898	cellular organization
+Positive Regulation Of Response To External Stimulus (GO:0032103)	GO:0032103	other biological process
+Positive Regulation Of Signal Transduction By P53 Class Mediator (GO:1901798)	GO:1901798	other biological process
+Positive Regulation Of Small Molecule Metabolic Process (GO:0062013)	GO:0062013	metabolic process
+Positive Regulation Of Smooth Muscle Cell Proliferation (GO:0048661)	GO:0048661	signaling — growth factor
+Positive Regulation Of Spindle Checkpoint (GO:0090232)	GO:0090232	cell cycle
+Positive Regulation Of Stem Cell Population Maintenance (GO:1902459)	GO:1902459	cell differentiation
+Positive Regulation Of Substrate Adhesion-Dependent Cell Spreading (GO:1900026)	GO:1900026	immune — other
+Positive Regulation Of Superoxide Anion Generation (GO:0032930)	GO:0032930	metabolic process
+Positive Regulation Of Synaptic Transmission (GO:0050806)	GO:0050806	nervous system process
+Positive Regulation Of T Cell Cytokine Production (GO:0002726)	GO:0002726	immune — cytokine
+Positive Regulation Of T Cell Mediated Cytotoxicity (GO:0001916)	GO:0001916	other biological process
+Positive Regulation Of T Cell Mediated Immunity (GO:0002711)	GO:0002711	immune — other
+Positive Regulation Of T Cell Receptor Signaling Pathway (GO:0050862)	GO:0050862	immune — other
+Positive Regulation Of T-helper Cell Differentiation (GO:0045624)	GO:0045624	anatomical structure development
+Positive Regulation Of Telomerase RNA Localization To Cajal Body (GO:1904874)	GO:1904874	other biological process
+Positive Regulation Of Transcription From RNA Polymerase II Promoter Involved In Cellular Response To Chemical Stimulus (GO:1901522)	GO:1901522	regulation of DNA-templated transcription
+Positive Regulation Of Transcription Regulatory Region DNA Binding (GO:2000679)	GO:2000679	regulation of DNA-templated transcription
+Positive Regulation Of Transforming Growth Factor Beta Receptor Signaling Pathway (GO:0030511)	GO:0030511	signaling — growth factor
+Positive Regulation Of Transmembrane Receptor Protein Serine/Threonine Kinase Signaling Pathway (GO:0090100)	GO:0090100	other biological process
+Positive Regulation Of Transmembrane Transport (GO:0034764)	GO:0034764	transmembrane transport
+Positive Regulation Of Triglyceride Metabolic Process (GO:0090208)	GO:0090208	metabolic process
+Positive Regulation Of Type II Interferon Production (GO:0032729)	GO:0032729	immune — cytokine
+Positive Regulation Of Ubiquitin-Protein Transferase Activity (GO:0051443)	GO:0051443	metabolic process
+Positive Regulation Of Vascular Associated Smooth Muscle Cell Proliferation (GO:1904707)	GO:1904707	signaling — growth factor
+Positive Regulation Of Vascular Endothelial Growth Factor Production (GO:0010575)	GO:0010575	signaling — immune
+Positive Regulation Of Vasculature Development (GO:1904018)	GO:1904018	anatomical structure development
+Positive Regulation Of mRNA Catabolic Process (GO:0061014)	GO:0061014	metabolic process
+Positive Regulation Of mRNA Processing (GO:0050685)	GO:0050685	regulation of DNA-templated transcription
+Positive Regulation Of mRNA Splicing, Via Spliceosome (GO:0048026)	GO:0048026	regulation of DNA-templated transcription
+Positive Regulation Of miRNA Metabolic Process (GO:2000630)	GO:2000630	metabolic process
+Positive Regulation Of miRNA Transcription (GO:1902895)	GO:1902895	regulation of DNA-templated transcription
+Positive Regulation Of p38MAPK Cascade (GO:1900745)	GO:1900745	signaling — growth factor
+Postreplication Repair (GO:0006301)	GO:0006301	DNA repair
+Potassium Ion Homeostasis (GO:0055075)	GO:0055075	transmembrane transport
+Potassium Ion Import Across Plasma Membrane (GO:1990573)	GO:1990573	transmembrane transport
+Prostaglandin Biosynthetic Process (GO:0001516)	GO:0001516	metabolic process
+Protein Acetylation (GO:0006473)	GO:0006473	other biological process
+Protein Complex Oligomerization (GO:0051259)	GO:0051259	cellular organization
+Protein Dephosphorylation (GO:0006470)	GO:0006470	metabolic process
+Protein Exit From Endoplasmic Reticulum (GO:0032527)	GO:0032527	cellular organization
+Protein Insertion Into ER Membrane (GO:0045048)	GO:0045048	cellular organization
+Protein K11-linked Ubiquitination (GO:0070979)	GO:0070979	metabolic process
+Protein K48-linked Deubiquitination (GO:0071108)	GO:0071108	metabolic process
+Protein K63-linked Deubiquitination (GO:0070536)	GO:0070536	metabolic process
+Protein Kinase B Signaling (GO:0043491)	GO:0043491	other biological process
+Protein Localization To Chromatin (GO:0071168)	GO:0071168	cellular organization
+Protein Localization To Chromosome (GO:0034502)	GO:0034502	other biological process
+Protein Localization To Chromosome, Centromeric Region (GO:0071459)	GO:0071459	other biological process
+Protein Localization To Condensed Chromosome (GO:1903083)	GO:1903083	other biological process
+Protein Localization To Endoplasmic Reticulum (GO:0070972)	GO:0070972	other biological process
+Protein Localization To Kinetochore (GO:0034501)	GO:0034501	other biological process
+Protein Localization To Mitochondrion (GO:0070585)	GO:0070585	other biological process
+Protein Localization To Organelle (GO:0033365)	GO:0033365	cellular organization
+Proteolysis Involved In Protein Catabolic Process (GO:0051603)	GO:0051603	metabolic process
+Proton Motive Force-Driven ATP Synthesis (GO:0015986)	GO:0015986	metabolic process
+Proton Motive Force-Driven Mitochondrial ATP Synthesis (GO:0042776)	GO:0042776	metabolic process
+Proton Transmembrane Transport (GO:1902600)	GO:1902600	transmembrane transport
+Purine Nucleotide Metabolic Process (GO:0006163)	GO:0006163	metabolic process
+Purine Ribonucleoside Triphosphate Biosynthetic Process (GO:0009206)	GO:0009206	metabolic process
+Pyrimidine Deoxyribonucleotide Catabolic Process (GO:0009223)	GO:0009223	metabolic process
+Pyroptosis (GO:0070269)	GO:0070269	immune — other
+Pyruvate Metabolic Process (GO:0006090)	GO:0006090	metabolic process
+RNA Export From Nucleus (GO:0006405)	GO:0006405	transmembrane transport
+RNA Splicing (GO:0008380)	GO:0008380	regulation of DNA-templated transcription
+RNA Stabilization (GO:0043489)	GO:0043489	other biological process
+RNA Transport (GO:0050658)	GO:0050658	transmembrane transport
+RNA-mediated Gene Silencing (GO:0031047)	GO:0031047	other biological process
+Receptor Signaling Pathway Via STAT (GO:0097696)	GO:0097696	other biological process
+Recombinational Repair (GO:0000725)	GO:0000725	DNA repair
+Regulation Of Activin Receptor Signaling Pathway (GO:0032925)	GO:0032925	other biological process
+Regulation Of Adaptive Immune Response (GO:0002819)	GO:0002819	immune — other
+Regulation Of Alternative mRNA Splicing, Via Spliceosome (GO:0000381)	GO:0000381	regulation of DNA-templated transcription
+Regulation Of Amyloid-Beta Clearance (GO:1900221)	GO:1900221	metabolic process
+Regulation Of Amyloid-Beta Formation (GO:1902003)	GO:1902003	metabolic process
+Regulation Of Angiogenesis (GO:0045765)	GO:0045765	anatomical structure development
+Regulation Of Apoptotic Signaling Pathway (GO:2001233)	GO:2001233	programmed cell death
+Regulation Of B Cell Activation (GO:0050864)	GO:0050864	immune — activation
+Regulation Of BMP Signaling Pathway (GO:0030510)	GO:0030510	signaling — growth factor
+Regulation Of Behavior (GO:0050795)	GO:0050795	other biological process
+Regulation Of Blood Coagulation (GO:0030193)	GO:0030193	other biological process
+Regulation Of Blood Vessel Endothelial Cell Migration (GO:0043535)	GO:0043535	cell motility
+Regulation Of Calcium-Mediated Signaling (GO:0050848)	GO:0050848	other biological process
+Regulation Of Cardiac Muscle Contraction (GO:0055117)	GO:0055117	other biological process
+Regulation Of Cell Cycle (GO:0051726)	GO:0051726	cell cycle
+Regulation Of Cell Cycle Checkpoint (GO:1901976)	GO:1901976	cell cycle
+Regulation Of Cell Cycle Process (GO:0010564)	GO:0010564	cell cycle
+Regulation Of Cell Growth (GO:0001558)	GO:0001558	other biological process
+Regulation Of Cell Morphogenesis (GO:0022604)	GO:0022604	anatomical structure development
+Regulation Of Cell Population Proliferation (GO:0042127)	GO:0042127	signaling — growth factor
+Regulation Of Cell Size (GO:0008361)	GO:0008361	other biological process
+Regulation Of Cellular Response To Heat (GO:1900034)	GO:1900034	other biological process
+Regulation Of Centrosome Duplication (GO:0010824)	GO:0010824	other biological process
+Regulation Of Chemokine (C-X-C Motif) Ligand 2 Production (GO:2000341)	GO:2000341	immune — other
+Regulation Of Chemokine Production (GO:0032642)	GO:0032642	immune — cytokine
+Regulation Of Cholesterol Biosynthetic Process (GO:0045540)	GO:0045540	metabolic process
+Regulation Of Cholesterol Efflux (GO:0010874)	GO:0010874	metabolic process
+Regulation Of Cholesterol Storage (GO:0010885)	GO:0010885	metabolic process
+Regulation Of Chondrocyte Differentiation (GO:0032330)	GO:0032330	anatomical structure development
+Regulation Of Chromosome Segregation (GO:0051983)	GO:0051983	cell cycle
+Regulation Of Chromosome Separation (GO:1905818)	GO:1905818	other biological process
+Regulation Of Cyclin-Dependent Protein Kinase Activity (GO:1904029)	GO:1904029	metabolic process
+Regulation Of Cyclin-Dependent Protein Serine/Threonine Kinase Activity (GO:0000079)	GO:0000079	metabolic process
+Regulation Of Cysteine-Type Endopeptidase Activity Involved In Apoptotic Process (GO:0043281)	GO:0043281	programmed cell death
+Regulation Of Cytokine Production Involved In Immune Response (GO:0002718)	GO:0002718	immune — cytokine
+Regulation Of DNA Binding (GO:0051101)	GO:0051101	other biological process
+Regulation Of DNA Damage Checkpoint (GO:2000001)	GO:2000001	DNA repair
+Regulation Of DNA Repair (GO:0006282)	GO:0006282	DNA repair
+Regulation Of DNA-directed DNA Polymerase Activity (GO:1900262)	GO:1900262	metabolic process
+Regulation Of DNA-templated DNA Replication (GO:0090329)	GO:0090329	cell cycle
+Regulation Of DNA-templated DNA Replication Initiation (GO:0030174)	GO:0030174	cell cycle
+Regulation Of Defense Response To Virus By Host (GO:0050691)	GO:0050691	defense response to other organism
+Regulation Of Dendritic Spine Development (GO:0060998)	GO:0060998	anatomical structure development
+Regulation Of Dephosphorylation (GO:0035303)	GO:0035303	metabolic process
+Regulation Of Double-Strand Break Repair (GO:2000779)	GO:2000779	DNA repair
+Regulation Of ERK1 And ERK2 Cascade (GO:0070372)	GO:0070372	signaling — growth factor
+Regulation Of Endopeptidase Activity (GO:0052548)	GO:0052548	metabolic process
+Regulation Of Endoplasmic Reticulum Stress-Induced Intrinsic Apoptotic Signaling Pathway (GO:1902235)	GO:1902235	programmed cell death
+Regulation Of Endosome Size (GO:0051036)	GO:0051036	cellular organization
+Regulation Of Endothelial Cell Apoptotic Process (GO:2000351)	GO:2000351	programmed cell death
+Regulation Of Endothelial Cell Migration (GO:0010594)	GO:0010594	cell motility
+Regulation Of Endothelial Cell Proliferation (GO:0001936)	GO:0001936	signaling — growth factor
+Regulation Of Epidermal Cell Differentiation (GO:0045604)	GO:0045604	anatomical structure development
+Regulation Of Epithelial Cell Differentiation (GO:0030856)	GO:0030856	anatomical structure development
+Regulation Of Epithelial Cell Proliferation (GO:0050678)	GO:0050678	signaling — growth factor
+Regulation Of Epithelial To Mesenchymal Transition (GO:0010717)	GO:0010717	anatomical structure development
+Regulation Of Establishment Of Cell Polarity (GO:2000114)	GO:2000114	other biological process
+Regulation Of Establishment Of Protein Localization To Telomere (GO:0070203)	GO:0070203	other biological process
+Regulation Of Establishment Or Maintenance Of Cell Polarity (GO:0032878)	GO:0032878	other biological process
+Regulation Of Execution Phase Of Apoptosis (GO:1900117)	GO:1900117	programmed cell death
+Regulation Of Extrinsic Apoptotic Signaling Pathway In Absence Of Ligand (GO:2001239)	GO:2001239	programmed cell death
+Regulation Of Extrinsic Apoptotic Signaling Pathway Via Death Domain Receptors (GO:1902041)	GO:1902041	programmed cell death
+Regulation Of Fat Cell Differentiation (GO:0045598)	GO:0045598	immune — activation
+Regulation Of G0 To G1 Transition (GO:0070316)	GO:0070316	other biological process
+Regulation Of GTPase Activity (GO:0043087)	GO:0043087	other biological process
+Regulation Of Heterotypic Cell-Cell Adhesion (GO:0034114)	GO:0034114	other biological process
+Regulation Of Hydrolase Activity (GO:0051336)	GO:0051336	other biological process
+Regulation Of I-kappaB kinase/NF-kappaB Signaling (GO:0043122)	GO:0043122	signaling — immune
+Regulation Of Immunoglobulin Production (GO:0002637)	GO:0002637	signaling — immune
+Regulation Of Inflammatory Response (GO:0050727)	GO:0050727	immune — other
+Regulation Of Interferon-Alpha Production (GO:0032647)	GO:0032647	immune — other
+Regulation Of Interleukin-2 Production (GO:0032663)	GO:0032663	immune — cytokine
+Regulation Of Interleukin-4 Production (GO:0032673)	GO:0032673	immune — cytokine
+Regulation Of Intracellular Signal Transduction (GO:1902531)	GO:1902531	other biological process
+Regulation Of Intrinsic Apoptotic Signaling Pathway (GO:2001242)	GO:2001242	programmed cell death
+Regulation Of Intrinsic Apoptotic Signaling Pathway In Response To DNA Damage (GO:1902229)	GO:1902229	programmed cell death
+Regulation Of JUN Kinase Activity (GO:0043506)	GO:0043506	metabolic process
+Regulation Of Keratinocyte Differentiation (GO:0045616)	GO:0045616	anatomical structure development
+Regulation Of Keratinocyte Proliferation (GO:0010837)	GO:0010837	signaling — growth factor
+Regulation Of Leukocyte Adhesion To Vascular Endothelial Cell (GO:1904994)	GO:1904994	immune — other
+Regulation Of Lipid Storage (GO:0010883)	GO:0010883	metabolic process
+Regulation Of Lymphocyte Differentiation (GO:0045619)	GO:0045619	immune — activation
+Regulation Of Lysosomal Lumen pH (GO:0035751)	GO:0035751	other biological process
+Regulation Of MAP Kinase Activity (GO:0043405)	GO:0043405	metabolic process
+Regulation Of MAPK Cascade (GO:0043408)	GO:0043408	signaling — growth factor
+Regulation Of Macrophage Cytokine Production (GO:0010935)	GO:0010935	immune — cytokine
+Regulation Of Macrophage Derived Foam Cell Differentiation (GO:0010743)	GO:0010743	immune — other
+Regulation Of Mast Cell Degranulation (GO:0043304)	GO:0043304	other biological process
+Regulation Of Meiotic Cell Cycle (GO:0051445)	GO:0051445	cell cycle
+Regulation Of Membrane Protein Ectodomain Proteolysis (GO:0051043)	GO:0051043	metabolic process
+Regulation Of Microtubule Depolymerization (GO:0031114)	GO:0031114	cellular organization
+Regulation Of Microtubule Polymerization (GO:0031113)	GO:0031113	cellular organization
+Regulation Of Mitochondrial Membrane Permeability (GO:0046902)	GO:0046902	cellular organization
+Regulation Of Mitochondrial Membrane Potential (GO:0051881)	GO:0051881	metabolic process
+Regulation Of Mitotic Cell Cycle Spindle Assembly Checkpoint (GO:0090266)	GO:0090266	cell cycle
+Regulation Of Mitotic Nuclear Division (GO:0007088)	GO:0007088	cell cycle
+Regulation Of Mitotic Sister Chromatid Separation (GO:0010965)	GO:0010965	cell cycle
+Regulation Of Mitotic Spindle Assembly (GO:1901673)	GO:1901673	cell cycle
+Regulation Of Mitotic Spindle Organization (GO:0060236)	GO:0060236	cell cycle
+Regulation Of Monocyte Chemotaxis (GO:0090025)	GO:0090025	immune — other
+Regulation Of Mononuclear Cell Migration (GO:0071675)	GO:0071675	cell motility
+Regulation Of Myelination (GO:0031641)	GO:0031641	other biological process
+Regulation Of Myoblast Fusion (GO:1901739)	GO:1901739	cell differentiation
+Regulation Of NIK/NF-kappaB Signaling (GO:1901222)	GO:1901222	signaling — immune
+Regulation Of NLRP3 Inflammasome Complex Assembly (GO:1900225)	GO:1900225	immune — other
+Regulation Of Neuroinflammatory Response (GO:0150077)	GO:0150077	immune — other
+Regulation Of Neuron Apoptotic Process (GO:0043523)	GO:0043523	programmed cell death
+Regulation Of Neuron Death (GO:1901214)	GO:1901214	nervous system process
+Regulation Of Neuronal Synaptic Plasticity (GO:0048168)	GO:0048168	nervous system process
+Regulation Of Neurotransmitter Secretion (GO:0046928)	GO:0046928	cellular organization
+Regulation Of Nitric Oxide Biosynthetic Process (GO:0045428)	GO:0045428	metabolic process
+Regulation Of Nitric-Oxide Synthase Activity (GO:0050999)	GO:0050999	other biological process
+Regulation Of Nitrogen Compound Metabolic Process (GO:0051171)	GO:0051171	metabolic process
+Regulation Of Nuclear-Transcribed mRNA Catabolic Process, Deadenylation-Dependent Decay (GO:1900151)	GO:1900151	metabolic process
+Regulation Of Nuclear-Transcribed mRNA poly(A) Tail Shortening (GO:0060211)	GO:0060211	metabolic process
+Regulation Of Oligodendrocyte Differentiation (GO:0048713)	GO:0048713	anatomical structure development
+Regulation Of Osteoclast Differentiation (GO:0045670)	GO:0045670	anatomical structure development
+Regulation Of Oxidative Phosphorylation (GO:0002082)	GO:0002082	metabolic process
+Regulation Of Oxidative Stress-Induced Intrinsic Apoptotic Signaling Pathway (GO:1902175)	GO:1902175	programmed cell death
+Regulation Of Pathway-Restricted SMAD Protein Phosphorylation (GO:0060393)	GO:0060393	other biological process
+Regulation Of Peptidase Activity (GO:0052547)	GO:0052547	metabolic process
+Regulation Of Phosphoprotein Phosphatase Activity (GO:0043666)	GO:0043666	metabolic process
+Regulation Of Phosphorylation (GO:0042325)	GO:0042325	metabolic process
+Regulation Of Platelet Activation (GO:0010543)	GO:0010543	other biological process
+Regulation Of Platelet Aggregation (GO:0090330)	GO:0090330	other biological process
+Regulation Of Protein Catabolic Process (GO:0042176)	GO:0042176	metabolic process
+Regulation Of Protein Dephosphorylation (GO:0035304)	GO:0035304	metabolic process
+Regulation Of Protein K63-linked Ubiquitination (GO:1900044)	GO:1900044	metabolic process
+Regulation Of Protein Localization To Plasma Membrane (GO:1903076)	GO:1903076	cellular organization
+Regulation Of Protein Modification By Small Protein Conjugation Or Removal (GO:1903320)	GO:1903320	metabolic process
+Regulation Of Protein Phosphorylation (GO:0001932)	GO:0001932	metabolic process
+Regulation Of Protein Processing (GO:0070613)	GO:0070613	metabolic process
+Regulation Of Protein Serine/Threonine Kinase Activity (GO:0071900)	GO:0071900	metabolic process
+Regulation Of Protein Sumoylation (GO:0033233)	GO:0033233	metabolic process
+Regulation Of Protein Ubiquitination (GO:0031396)	GO:0031396	metabolic process
+Regulation Of Protein-Containing Complex Disassembly (GO:0043244)	GO:0043244	other biological process
+Regulation Of RNA Splicing (GO:0043484)	GO:0043484	regulation of DNA-templated transcription
+Regulation Of Reactive Oxygen Species Metabolic Process (GO:2000377)	GO:2000377	metabolic process
+Regulation Of Regulatory T Cell Differentiation (GO:0045589)	GO:0045589	immune — activation
+Regulation Of Response To Biotic Stimulus (GO:0002831)	GO:0002831	other biological process
+Regulation Of Response To Endoplasmic Reticulum Stress (GO:1905897)	GO:1905897	cellular organization
+Regulation Of Signal Transduction (GO:0009966)	GO:0009966	other biological process
+Regulation Of Smooth Muscle Cell Proliferation (GO:0048660)	GO:0048660	signaling — growth factor
+Regulation Of Spindle Assembly (GO:0090169)	GO:0090169	cell cycle
+Regulation Of Spindle Organization (GO:0090224)	GO:0090224	cell cycle
+Regulation Of Steroid Metabolic Process (GO:0019218)	GO:0019218	metabolic process
+Regulation Of Superoxide Anion Generation (GO:0032928)	GO:0032928	metabolic process
+Regulation Of Synaptic Transmission, Glutamatergic (GO:0051966)	GO:0051966	nervous system process
+Regulation Of T Cell Mediated Cytotoxicity (GO:0001914)	GO:0001914	other biological process
+Regulation Of T Cell Receptor Signaling Pathway (GO:0050856)	GO:0050856	immune — other
+Regulation Of T-helper 17 Cell Differentiation (GO:2000319)	GO:2000319	anatomical structure development
+Regulation Of T-helper 17 Type Immune Response (GO:2000316)	GO:2000316	immune — other
+Regulation Of Telomere Maintenance Via Telomerase (GO:0032210)	GO:0032210	metabolic process
+Regulation Of Toll-Like Receptor 4 Signaling Pathway (GO:0034143)	GO:0034143	immune — other
+Regulation Of Toll-Like Receptor Signaling Pathway (GO:0034121)	GO:0034121	immune — other
+Regulation Of Transcription From RNA Polymerase II Promoter In Response To Stress (GO:0043618)	GO:0043618	regulation of DNA-templated transcription
+Regulation Of Tyrosine Phosphorylation Of STAT Protein (GO:0042509)	GO:0042509	metabolic process
+Regulation Of Ubiquitin Protein Ligase Activity (GO:1904666)	GO:1904666	metabolic process
+Regulation Of Vascular Associated Smooth Muscle Cell Proliferation (GO:1904705)	GO:1904705	signaling — growth factor
+Regulation Of Vascular Endothelial Growth Factor Production (GO:0010574)	GO:0010574	signaling — immune
+Regulation Of Viral Genome Replication (GO:0045069)	GO:0045069	defense response to other organism
+Regulation Of mRNA Catabolic Process (GO:0061013)	GO:0061013	metabolic process
+Regulation Of mRNA Processing (GO:0050684)	GO:0050684	regulation of DNA-templated transcription
+Regulation Of mRNA Splicing, Via Spliceosome (GO:0048024)	GO:0048024	regulation of DNA-templated transcription
+Regulation Of miRNA Transcription (GO:1902893)	GO:1902893	regulation of DNA-templated transcription
+Regulation Of p38MAPK Cascade (GO:1900744)	GO:1900744	signaling — growth factor
+Release Of Cytochrome C From Mitochondria (GO:0001836)	GO:0001836	cellular organization
+Removal Of Superoxide Radicals (GO:0019430)	GO:0019430	other biological process
+Replication Fork Processing (GO:0031297)	GO:0031297	other biological process
+Respiratory System Development (GO:0060541)	GO:0060541	anatomical structure development
+Respiratory Tube Development (GO:0030323)	GO:0030323	anatomical structure development
+Response To Cadmium Ion (GO:0046686)	GO:0046686	metabolic process
+Response To Chemokine (GO:1990868)	GO:1990868	immune — other
+Response To Copper Ion (GO:0046688)	GO:0046688	metabolic process
+Response To Endoplasmic Reticulum Stress (GO:0034976)	GO:0034976	cellular organization
+Response To Epidermal Growth Factor (GO:0070849)	GO:0070849	signaling — growth factor
+Response To Fibroblast Growth Factor (GO:0071774)	GO:0071774	signaling — growth factor
+Response To Glucocorticoid (GO:0051384)	GO:0051384	metabolic process
+Response To Hydrogen Peroxide (GO:0042542)	GO:0042542	metabolic process
+Response To Insulin (GO:0032868)	GO:0032868	metabolic process
+Response To Interferon-Alpha (GO:0035455)	GO:0035455	immune — other
+Response To Interferon-Beta (GO:0035456)	GO:0035456	immune — other
+Response To Interleukin-1 (GO:0070555)	GO:0070555	immune — cytokine
+Response To Lipid (GO:0033993)	GO:0033993	metabolic process
+Response To Lipopolysaccharide (GO:0032496)	GO:0032496	other biological process
+Response To Molecule Of Bacterial Origin (GO:0002237)	GO:0002237	other biological process
+Response To Nerve Growth Factor (GO:1990089)	GO:1990089	signaling — growth factor
+Response To Organic Cyclic Compound (GO:0014070)	GO:0014070	anatomical structure development
+Response To Reactive Oxygen Species (GO:0000302)	GO:0000302	metabolic process
+Response To Steroid Hormone (GO:0048545)	GO:0048545	other biological process
+Response To Sterol (GO:0036314)	GO:0036314	metabolic process
+Response To Transforming Growth Factor Beta (GO:0071559)	GO:0071559	other biological process
+Response To Tumor Necrosis Factor (GO:0034612)	GO:0034612	other biological process
+Response To Unfolded Protein (GO:0006986)	GO:0006986	cellular organization
+Response To X-ray (GO:0010165)	GO:0010165	other biological process
+Retina Homeostasis (GO:0001895)	GO:0001895	metabolic process
+Retrograde Protein Transport, ER To Cytosol (GO:0030970)	GO:0030970	cellular organization
+Ruffle Organization (GO:0031529)	GO:0031529	anatomical structure development
+SMAD Protein Signal Transduction (GO:0060395)	GO:0060395	other biological process
+Sensory Perception (GO:0007600)	GO:0007600	nervous system process
+Signal Transduction By P53 Class Mediator (GO:0072331)	GO:0072331	other biological process
+Sister Chromatid Segregation (GO:0000819)	GO:0000819	cell cycle
+Sodium Ion Homeostasis (GO:0055078)	GO:0055078	transmembrane transport
+Sodium Ion Transport (GO:0006814)	GO:0006814	transmembrane transport
+Spindle Assembly (GO:0051225)	GO:0051225	cellular organization
+Spindle Assembly Checkpoint Signaling (GO:0071173)	GO:0071173	cell cycle
+Sprouting Angiogenesis (GO:0002040)	GO:0002040	anatomical structure development
+Sterol Transport (GO:0015918)	GO:0015918	metabolic process
+Stress Granule Assembly (GO:0034063)	GO:0034063	metabolic process
+Suppression Of Viral Release By Host (GO:0044790)	GO:0044790	defense response to other organism
+Synapse Organization (GO:0050808)	GO:0050808	other biological process
+Synaptic Vesicle Transport Along Microtubule (GO:0099517)	GO:0099517	cellular organization
+T Cell Differentiation (GO:0030217)	GO:0030217	cell differentiation
+T Cell Homeostasis (GO:0043029)	GO:0043029	immune — other
+Tail-Anchored Membrane Protein Insertion Into ER Membrane (GO:0071816)	GO:0071816	cellular organization
+Telomere Maintenance (GO:0000723)	GO:0000723	other biological process
+Telomere Organization (GO:0032200)	GO:0032200	other biological process
+Transcription Elongation By RNA Polymerase II (GO:0006368)	GO:0006368	regulation of DNA-templated transcription
+Transforming Growth Factor Beta Receptor Signaling Pathway (GO:0007179)	GO:0007179	signaling — growth factor
+Transmembrane Receptor Protein Serine/Threonine Kinase Signaling Pathway (GO:0007178)	GO:0007178	other biological process
+Transport Across Blood-Brain Barrier (GO:0150104)	GO:0150104	other biological process
+Transport Along Microtubule (GO:0010970)	GO:0010970	cellular organization
+Triglyceride Homeostasis (GO:0070328)	GO:0070328	metabolic process
+Triglyceride Metabolic Process (GO:0006641)	GO:0006641	metabolic process
+Tumor Necrosis Factor-Mediated Signaling Pathway (GO:0033209)	GO:0033209	signaling — immune
+Type I Interferon-Mediated Signaling Pathway (GO:0060337)	GO:0060337	immune — other
+Ubiquitin-Dependent ERAD Pathway (GO:0030433)	GO:0030433	metabolic process
+V(D)J Recombination (GO:0033151)	GO:0033151	DNA repair
+Vacuolar Acidification (GO:0007035)	GO:0007035	other biological process
+Vascular Transport (GO:0010232)	GO:0010232	other biological process
+Vesicle Targeting, Rough ER To cis-Golgi (GO:0048207)	GO:0048207	cellular organization
+Vitamin Transport (GO:0051180)	GO:0051180	transmembrane transport
+Wound Healing, Spreading Of Cells (GO:0044319)	GO:0044319	cell motility
+acetyl-CoA Biosynthetic Process (GO:0006085)	GO:0006085	metabolic process
+cAMP-mediated Signaling (GO:0019933)	GO:0019933	other biological process
+fatty-acyl-CoA Biosynthetic Process (GO:0046949)	GO:0046949	metabolic process
+fatty-acyl-CoA Metabolic Process (GO:0035337)	GO:0035337	metabolic process
+mRNA Cis Splicing, Via Spliceosome (GO:0045292)	GO:0045292	metabolic process
+mRNA Destabilization (GO:0061157)	GO:0061157	regulation of DNA-templated transcription
+mRNA Metabolic Process (GO:0016071)	GO:0016071	metabolic process
+mRNA Splicing, Via Spliceosome (GO:0000398)	GO:0000398	metabolic process
+mRNA Stabilization (GO:0048255)	GO:0048255	regulation of DNA-templated transcription
+mRNA Transport (GO:0051028)	GO:0051028	regulation of DNA-templated transcription
+miRNA-mediated Gene Silencing (GO:0035195)	GO:0035195	other biological process
+miRNA-mediated Gene Silencing By Inhibition Of Translation (GO:0035278)	GO:0035278	other biological process
+ncRNA Metabolic Process (GO:0034660)	GO:0034660	metabolic process
+ncRNA-mediated Post-Transcriptional Gene Silencing (GO:0035194)	GO:0035194	other biological process
+poly(A)+ mRNA Export From Nucleus (GO:0016973)	GO:0016973	transmembrane transport
+post-Golgi Vesicle-Mediated Transport (GO:0006892)	GO:0006892	cellular organization
+protein-DNA Complex Assembly (GO:0065004)	GO:0065004	cellular organization
+protein-DNA Complex Disassembly (GO:0032986)	GO:0032986	other biological process
+rRNA Modification (GO:0000154)	GO:0000154	regulation of DNA-templated transcription

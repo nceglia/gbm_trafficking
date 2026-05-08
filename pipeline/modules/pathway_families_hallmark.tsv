@@ -1,0 +1,51 @@
+term	family
+Adipogenesis	Metabolism — oxidative
+Allograft Rejection	NF-kB / Inflammation
+Androgen Response	Hormone response
+Angiogenesis	Tissue morphogenesis
+Apical Junction	Migration / adhesion
+Apical Surface	Migration / adhesion
+Apoptosis	Apoptosis / cell death
+Bile Acid Metabolism	Metabolism — oxidative
+Cholesterol Homeostasis	Metabolism — biosynthetic
+Coagulation	NF-kB / Inflammation
+Complement	NF-kB / Inflammation
+DNA Repair	DNA damage / repair
+E2F Targets	Proliferation / cell cycle
+Epithelial Mesenchymal Transition	Tissue morphogenesis
+Estrogen Response Early	Hormone response
+Estrogen Response Late	Hormone response
+Fatty Acid Metabolism	Metabolism — oxidative
+G2-M Checkpoint	Proliferation / cell cycle
+Glycolysis	Metabolism — biosynthetic
+Hedgehog Signaling	Growth factor signaling
+Hypoxia	Stress response
+IL-2/STAT5 Signaling	Cytokine signaling
+IL-6/JAK/STAT3 Signaling	Cytokine signaling
+Inflammatory Response	NF-kB / Inflammation
+Interferon Alpha Response	Type I/II interferon
+Interferon Gamma Response	Type I/II interferon
+KRAS Signaling Dn	Growth factor signaling
+KRAS Signaling Up	Growth factor signaling
+Mitotic Spindle	Proliferation / cell cycle
+Myc Targets V1	Proliferation / cell cycle
+Myc Targets V2	Proliferation / cell cycle
+Myogenesis	Tissue morphogenesis
+Notch Signaling	Growth factor signaling
+Oxidative Phosphorylation	Metabolism — oxidative
+PI3K/AKT/mTOR  Signaling	Growth factor signaling
+Pancreas Beta Cells	Tissue morphogenesis
+Pperoxisome	Metabolism — oxidative
+Protein Secretion	Metabolism — biosynthetic
+Reactive Oxygen Species Pathway	Stress response
+Spermatogenesis	Tissue morphogenesis
+TGF-beta Signaling	Growth factor signaling
+TNF-alpha Signaling via NF-kB	NF-kB / Inflammation
+UV Response Dn	Stress response
+UV Response Up	Stress response
+Unfolded Protein Response	Stress response
+Wnt-beta Catenin Signaling	Growth factor signaling
+Xenobiotic Metabolism	Metabolism — oxidative
+heme Metabolism	Metabolism — biosynthetic
+mTORC1 Signaling	Metabolism — biosynthetic
+p53 Pathway	Stress response

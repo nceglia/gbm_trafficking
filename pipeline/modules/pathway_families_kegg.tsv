@@ -1,0 +1,137 @@
+term	family
+ABC transporters	Metabolism — biosynthetic
+AGE-RAGE signaling pathway in diabetic complications	Growth factor signaling
+Adipocytokine signaling pathway	Cytokine signaling
+African trypanosomiasis	Disease / infection (excluded)
+Allograft rejection	NF-kB / Inflammation
+Alzheimer disease	Stress response
+Amoebiasis	Disease / infection (excluded)
+Amphetamine addiction	Disease / infection (excluded)
+Amyotrophic lateral sclerosis	Stress response
+Antigen processing and presentation	TCR / antigen receptor
+Apoptosis	Apoptosis / cell death
+Arginine and proline metabolism	Metabolism — oxidative
+Arginine biosynthesis	Metabolism — biosynthetic
+Arrhythmogenic right ventricular cardiomyopathy	Disease / infection (excluded)
+Asthma	TCR / antigen receptor
+Autoimmune thyroid disease	TCR / antigen receptor
+Autophagy	Apoptosis / cell death
+B cell receptor signaling pathway	TCR / antigen receptor
+Basal cell carcinoma	Growth factor signaling
+Base excision repair	DNA damage / repair
+Bladder cancer	Growth factor signaling
+Breast cancer	Growth factor signaling
+C-type lectin receptor signaling pathway	Type I/II interferon
+Cardiac muscle contraction	Disease / infection (excluded)
+Cell cycle	Proliferation / cell cycle
+Central carbon metabolism in cancer	Metabolism — biosynthetic
+Chagas disease	Disease / infection (excluded)
+Chemokine signaling pathway	Cytokine signaling
+Cholesterol metabolism	Metabolism — biosynthetic
+Chronic myeloid leukemia	Growth factor signaling
+Circadian rhythm	Proliferation / cell cycle
+Citrate cycle (TCA cycle)	Metabolism — oxidative
+Cocaine addiction	Disease / infection (excluded)
+Colorectal cancer	Growth factor signaling
+Coronavirus disease	NF-kB / Inflammation
+Cytokine-cytokine receptor interaction	Cytokine signaling
+Cytosolic DNA-sensing pathway	Type I/II interferon
+DNA replication	Proliferation / cell cycle
+Diabetic cardiomyopathy	Metabolism — oxidative
+Endometrial cancer	Growth factor signaling
+Epithelial cell signaling in Helicobacter pylori infection	NF-kB / Inflammation
+Epstein-Barr virus infection	NF-kB / Inflammation
+Fanconi anemia pathway	DNA damage / repair
+Fatty acid elongation	Metabolism — oxidative
+Ferroptosis	Apoptosis / cell death
+Fluid shear stress and atherosclerosis	NF-kB / Inflammation
+FoxO signaling pathway	Growth factor signaling
+Glycine, serine and threonine metabolism	Metabolism — biosynthetic
+Glycolysis / Gluconeogenesis	Metabolism — biosynthetic
+Glycosphingolipid biosynthesis	Metabolism — biosynthetic
+Graft-versus-host disease	NF-kB / Inflammation
+HIF-1 signaling pathway	Stress response
+Hepatitis B	NF-kB / Inflammation
+Hepatitis C	NF-kB / Inflammation
+Homologous recombination	DNA damage / repair
+Human T-cell leukemia virus 1 infection	NF-kB / Inflammation
+Human cytomegalovirus infection	NF-kB / Inflammation
+Human immunodeficiency virus 1 infection	TCR / antigen receptor
+Huntington disease	Stress response
+IL-17 signaling pathway	Cytokine signaling
+Inflammatory bowel disease	NF-kB / Inflammation
+Influenza A	NF-kB / Inflammation
+Intestinal immune network for IgA production	TCR / antigen receptor
+JAK-STAT signaling pathway	Cytokine signaling
+Kaposi sarcoma-associated herpesvirus infection	NF-kB / Inflammation
+Legionellosis	NF-kB / Inflammation
+Leishmaniasis	Disease / infection (excluded)
+Lipid and atherosclerosis	NF-kB / Inflammation
+Lysine degradation	Metabolism — oxidative
+Lysosome	Metabolism — biosynthetic
+MAPK signaling pathway	Growth factor signaling
+Malaria	Disease / infection (excluded)
+Measles	NF-kB / Inflammation
+Mineral absorption	Disease / infection (excluded)
+Mismatch repair	DNA damage / repair
+Mitophagy	Stress response
+NF-kappa B signaling pathway	NF-kB / Inflammation
+NOD-like receptor signaling pathway	Type I/II interferon
+Natural killer cell mediated cytotoxicity	TCR / antigen receptor
+Necroptosis	Apoptosis / cell death
+Non-alcoholic fatty liver disease	Stress response
+Non-homologous end-joining	DNA damage / repair
+Non-small cell lung cancer	Growth factor signaling
+Nucleotide excision repair	DNA damage / repair
+Osteoclast differentiation	NF-kB / Inflammation
+Oxidative phosphorylation	Metabolism — oxidative
+PD-L1 expression and PD-1 checkpoint pathway in cancer	TCR / antigen receptor
+PPAR signaling pathway	Metabolism — biosynthetic
+Parathyroid hormone synthesis, secretion and action	Hormone response
+Parkinson disease	Stress response
+Pathogenic Escherichia coli infection	NF-kB / Inflammation
+Pathways in cancer	Growth factor signaling
+Pathways of neurodegeneration	Stress response
+Pertussis	NF-kB / Inflammation
+Phagosome	TCR / antigen receptor
+Phosphatidylinositol signaling system	Metabolism — biosynthetic
+Primary immunodeficiency	TCR / antigen receptor
+Prion disease	Stress response
+Prolactin signaling pathway	Growth factor signaling
+Propanoate metabolism	Metabolism — oxidative
+Proteasome	Proliferation / cell cycle
+Protein export	Metabolism — biosynthetic
+Protein processing in endoplasmic reticulum	Stress response
+RIG-I-like receptor signaling pathway	Type I/II interferon
+Regulation of actin cytoskeleton	Migration / adhesion
+Relaxin signaling pathway	Growth factor signaling
+Retrograde endocannabinoid signaling	Metabolism — oxidative
+Rheumatoid arthritis	NF-kB / Inflammation
+Salmonella infection	NF-kB / Inflammation
+Shigellosis	NF-kB / Inflammation
+Small cell lung cancer	Growth factor signaling
+Spliceosome	Proliferation / cell cycle
+Systemic lupus erythematosus	TCR / antigen receptor
+T cell receptor signaling pathway	TCR / antigen receptor
+TGF-beta signaling pathway	Growth factor signaling
+TNF signaling pathway	NF-kB / Inflammation
+Th1 and Th2 cell differentiation	TCR / antigen receptor
+Th17 cell differentiation	TCR / antigen receptor
+Thermogenesis	Metabolism — oxidative
+Thyroid cancer	Growth factor signaling
+Toll-like receptor signaling pathway	Type I/II interferon
+Toxoplasmosis	Disease / infection (excluded)
+Transcriptional misregulation in cancer	Growth factor signaling
+Tuberculosis	NF-kB / Inflammation
+Type I diabetes mellitus	TCR / antigen receptor
+Type II diabetes mellitus	Hormone response
+Valine, leucine and isoleucine degradation	Metabolism — oxidative
+Vasopressin-regulated water reabsorption	Disease / infection (excluded)
+Vibrio cholerae infection	NF-kB / Inflammation
+Viral carcinogenesis	Growth factor signaling
+Viral myocarditis	TCR / antigen receptor
+Viral protein interaction with cytokine and cytokine receptor	Cytokine signaling
+Yersinia infection	NF-kB / Inflammation
+cAMP signaling pathway	Growth factor signaling
+mRNA surveillance pathway	Proliferation / cell cycle
+p53 signaling pathway	Stress response
