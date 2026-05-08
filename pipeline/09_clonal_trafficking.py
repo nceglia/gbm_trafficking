@@ -1,5 +1,7 @@
 # %%
 
+from pathlib import Path
+
 import scanpy as sc
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -11,11 +13,11 @@ from modules.clone_helpers import (
     shorten_phenotype_label,
 )
 
-<<<<<<< HEAD
+REPO_ROOT = Path(__file__).resolve().parents[1]
+OUTPUT_DIR = REPO_ROOT / "results" / "07_clonal_trafficking"
+OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
 adata = sc.read("/Users/ceglian/Codebase/GitHub/gbm_trafficking/data/objects/GBM_TCR_POS_TCELLS.h5ad")
-=======
-adata = sc.read("GBM_TCR_POS_TCELLS.h5ad")
->>>>>>> origin/main
 tcr = adata.obs[adata.obs["trb"].notna()].copy()
 tcr["tissue"] = tcr["tissue"].astype(str)
 tcr["phenotype"] = tcr["phenotype"].astype(str)
@@ -488,7 +490,7 @@ print(f"\nTop 15 edges:")
 print(edges_cd8.nlargest(15, "n_shared_clones")[["source", "target", "n_shared_clones"]].to_string(index=False))
 
 plot_clone_network(nodes_cd8, edges_cd8, title="CD8 Clone Sharing Network",
-                   min_edge_clones=2, savepath="cd8_clone_network.png")
+                   min_edge_clones=2, savepath=OUTPUT_DIR / "cd8_clone_network.png")
 
 # --- CD4 ---
 nodes_cd4, edges_cd4, clones_cd4 = compute_clone_network(
@@ -500,7 +502,7 @@ print(f"\nTop 15 edges:")
 print(edges_cd4.nlargest(15, "n_shared_clones")[["source", "target", "n_shared_clones"]].to_string(index=False))
 
 plot_clone_network(nodes_cd4, edges_cd4, title="CD4 Clone Sharing Network",
-                   min_edge_clones=2, savepath="cd4_clone_network.png")
+                   min_edge_clones=2, savepath=OUTPUT_DIR / "cd4_clone_network.png")
 
 # --- Edge breakdown ---
 for label, edges_df in [("CD8", edges_cd8), ("CD4", edges_cd4)]:
@@ -516,10 +518,10 @@ for label, edges_df in [("CD8", edges_cd8), ("CD4", edges_cd4)]:
 # Cross-tissue only
 plot_clone_network(nodes_cd8, edges_cd8, title="CD8 Cross-Tissue Clone Sharing",
                    edge_filter=["cross_tissue_same_time", "cross_tissue_diff_time"],
-                   min_edge_clones=1, savepath="cd8_cross_tissue_network.png")
+                   min_edge_clones=1, savepath=OUTPUT_DIR / "cd8_cross_tissue_network.png")
 
 # Within-tissue temporal only
 plot_clone_network(nodes_cd8, edges_cd8, title="CD8 Temporal Clone Persistence",
                    edge_filter="within_tissue",
-                   min_edge_clones=5, savepath="cd8_temporal_network.png")
+                   min_edge_clones=5, savepath=OUTPUT_DIR / "cd8_temporal_network.png")
 # %%

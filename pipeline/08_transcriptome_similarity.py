@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import scanpy as sc
 import pandas as pd
 import numpy as np
@@ -10,6 +12,10 @@ from modules.pseudobulk import pseudobulk_mean_expression
 from modules.similarity import tissue_distances_per_phenotype
 
 warnings.filterwarnings('ignore')
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+OUTPUT_DIR = REPO_ROOT / "results" / "06_transcriptome_similarity"
+OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 adata = sc.read("GBM_TCR_POS_TCELLS.h5ad")
 
@@ -125,7 +131,7 @@ plot_data.index = [x.replace("CD8_Activated_", "CD8a_").replace("CD8_Quiescent_"
 sns.heatmap(plot_data, annot=True, fmt=".3f", cmap="YlOrRd", ax=ax, linewidths=0.5)
 ax.set_title("Cosine Distance Between Tissues per Phenotype\n(pseudobulk, patients as replicates)", fontsize=12)
 plt.tight_layout()
-plt.savefig("tissue_cosine_heatmap.png", dpi=200, bbox_inches="tight")
+plt.savefig(OUTPUT_DIR / "tissue_cosine_heatmap.png", dpi=200, bbox_inches="tight")
 plt.show()
 
 # Patient-matched boxplots
@@ -146,7 +152,7 @@ for ax, pair in zip(axes, [f"{t1}_vs_{t2}" for t1, t2 in TISSUE_PAIRS]):
     ax.set_ylabel("Cosine distance" if ax == axes[0] else "")
 plt.suptitle("Tissue Divergence per Phenotype (patient-matched)", fontsize=14, fontweight="bold")
 plt.tight_layout()
-plt.savefig("tissue_cosine_boxplots.png", dpi=200, bbox_inches="tight")
+plt.savefig(OUTPUT_DIR / "tissue_cosine_boxplots.png", dpi=200, bbox_inches="tight")
 plt.show()
 
 # Per-patient heatmaps
@@ -167,7 +173,7 @@ for ax, pat in zip(axes, patients):
     ax.set_ylabel("" if ax != axes[0] else "Phenotype")
 plt.suptitle("Per-Patient Tissue Cosine Distances", fontsize=14, fontweight="bold")
 plt.tight_layout()
-plt.savefig("tissue_cosine_per_patient.png", dpi=200, bbox_inches="tight")
+plt.savefig(OUTPUT_DIR / "tissue_cosine_per_patient.png", dpi=200, bbox_inches="tight")
 plt.show()
 
 print("\nDone.")
