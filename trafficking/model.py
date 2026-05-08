@@ -22,7 +22,7 @@ def transition_model(theta, dst, n_dst, pat_ids, K, P, hierarchical=True):
         with pyro.plate("src_state", K, dim=-1):
             T_global = pyro.sample("T_global", dist.Dirichlet(alpha))
         with pyro.plate("patient", P, dim=-2):
-            with pyro.plate("src_state", K, dim=-1):
+            with pyro.plate("src_state_patient", K, dim=-1):
                 T_patient = pyro.sample("T_patient", dist.Dirichlet(kappa * T_global))
         T_clone = T_patient[pat_ids]
         expected = torch.einsum("nk,nkj->nj", theta, T_clone)
@@ -32,8 +32,12 @@ def transition_model(theta, dst, n_dst, pat_ids, K, P, hierarchical=True):
         expected = theta @ T
 
     expected = expected / expected.sum(dim=1, keepdim=True).clamp(min=1e-8)
+    # Manual log-likelihood: sum of dst_counts * log(probs) per clone
+    # Equivalent to inhomogeneous Multinomial but avoids torch limitation
+    log_probs = torch.log(expected.clamp(min=1e-8))
+    log_lik = (dst * log_probs).sum(dim=1)
     with pyro.plate("clones", theta.shape[0]):
-        pyro.sample("obs", dist.Multinomial(total_count=n_dst, probs=expected), obs=dst)
+        pyro.factor("obs", log_lik)
 
 
 def transition_guide(theta, dst, n_dst, pat_ids, K, P, hierarchical=True):
@@ -53,7 +57,7 @@ def transition_guide(theta, dst, n_dst, pat_ids, K, P, hierarchical=True):
                                      torch.ones(P, K, K, device=device) * 5.0,
                                      constraint=torch.distributions.constraints.positive)
         with pyro.plate("patient", P, dim=-2):
-            with pyro.plate("src_state", K, dim=-1):
+            with pyro.plate("src_state_patient", K, dim=-1):
                 pyro.sample("T_patient", dist.Dirichlet(T_patient_conc))
     else:
         T_conc = pyro.param("T_conc", torch.ones(K, K, device=device) * 5.0,
