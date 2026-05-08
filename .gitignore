@@ -1,3 +1,21 @@
 data/
 figures/
+results/
 pipeline/augur_results_cache.pkl
+pipeline/data/ontology/
+
+# Python build/cache
+__pycache__/
+*.pyc
+*.egg-info/
+build/
+
+# macOS
+.DS_Store
+
+# Build artifacts (regenerable)
+gbm_temporal_explorer.html
+gbm_report/
+
+# One-off spatial outputs
+pipeline/spatial_cell_typing*.vec
