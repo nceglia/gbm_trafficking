@@ -24,7 +24,7 @@ sys.path.insert(0, str(REPO_ROOT / "pipeline"))
 
 # %%
 # ---- Config ----
-DATA_PATH = Path("/Users/ceglian/Data/gbm_btc/adata_myeloid_C_T_P_scANVIembed_detailMyeloid_DC.h5ad")
+DATA_PATH = Path("/Users/ceglian/Codebase/GitHub/gbm_trafficking/data/objects/MYELOID_GBM.h5ad")
 OUTPUT_DIR = REPO_ROOT / "results" / "10_temporal_scores"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -33,45 +33,45 @@ TCELL_PANEL_PATH = OUTPUT_DIR / "gene_panel_tcell.txt"
 
 GROUP_KEYS = ["patient", "tissue", "timepoint", "phenotype"]
 SAMPLE_KEYS = ["patient", "tissue", "timepoint"]
-MIN_GROUP_CELLS = 10
-MIN_SAMPLE_CELLS = 20
+# Composition: keep singleton phenotypes; drop samples with <10 total cells.
+MIN_COMP_CELLS   = 1
+MIN_SAMPLE_CELLS = 10
+# Pathway / gene aggregation: mean is too noisy below 3 cells.
+MIN_SCORE_CELLS  = 3
 MIN_PATHWAY_GENES = 10
 TOP_MARKERS_PER_PHENO = 50
 GENE_CHUNK = 100
 LINEAGE_LABEL = "Myeloid"
 
-OBS_RENAMES = {
-    "celltype_fine_Myeloid_v2": "phenotype",
-    "sample_type": "tissue",
-    "timepoint": "timepoint",
-    "subject_trial_id": "patient",
-}
-
 # %%
-# ---- Load AnnData + remap obs columns ----
+# ---- Load AnnData ----
+# The myeloid h5ad's obs schema mostly matches the T-cell object
+# (phenotype, patient, timepoint). Tissue is exposed as 'sample_type'
+# in this export; we alias it to 'tissue' for downstream consistency.
 adata = sc.read(str(DATA_PATH))
 print(f"Loaded {adata.n_obs} cells x {adata.n_vars} genes from {DATA_PATH.name}")
 
-# The myeloid object already has a 'patient' column that conflicts
-# with the rename of subject_trial_id -> patient. Drop the existing
-# one before renaming. (Confirmed in Step 1 that subject_trial_id is
-# the value matching the T cell object's patient IDs.)
-if "patient" in adata.obs.columns:
-    adata.obs = adata.obs.drop(columns=["patient"])
+if "tissue" not in adata.obs.columns and "sample_type" in adata.obs.columns:
+    adata.obs = adata.obs.rename(columns={"sample_type": "tissue"})
+    print("aliased sample_type -> tissue")
 
-adata.obs = adata.obs.rename(columns={
-    "celltype_fine_Myeloid_v2": "phenotype",
-    "sample_type": "tissue",
-    "subject_trial_id": "patient",
-})
-# timepoint stays as-is
+required = ["phenotype", "patient", "timepoint", "tissue"]
+missing = [c for c in required if c not in adata.obs.columns]
+if missing:
+    raise KeyError(f"Expected obs columns missing: {missing}; got {list(adata.obs.columns)}")
 
-for c in ["patient", "tissue", "timepoint", "phenotype"]:
+# Coerce types. timepoint goes through int first to drop "1.0" -> "1";
+# pd.to_numeric is idempotent if values are already integer-formatted strings.
+adata.obs["timepoint"] = pd.to_numeric(adata.obs["timepoint"]).astype(int).astype(str)
+for c in ["patient", "tissue", "phenotype"]:
     adata.obs[c] = adata.obs[c].astype(str)
 
 n_phenos = adata.obs["phenotype"].nunique()
 print(f"Unique myeloid phenotypes: {n_phenos}")
 print(f"  {sorted(adata.obs['phenotype'].unique().tolist())}")
+print(f"Unique timepoints: {sorted(adata.obs['timepoint'].unique().tolist())}")
+print(f"Unique patients:   {sorted(adata.obs['patient'].unique().tolist())}")
+print(f"Unique tissues:    {sorted(adata.obs['tissue'].unique().tolist())}")
 
 # %%
 # ---- Confirm X is normalized log-counts; normalize in-memory if not ----
@@ -102,7 +102,8 @@ comp = (
     .size().rename("n_cells_phenotype").reset_index()
 )
 comp["n_cells_total"] = comp.groupby(SAMPLE_KEYS, observed=True)["n_cells_phenotype"].transform("sum")
-comp = comp[comp["n_cells_total"] >= MIN_SAMPLE_CELLS].copy()
+comp = comp[(comp["n_cells_phenotype"] >= MIN_COMP_CELLS) &
+            (comp["n_cells_total"] >= MIN_SAMPLE_CELLS)].copy()
 comp["frac"] = comp["n_cells_phenotype"] / comp["n_cells_total"]
 comp["lineage"] = LINEAGE_LABEL
 comp = comp[SAMPLE_KEYS + ["phenotype", "lineage", "n_cells_phenotype", "n_cells_total", "frac"]]
@@ -167,7 +168,7 @@ for _, row in pathway_def.iterrows():
         .agg(["mean", "size"]).reset_index()
         .rename(columns={"mean": "mean_score", "size": "n_cells"})
     )
-    grouped = grouped[grouped["n_cells"] >= MIN_GROUP_CELLS]
+    grouped = grouped[grouped["n_cells"] >= MIN_SCORE_CELLS]
     grouped["pathway"] = row["pathway"]
     grouped["source"] = row["source"]
     grouped["lineage"] = LINEAGE_LABEL
@@ -199,11 +200,11 @@ if gene_expr_path.exists():
     gene_expr_path.unlink()
 
 group_idx = adata.obs[GROUP_KEYS].groupby(GROUP_KEYS, observed=True).indices
-group_keys_keep = [k for k, idx in group_idx.items() if len(idx) >= MIN_GROUP_CELLS]
+group_keys_keep = [k for k, idx in group_idx.items() if len(idx) >= MIN_SCORE_CELLS]
 print(f"Groups passing min-cells filter: {len(group_keys_keep)} (of {len(group_idx)})")
 
 if not group_keys_keep:
-    raise RuntimeError(f"No groups have >= {MIN_GROUP_CELLS} cells")
+    raise RuntimeError(f"No groups have >= {MIN_SCORE_CELLS} cells")
 
 n_cells_per_group = np.array([len(group_idx[k]) for k in group_keys_keep])
 patients = np.array([k[0] for k in group_keys_keep])

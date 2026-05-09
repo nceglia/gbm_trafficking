@@ -36,7 +36,12 @@ KEGG_FAMILY_TSV = MODULES_DIR / "pathway_families_kegg.tsv"
 KEGG_EXCLUDED_TSV = MODULES_DIR / "pathway_families_kegg_excluded.tsv"
 
 GROUP_KEYS = ["patient", "tissue", "timepoint", "phenotype"]
-MIN_GROUP_CELLS = 10
+# Composition: keep singleton phenotypes (cells>=1), drop whole samples
+# with fewer than 10 cells across all phenotypes.
+MIN_COMP_CELLS   = 1
+MIN_SAMPLE_CELLS = 10
+# Pathway / gene aggregation: mean is too noisy below 3 cells.
+MIN_SCORE_CELLS  = 3
 MIN_PATHWAY_GENES = 10
 TOP_MARKERS_PER_PHENO = 50
 GSEA_FDR_THRESHOLD = 0.25
@@ -56,7 +61,8 @@ comp = (
 )
 sample_keys = ["patient", "tissue", "timepoint"]
 comp["n_cells_total"] = comp.groupby(sample_keys, observed=True)["n_cells_phenotype"].transform("sum")
-comp = comp[comp["n_cells_total"] >= 20].copy()
+comp = comp[(comp["n_cells_phenotype"] >= MIN_COMP_CELLS) &
+            (comp["n_cells_total"] >= MIN_SAMPLE_CELLS)].copy()
 comp["frac"] = comp["n_cells_phenotype"] / comp["n_cells_total"]
 comp["lineage"] = comp["phenotype"].astype(str).map(infer_lineage_from_phenotype)
 comp = comp[sample_keys + ["phenotype", "lineage", "n_cells_phenotype", "n_cells_total", "frac"]]
@@ -175,7 +181,7 @@ for _, row in pathway_def.iterrows():
         .agg(["mean", "size"]).reset_index()
         .rename(columns={"mean": "mean_score", "size": "n_cells"})
     )
-    grouped = grouped[grouped["n_cells"] >= MIN_GROUP_CELLS]
+    grouped = grouped[grouped["n_cells"] >= MIN_SCORE_CELLS]
     grouped["pathway"] = row["pathway"]
     grouped["source"] = row["source"]
     grouped["lineage"] = grouped["phenotype"].astype(str).map(infer_lineage_from_phenotype)
@@ -206,11 +212,11 @@ if gene_expr_path.exists():
 
 # Pre-compute per-group cell indices once (reused across chunks)
 group_idx = adata.obs[GROUP_KEYS].groupby(GROUP_KEYS, observed=True).indices
-group_keys_keep = [k for k, idx in group_idx.items() if len(idx) >= MIN_GROUP_CELLS]
+group_keys_keep = [k for k, idx in group_idx.items() if len(idx) >= MIN_SCORE_CELLS]
 print(f"Groups passing min-cells filter: {len(group_keys_keep)} (of {len(group_idx)})")
 
 if not group_keys_keep:
-    raise RuntimeError(f"No groups have >= {MIN_GROUP_CELLS} cells")
+    raise RuntimeError(f"No groups have >= {MIN_SCORE_CELLS} cells")
 
 n_cells_per_group = np.array([len(group_idx[k]) for k in group_keys_keep])
 patients = np.array([k[0] for k in group_keys_keep])
