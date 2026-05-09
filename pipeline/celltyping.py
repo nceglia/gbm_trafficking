@@ -9,7 +9,12 @@ import tqdm
 from scipy import sparse
 from scipy.stats import entropy
 
-from modules.clone_helpers import infer_lineage_from_phenotype
+try:
+    # Package import path when used as `pipeline.celltyping`.
+    from pipeline.modules.clone_helpers import infer_lineage_from_phenotype
+except ImportError:
+    # Fallback for direct script execution from within `pipeline/`.
+    from modules.clone_helpers import infer_lineage_from_phenotype
 
 def load_trb(sample, gex_h5, vdj_file, clonotype_file):
     adata = sc.read_10x_h5(gex_h5)
@@ -258,6 +263,85 @@ def load_markers(beltra_path="41586_2025_9989_MOESM10_ESM.xlsx"):
             }
         },
     }
+
+def build_phenotype_marker_dict(markers):
+    out = {}
+    for lineage, lineage_info in markers.items():
+        lineage_genes = lineage_info.get("markers", [])
+        for subtype, subtype_info in lineage_info.get("subtypes", {}).items():
+            if isinstance(subtype_info, list):
+                out[f"{lineage}_{subtype}"] = list(dict.fromkeys(lineage_genes + subtype_info))
+                continue
+            subtype_genes = subtype_info.get("markers", [])
+            for leaf, leaf_genes in subtype_info.get("subtypes", {}).items():
+                out[f"{lineage}_{subtype}_{leaf}"] = list(
+                    dict.fromkeys(lineage_genes + subtype_genes + leaf_genes)
+                )
+    out["CD8_Activated_TEMRA"] = [
+        "CD8A", "CD8B", "CX3CR1", "S1PR5", "KLF2", "FGFBP2", "FCGR3A", "KLRD1"
+    ]
+    return out
+
+def score_all_phenotypes(adata, marker_dict):
+    for phenotype, gene_list in marker_dict.items():
+        present = [g for g in gene_list if g in adata.var_names]
+        if not present:
+            continue
+        sc.tl.score_genes(adata, gene_list=present, score_name=f"{phenotype}_score")
+
+def _lin(label):
+    return "CD8" if "CD8" in str(label) else "CD4"
+
+def retype_global(adata, marker_dict, clone_key="trb", phenotype_key="phenotype"):
+    score_all_phenotypes(adata, marker_dict)
+    score_cols = [f"{p}_score" for p in marker_dict if f"{p}_score" in adata.obs.columns]
+    cd4_cols = [c for c in score_cols if c.startswith("CD4_")]
+    cd8_cols = [c for c in score_cols if c.startswith("CD8_")]
+
+    obs = adata.obs
+    proposed = obs[score_cols].idxmax(axis=1).str.replace("_score", "", regex=False)
+    cd4_best = obs[cd4_cols].idxmax(axis=1).str.replace("_score", "", regex=False)
+    cd8_best = obs[cd8_cols].idxmax(axis=1).str.replace("_score", "", regex=False)
+
+    current = obs[phenotype_key].astype(str)
+    clones = obs[clone_key]
+
+    for leaf in current.unique():
+        in_leaf = current == leaf
+        rest_idx = obs.index[(~in_leaf) & clones.notna()]
+        if len(rest_idx) == 0:
+            continue
+        rest_lin = obs.loc[rest_idx, phenotype_key].astype(str).map(_lin)
+        clone_lin = (
+            pd.DataFrame({"_clone": clones.loc[rest_idx], "_lin": rest_lin})
+            .groupby("_clone", observed=True)["_lin"]
+            .agg(lambda s: s.iloc[0] if s.nunique() == 1 else None)
+        )
+        cells_in_leaf = obs.index[in_leaf & clones.notna()]
+        if len(cells_in_leaf) == 0:
+            continue
+        cl = clones.loc[cells_in_leaf].map(clone_lin)
+        prop_lin = proposed.loc[cells_in_leaf].map(_lin)
+        fix_cd4 = cells_in_leaf[((cl == "CD4") & (prop_lin == "CD8")).values]
+        fix_cd8 = cells_in_leaf[((cl == "CD8") & (prop_lin == "CD4")).values]
+        proposed.loc[fix_cd4] = cd4_best.loc[fix_cd4]
+        proposed.loc[fix_cd8] = cd8_best.loc[fix_cd8]
+
+    prop_lin_all = proposed.map(_lin)
+    has_clone = clones.notna()
+    maj_lin = (
+        pd.DataFrame({"_clone": clones.loc[has_clone], "_lin": prop_lin_all.loc[has_clone]})
+        .groupby("_clone", observed=True)["_lin"]
+        .agg(lambda s: s.mode().iloc[0] if len(s) else None)
+    )
+    cell_maj = clones.map(maj_lin)
+    minority = has_clone & cell_maj.notna() & (prop_lin_all != cell_maj)
+    fix_to_cd4 = minority & (cell_maj == "CD4")
+    fix_to_cd8 = minority & (cell_maj == "CD8")
+    proposed.loc[fix_to_cd4] = cd4_best.loc[fix_to_cd4]
+    proposed.loc[fix_to_cd8] = cd8_best.loc[fix_to_cd8]
+
+    return proposed
 
 def phenotype_tcells(adata, beltra_path="41586_2025_9989_MOESM10_ESM.xlsx",
                      clone_key="trb", key="phenotype", temperature=0.01):

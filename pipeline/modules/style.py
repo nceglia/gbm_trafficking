@@ -24,22 +24,25 @@ LINEAGE_ORDER = ("CD8", "CD4")
 
 # ── T cell phenotypes ──────────────────────────────────────────────────
 # Ordered: CD8 activated → CD8 quiescent → CD4
+# Palette designed for max distinguishability in narrow stacked bars:
+# CD8 → cool hues (blues / teals / greens / purples)
+# CD4 → warm hues (yellows / oranges / reds / magentas)
 TCELL_PHENOTYPE_COLORS = {
-    # CD8 Activated
-    "CD8_Activated_TEMRA":   "#08306b",
-    "CD8_Activated_TEXeff":  "#2171b5",
-    "CD8_Activated_TEXterm": "#6baed6",
-    "CD8_Activated_TRM":     "#9ecae1",
-    # CD8 Quiescent
-    "CD8_Quiescent_Memory":  "#54278f",
-    "CD8_Quiescent_Naive":   "#9e9ac8",
-    "CD8_Quiescent_TEXprog": "#bcbddc",
-    # CD4
-    "CD4_Naive_Memory":      "#fdae6b",
-    "CD4_Exhausted":         "#a50f15",
-    "CD4_Treg":              "#67000d",
-    "CD4_Th1_polarized":     "#e6550d",
-    "CD4_Th2_polarized":     "#fd8d3c",
+    # CD8 Activated (cool, saturated)
+    "CD8_Activated_TEMRA":   "#08306b",  # navy
+    "CD8_Activated_TEXeff":  "#41b6c4",  # cyan/teal
+    "CD8_Activated_TEXterm": "#54278f",  # dark purple
+    "CD8_Activated_TRM":     "#1b7837",  # forest green
+    # CD8 Quiescent (cool, lighter)
+    "CD8_Quiescent_Memory":  "#5e8ec1",  # mid blue
+    "CD8_Quiescent_Naive":   "#a6cee3",  # pale blue
+    "CD8_Quiescent_TEXprog": "#9e9ac8",  # light purple
+    # CD4 (warm)
+    "CD4_Naive_Memory":      "#ffd92f",  # yellow
+    "CD4_Exhausted":         "#c51b8a",  # magenta
+    "CD4_Treg":              "#fd8d3c",  # orange
+    "CD4_Th1_polarized":     "#e31a1c",  # red
+    "CD4_Th2_polarized":     "#a50026",  # deep red
 }
 TCELL_PHENOTYPE_LABELS = {
     "CD8_Activated_TEMRA":   "TEMRA",
