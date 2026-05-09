@@ -29,8 +29,8 @@ INPUTS = [
 
 def encode_table(df: pd.DataFrame) -> tuple[str, list[str]]:
     df = df.copy()
-    if "n_cells" in df.columns:
-        df = df.drop(columns=["n_cells"])
+    # n_cells is kept now: the explorer uses it for log-scaled dot sizing
+    # and the dot-hover "n=<n_cells>" suffix.
     if "lineage" in df.columns and df["lineage"].nunique(dropna=True) <= 1:
         df = df.drop(columns=["lineage"])
     for c in df.select_dtypes(include="float").columns:
@@ -176,19 +176,13 @@ TEMPLATE = r"""<!DOCTYPE html>
         <button class="add-btn" data-add="genes">+ add</button>
       </div>
       <div class="control-row check-group">
-        <label>Tissues:</label>
-        <label><input type="checkbox" data-tissue="PBMC" checked> PBMC</label>
-        <label><input type="checkbox" data-tissue="CSF" checked> CSF</label>
-        <label><input type="checkbox" data-tissue="TP" checked> TP</label>
-        <span style="margin-left:.75rem"></span>
-        <label>Show rows:</label>
-        <label><input type="checkbox" data-row="comp" checked> Composition</label>
-        <label><input type="checkbox" data-row="path" checked> Pathway</label>
-        <label><input type="checkbox" data-row="gene" checked> Gene</label>
-        <span style="margin-left:.75rem"></span>
         <label><input type="checkbox" data-toggle="showSD" checked> Mean &plusmn; SD</label>
         <label><input type="checkbox" data-toggle="showDots" checked> Patient dots</label>
-        <label title="z-score each path/gene trace across the 18 (tissue x timepoint) points; composition unaffected."><input type="checkbox" data-toggle="showNormalize"> Normalize per row</label>
+        <span style="margin-left:.75rem"></span>
+        <label>Y-axis:</label>
+        <label><input type="radio" name="ymode" value="raw" checked> Raw</label>
+        <label title="(x - mean) / std across the 18 (tissue, timepoint) points within each path/gene trace. Activates only when the row has >=2 series. Y range fixed at [-3, 3]."><input type="radio" name="ymode" value="zscore"> Z-score</label>
+        <label title="(x - min) / (max - min) within each path/gene trace. Y range fixed at [0, 1]."><input type="radio" name="ymode" value="minmax"> Min-max</label>
       </div>
     </div>
     <div id="plot"></div>
@@ -236,18 +230,25 @@ __DATA_BLOCKS__
     // Vertical row labels on the left of the figure.
     const ROW_LEFT_LABEL = {comp: 'Composition', path: 'Pathway score', gene: 'Gene expression'};
     const VALUE_KEY = {comp:'frac', path:'mean_score', gene:'mean_expr'};
+    const CELLS_KEY = {comp:'n_cells_phenotype', path:'n_cells', gene:'n_cells'};
     const LINEAGE_TAG = {tcell:'(T)', myeloid:'(M)'};
+
+    // Patient-dot radius scales log10 with cell count (clamped 3..14 px).
+    function dotSize(n) {
+      return Math.min(14, Math.max(3, Math.log10((n || 0) + 1) * 3 + 3));
+    }
 
     /* ---------- State ---------- */
     const state = {
-      phenotypes:    [],   // [{name, lineage:'tcell'|'myeloid'}]
-      pathways:      [],   // [{name, source:'hallmark'|'kegg'}]
-      genes:         [],   // [{name, in:'T'|'M'|'both'}]
-      tissues:       new Set(['PBMC','CSF','TP']),
-      showRows:      new Set(['comp','path','gene']),
-      showSD:        true,
-      showDots:      true,
-      showNormalize: false,  // z-score path/gene traces across the 18 (tissue x timepoint) points
+      phenotypes: [],   // [{name, lineage:'tcell'|'myeloid'}]
+      pathways:   [],   // [{name, source:'hallmark'|'kegg'}]
+      genes:      [],   // [{name, in:'T'|'M'|'both'}]
+      showSD:     true,
+      showDots:   true,
+      // Y-axis transform applied to path/gene rows when the row has >=2
+      // series. Composition is always 'raw'. Single-series rows are
+      // always 'raw' regardless of this setting.
+      yMode:      'raw',  // 'raw' | 'zscore' | 'minmax'
     };
 
     /* ---------- Tables + indices ---------- */
@@ -371,16 +372,18 @@ __DATA_BLOCKS__
     }
 
     /* ---------- Aggregation ---------- */
-    function aggregate(rows, valueKey) {
+    function aggregate(rows, valueKey, cellsKey) {
       const byT = new Map();
       for (const r of rows) {
         const t = r.timepoint;
         if (t == null) continue;
         const v = r[valueKey];
         if (v == null || isNaN(v)) continue;
+        const n = cellsKey ? (+r[cellsKey] || 0) : 0;
+        const entry = {patient: r.patient, value: +v, n_cells: n};
         const arr = byT.get(t);
-        if (arr) arr.push({patient: r.patient, value: +v});
-        else byT.set(t, [{patient: r.patient, value: +v}]);
+        if (arr) arr.push(entry);
+        else byT.set(t, [entry]);
       }
       const ts = [...byT.keys()].sort((a, b) => a - b);
       const tArr = [], meanArr = [], sdArr = [], pointArr = [];
@@ -392,7 +395,7 @@ __DATA_BLOCKS__
           ? Math.sqrt(vs.reduce((a, b) => a + (b - m) * (b - m), 0) / (vs.length - 1))
           : 0;
         tArr.push(t); meanArr.push(m); sdArr.push(sd);
-        for (const d of grp) pointArr.push({t, value: d.value, patient: d.patient});
+        for (const d of grp) pointArr.push({t, value: d.value, patient: d.patient, n_cells: d.n_cells});
       }
       return {tArr, meanArr, sdArr, pointArr};
     }
@@ -408,13 +411,13 @@ __DATA_BLOCKS__
       const traces = [];
       const cellHasData = new Array(9).fill(false);
 
-      // ---- Aggregation cache (avoids double work when normalize is on) ----
+      // ---- Aggregation cache (avoids double work when y-mode transforms run) ----
       const aggCache = new Map();
       function cachedAgg(rowKind, pheno, featKey, tissue) {
         const k = rowKind + '|' + phenoKey(pheno) + '|' + featKey + '|' + tissue;
         if (!aggCache.has(k)) {
           const rows = lookup(rowKind, pheno, featKey, tissue);
-          aggCache.set(k, rows.length ? aggregate(rows, VALUE_KEY[rowKind]) : null);
+          aggCache.set(k, rows.length ? aggregate(rows, VALUE_KEY[rowKind], CELLS_KEY[rowKind]) : null);
         }
         return aggCache.get(k);
       }
@@ -427,13 +430,15 @@ __DATA_BLOCKS__
         gene: state.phenotypes.length * state.genes.length,
       };
 
-      // ---- Z-score stats per (rowKind, pheno, feat) across all 3 tissues * timepoints ----
-      // Composition excluded (bounded frac); normalize only when row has >=2 series.
-      const normStats = new Map();
-      if (state.showNormalize) {
+      // ---- Y-axis transform stats per (rowKind, pheno, feat) ----
+      // Computed across all 3 tissues * timepoints within each trace.
+      // Composition is always 'raw'; single-series rows are also 'raw'.
+      // Z-score:  v -> (v - mu) / sigma
+      // Min-max:  v -> (v - min) / (max - min) ; skipped if max == min.
+      const yTransform = new Map();  // key -> {kind, mu, sigma} or {kind, min, max}
+      if (state.yMode !== 'raw') {
         for (const rowKind of ['path', 'gene']) {
-          if (!state.showRows.has(rowKind)) continue;
-          if (seriesCount[rowKind] < 2) continue;  // single-series rows: no z-score
+          if (seriesCount[rowKind] < 2) continue;  // single-series rows: raw
           const featList = (rowKind === 'path')
             ? state.pathways.map(p => p.name)
             : state.genes.map(g => g.name);
@@ -445,11 +450,18 @@ __DATA_BLOCKS__
                 if (a) for (const v of a.meanArr) all.push(v);
               }
               if (all.length < 2) continue;
-              const mu = all.reduce((s, x) => s + x, 0) / all.length;
-              const var_ = all.reduce((s, x) => s + (x - mu) * (x - mu), 0) / (all.length - 1);
-              const sigma = Math.sqrt(var_);
-              normStats.set(rowKind + '|' + phenoKey(pheno) + '|' + featKey,
-                            {mu, sigma: sigma > 0 ? sigma : 1});
+              const key = rowKind + '|' + phenoKey(pheno) + '|' + featKey;
+              if (state.yMode === 'zscore') {
+                const mu = all.reduce((s, x) => s + x, 0) / all.length;
+                const var_ = all.reduce((s, x) => s + (x - mu) * (x - mu), 0) / (all.length - 1);
+                const sigma = Math.sqrt(var_);
+                if (sigma > 0) yTransform.set(key, {kind: 'zscore', mu, sigma});
+              } else if (state.yMode === 'minmax') {
+                let lo = Infinity, hi = -Infinity;
+                for (const v of all) { if (v < lo) lo = v; if (v > hi) hi = v; }
+                if (hi > lo) yTransform.set(key, {kind: 'minmax', min: lo, max: hi});
+                // else: max == min, leave raw (per spec)
+              }
             }
           }
         }
@@ -472,7 +484,6 @@ __DATA_BLOCKS__
         const phenoK = phenoKey(pheno);
 
         for (const rowKind of ROWS) {
-          if (!state.showRows.has(rowKind)) continue;
           const r = ROWS.indexOf(rowKind);
 
           let features;
@@ -492,24 +503,33 @@ __DATA_BLOCKS__
             const seriesId = phenoK + '|' + rowKind + '|' + feat.key;
 
             for (const tissue of TISSUES) {
-              if (!state.tissues.has(tissue)) continue;
               const c = TISSUES.indexOf(tissue);
               const ax = axRef(subplotIdx(r, c));
 
               let agg = cachedAgg(rowKind, pheno, feat.key, tissue);
               if (!agg || !agg.tArr.length) continue;
 
-              // z-score normalization (path/gene, only when row has >=2 series)
-              if (state.showNormalize && rowKind !== 'comp') {
-                const stats = normStats.get(rowKind + '|' + phenoK + '|' + feat.key);
-                if (stats) {
+              // Apply Y-axis transform (path/gene rows when row has >=2 series).
+              if (rowKind !== 'comp') {
+                const t = yTransform.get(rowKind + '|' + phenoK + '|' + feat.key);
+                if (t) {
+                  let xform, sxform;
+                  if (t.kind === 'zscore') {
+                    xform  = (v) => (v - t.mu) / t.sigma;
+                    sxform = (s) => s / t.sigma;
+                  } else {
+                    const span = t.max - t.min;
+                    xform  = (v) => (v - t.min) / span;
+                    sxform = (s) => s / span;
+                  }
                   agg = {
                     tArr: agg.tArr,
-                    meanArr:  agg.meanArr.map(v => (v - stats.mu) / stats.sigma),
-                    sdArr:    agg.sdArr.map(s => s / stats.sigma),
+                    meanArr:  agg.meanArr.map(xform),
+                    sdArr:    agg.sdArr.map(sxform),
                     pointArr: agg.pointArr.map(p => ({
                       t: p.t, patient: p.patient,
-                      value: (p.value - stats.mu) / stats.sigma,
+                      n_cells: p.n_cells,
+                      value: xform(p.value),
                     })),
                   };
                 }
@@ -571,15 +591,20 @@ __DATA_BLOCKS__
               }
               traces.push(meanTrace);
 
-              // Patient dots
+              // Patient dots — size scales log10 with cell count
               if (state.showDots && agg.pointArr.length) {
-                const xs = agg.pointArr.map(p => p.t + (Math.random() - 0.5) * 0.2);
-                const ys = agg.pointArr.map(p => p.value);
+                const xs    = agg.pointArr.map(p => p.t + (Math.random() - 0.5) * 0.2);
+                const ys    = agg.pointArr.map(p => p.value);
+                const sizes = agg.pointArr.map(p => dotSize(p.n_cells));
                 traces.push({
                   x: xs, y: ys,
                   mode: 'markers',
-                  marker: {color: color, size: 5, opacity: 0.55,
-                           line: {color: color, width: 1}},
+                  marker: {
+                    color: color,
+                    size: sizes,
+                    opacity: 0.55,
+                    line: {width: 0.5, color: 'rgba(0,0,0,0.3)'},
+                  },
                   legendgroup: phenoK, showlegend: false, hoverinfo: 'text',
                   meta: {seriesId: seriesId},
                   text: agg.pointArr.map(p =>
@@ -587,7 +612,8 @@ __DATA_BLOCKS__
                     '<br>patient: ' + p.patient +
                     '<br>tissue: ' + tissue +
                     '<br>timepoint: ' + p.t +
-                    '<br>value: ' + p.value.toFixed(3)
+                    '<br>value: ' + p.value.toFixed(3) +
+                    '<br>n=' + p.n_cells
                   ),
                   xaxis: ax.x, yaxis: ax.y,
                 });
@@ -619,15 +645,19 @@ __DATA_BLOCKS__
         annotations: [],
       };
 
-      const isNormalized = (rowKind) => {
-        if (rowKind === 'comp') return false;
+      // Returns 'raw' | 'zscore' | 'minmax' for a row given current state.
+      // Composition is always 'raw'. Single-series rows are always 'raw'.
+      const rowYMode = (rowKind) => {
+        if (rowKind === 'comp' || state.yMode === 'raw') return 'raw';
         const n = state.phenotypes.length *
                   (rowKind === 'path' ? state.pathways.length : state.genes.length);
-        return state.showNormalize && n >= 2;
+        return n >= 2 ? state.yMode : 'raw';
       };
       const yTitle = (rowKind) => {
-        if (rowKind === 'comp') return Y_AXIS_TITLE.comp;
-        return isNormalized(rowKind) ? 'Z-score' : Y_AXIS_TITLE[rowKind];
+        const m = rowYMode(rowKind);
+        if (m === 'zscore') return 'Z-score';
+        if (m === 'minmax') return 'Min-max';
+        return Y_AXIS_TITLE[rowKind];
       };
 
       for (let i = 0; i < 9; i++) {
@@ -654,8 +684,12 @@ __DATA_BLOCKS__
           title: c === 0 ? {text: yTitle(rowKind), font: {size: 11}} : '',
           ticks: 'outside',
         };
-        if (isNormalized(rowKind)) {
+        const m = rowYMode(rowKind);
+        if (m === 'zscore') {
           layout[ykey].range = [-3, 3];
+          layout[ykey].autorange = false;
+        } else if (m === 'minmax') {
+          layout[ykey].range = [0, 1];
           layout[ykey].autorange = false;
         } else {
           layout[ykey].autorange = true;
@@ -704,9 +738,7 @@ __DATA_BLOCKS__
         });
       } else {
         for (let r = 0; r < 3; r++) {
-          if (!state.showRows.has(ROWS[r])) continue;
           for (let c = 0; c < 3; c++) {
-            if (!state.tissues.has(TISSUES[c])) continue;
             const idx = subplotIdx(r, c);
             if (cellHasData[idx]) continue;
             const s = idx === 0 ? '' : (idx + 1);
@@ -954,24 +986,19 @@ __DATA_BLOCKS__
           closeActiveDropdown();
         }
       });
-      document.querySelectorAll('input[data-tissue]').forEach(cb => {
-        cb.addEventListener('change', () => {
-          if (cb.checked) state.tissues.add(cb.dataset.tissue);
-          else state.tissues.delete(cb.dataset.tissue);
-          render();
-        });
-      });
-      document.querySelectorAll('input[data-row]').forEach(cb => {
-        cb.addEventListener('change', () => {
-          if (cb.checked) state.showRows.add(cb.dataset.row);
-          else state.showRows.delete(cb.dataset.row);
-          render();
-        });
-      });
       document.querySelectorAll('input[data-toggle]').forEach(cb => {
         cb.addEventListener('change', () => {
           state[cb.dataset.toggle] = cb.checked;
           render();
+        });
+      });
+      // Y-axis mode radio (raw / zscore / minmax)
+      document.querySelectorAll('input[name="ymode"]').forEach(rb => {
+        rb.addEventListener('change', () => {
+          if (rb.checked) {
+            state.yMode = rb.value;
+            render();
+          }
         });
       });
 
