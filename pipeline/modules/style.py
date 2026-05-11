@@ -41,8 +41,7 @@ TCELL_PHENOTYPE_COLORS = {
     "CD4_Naive_Memory":      "#ffd92f",  # yellow
     "CD4_Exhausted":         "#c51b8a",  # magenta
     "CD4_Treg":              "#fd8d3c",  # orange
-    "CD4_Th1_polarized":     "#e31a1c",  # red
-    "CD4_Th2_polarized":     "#a50026",  # deep red
+    "CD4_Th":                "#e31a1c",  # red
 }
 TCELL_PHENOTYPE_LABELS = {
     "CD8_Activated_TEMRA":   "TEMRA",
@@ -55,15 +54,31 @@ TCELL_PHENOTYPE_LABELS = {
     "CD4_Naive_Memory":      "Naive/Memory",
     "CD4_Exhausted":         "Exhausted",
     "CD4_Treg":              "Treg",
-    "CD4_Th1_polarized":     "Th1",
-    "CD4_Th2_polarized":     "Th2",
+    "CD4_Th":                "Th",
 }
 TCELL_PHENOTYPE_ORDER = tuple(TCELL_PHENOTYPE_COLORS.keys())
 
-# ── Myeloid phenotypes (placeholders — fill in when myeloid pipeline lands) ──
-MYELOID_PHENOTYPE_COLORS: dict = {}  # TODO: populate
-MYELOID_PHENOTYPE_LABELS: dict = {}  # TODO: populate
-MYELOID_PHENOTYPE_ORDER: tuple = ()  # TODO: populate
+# ── Myeloid phenotypes ────────────────────────────────────────────────
+# Keys MUST match the labels emitted by
+# pipeline.modules.myeloid_groups.MYELOID_GROUPS (after regrouping).
+# Any unmapped group should raise loudly downstream — never default to gray.
+MYELOID_PHENOTYPE_COLORS = {
+    "Microglia":         "#5d4037",  # brown
+    "Mac_Immunosupp":    "#00838f",  # cyan
+    "Mac_Inflammatory":  "#006064",  # dark cyan
+    "Mac_Hypoxia":       "#4dd0e1",  # light cyan
+    "Mac_Proliferating": "#616161",  # gray
+    "Mono_CD14":         "#880e4f",  # dark pink
+    "Mono_CD16":         "#ec407a",  # pink
+    "cDC1":              "#c2185b",  # rose
+    "cDC2":              "#9c27b0",  # purple
+    "mregDC":            "#673ab7",  # deep purple
+    "moDC":              "#3f51b5",  # indigo
+    "pDC":               "#827717",  # olive
+}
+MYELOID_PHENOTYPE_LABELS = {k: k.replace("_", " ")
+                              for k in MYELOID_PHENOTYPE_COLORS}
+MYELOID_PHENOTYPE_ORDER = tuple(MYELOID_PHENOTYPE_COLORS.keys())
 
 # ── Timepoints ─────────────────────────────────────────────────────────
 # Sequential colormap — early to late

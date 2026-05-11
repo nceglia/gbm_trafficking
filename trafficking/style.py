@@ -50,22 +50,54 @@ def phenotype_color(pheno, modality="tcell"):
 
 def init_phenotype_colors(tdata=None, mdata=None,
                           tcell_cmap=plt.cm.tab20, myeloid_cmap=plt.cm.tab20c):
+    """Populate COLORS['tcell_phenotype'] / ['myeloid_phenotype'].
+
+    Resolution order per phenotype:
+      1. Centralized mappings from pipeline.modules.style
+         (TCELL_PHENOTYPE_COLORS, MYELOID_PHENOTYPE_COLORS).
+      2. Any prebuilt list in adata.uns['phenotype_colors'] (legacy).
+      3. Colormap-derived fallback so unmapped phenotypes still get a
+         color and downstream code never throws a KeyError.
+    """
+    central_t, central_m = {}, {}
+    try:
+        from pipeline.modules.style import (
+            TCELL_PHENOTYPE_COLORS as _CT,
+            MYELOID_PHENOTYPE_COLORS as _CM,
+        )
+        central_t = dict(_CT)
+        central_m = dict(_CM)
+    except Exception:
+        pass
+
+    def _assign(adata, central, cmap, key):
+        phenos = sorted(adata.obs["phenotype"].astype(str).unique())
+        legacy = {}
+        col = adata.obs["phenotype"]
+        if (
+            "phenotype_colors" in adata.uns
+            and len(adata.uns["phenotype_colors"]) >= len(phenos)
+            and hasattr(col, "cat")
+        ):
+            legacy = dict(zip(col.cat.categories, adata.uns["phenotype_colors"]))
+        out, unmapped = {}, []
+        for p in phenos:
+            if p in central:
+                out[p] = central[p]
+            elif p in legacy:
+                out[p] = legacy[p]
+            else:
+                unmapped.append(p)
+        if unmapped:
+            cols = cmap(np.linspace(0, 1, max(len(unmapped), 1)))
+            for i, p in enumerate(unmapped):
+                out[p] = cols[i]
+        COLORS[key] = out
+
     if tdata is not None:
-        phenos = sorted(tdata.obs["phenotype"].unique())
-        if "phenotype_colors" in tdata.uns and len(tdata.uns["phenotype_colors"]) >= len(phenos):
-            COLORS["tcell_phenotype"] = dict(zip(
-                tdata.obs["phenotype"].cat.categories, tdata.uns["phenotype_colors"]))
-        else:
-            cols = tcell_cmap(np.linspace(0, 1, len(phenos)))
-            COLORS["tcell_phenotype"] = {p: cols[i] for i, p in enumerate(phenos)}
+        _assign(tdata, central_t, tcell_cmap, "tcell_phenotype")
     if mdata is not None:
-        phenos = sorted(mdata.obs["phenotype"].unique())
-        if "phenotype_colors" in mdata.uns and len(mdata.uns["phenotype_colors"]) >= len(phenos):
-            COLORS["myeloid_phenotype"] = dict(zip(
-                mdata.obs["phenotype"].cat.categories, mdata.uns["phenotype_colors"]))
-        else:
-            cols = myeloid_cmap(np.linspace(0.3, 0.9, len(phenos)))
-            COLORS["myeloid_phenotype"] = {p: cols[i] for i, p in enumerate(phenos)}
+        _assign(mdata, central_m, myeloid_cmap, "myeloid_phenotype")
 
 
 def init_colors_from_dataset(dataset):

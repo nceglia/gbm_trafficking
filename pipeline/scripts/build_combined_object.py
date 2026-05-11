@@ -53,7 +53,7 @@ from pipeline.modules.clone_helpers import infer_lineage_from_phenotype
 adata = sc.read("/Users/ceglian/Codebase/GitHub/gbm_trafficking/data/objects/GBM_TCR_POS_TCELLS.h5ad")
 adata.X = adata.layers["counts"]
 # sc.pp.highly_variable_genes(adata, n_top_genes=2000, flavor="seurat_v3", subset=True)
-th1 = adata[adata.obs["phenotype"] == "CD4_Th1_polarized"].copy()
+th1 = adata[adata.obs["phenotype"] == "CD4_Th"].copy()
 sc.pp.normalize_total(th1, target_sum=1e4)
 sc.pp.log1p(th1)
 print(th1.shape, th1.obs["tissue"].value_counts().to_dict())
@@ -144,7 +144,7 @@ sw_v3 = switching(adata.obs, "lineage_v3")
 print(f"Switching — v1: {(sw_v1 > 1).sum()}, v2: {(sw_v2 > 1).sum()}, v3: {(sw_v3 > 1).sum()}")
 
 for col in ["phenotype", "phenotype_v2", "phenotype_v3"]:
-    f = adata.obs.groupby("tissue", observed=True)[col].apply(lambda s: (s == "CD4_Th1_polarized").mean())
+    f = adata.obs.groupby("tissue", observed=True)[col].apply(lambda s: (s == "CD4_Th").mean())
     print(f"{col}:\n{f.round(3)}\n")
 # %%
 # %% v4 dry run
@@ -173,7 +173,7 @@ adata.obs.loc[to_cd8, "phenotype_v4"] = cd8_best.loc[to_cd8].values
 adata.obs["lineage_v4"] = adata.obs["phenotype_v4"].apply(_lin)
 print(f"Switching — v3: {(sw_v3 > 1).sum()}, v4: {(switching(adata.obs, 'lineage_v4') > 1).sum()}")
 print(adata.obs.groupby("tissue", observed=True)["phenotype_v4"].apply(
-    lambda s: (s == "CD4_Th1_polarized").mean()).round(3))
+    lambda s: (s == "CD4_Th").mean()).round(3))
 # %%
 
 

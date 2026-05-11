@@ -67,7 +67,7 @@ def main(args):
     print((v1 != v2).groupby(obs["tissue"], observed=True).mean().round(3))
 
     print("\n=== Leaf fractions by tissue (v1 vs retyped) ===")
-    for leaf in ["CD4_Treg", "CD4_Th1_polarized", "CD4_Exhausted"]:
+    for leaf in ["CD4_Treg", "CD4_Th", "CD4_Exhausted"]:
         before = (v1 == leaf).groupby(obs["tissue"], observed=True).mean()
         after = (v2 == leaf).groupby(obs["tissue"], observed=True).mean()
         print(f"\n{leaf}:")

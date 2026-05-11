@@ -43,7 +43,7 @@ def plot_phenotype_heatmap(adata, genes=None, key="phenotype", figsize=(18, 6)):
         "CD8_Activated_TRM","CD8_Quiescent_Memory","CD8_Quiescent_Naive",
         "CD8_Quiescent_TEXprog",
         "CD4_Naive_Memory","CD4_Exhausted","CD4_Treg",
-        "CD4_Th1_polarized","CD4_Th2_polarized",
+        "CD4_Th",
     ]
     pheno_order = [p for p in pheno_order if p in expr["phenotype"].unique()]
 
@@ -85,7 +85,7 @@ def plot_tissue_stability(adata, genes=None, key="phenotype", figsize=(20, 14)):
         "CD8_Activated_TEMRA","CD8_Activated_TEXeff","CD8_Activated_TEXterm",
         "CD8_Activated_TRM","CD8_Quiescent_Naive","CD8_Quiescent_TEXprog",
         "CD4_Naive_Memory","CD4_Exhausted","CD4_Treg",
-        "CD4_Th1_polarized",
+        "CD4_Th",
     ]
     pheno_order = [p for p in pheno_order if p in expr["phenotype"].unique()]
     tissues = ["PBMC", "CSF", "TP"]
@@ -195,7 +195,7 @@ def plot_patient_cv(adata, genes=None, key="phenotype", figsize=(16, 6)):
     pheno_order = [
         "CD8_Activated_TEMRA","CD8_Activated_TEXeff","CD8_Activated_TEXterm",
         "CD8_Activated_TRM","CD8_Quiescent_Naive","CD8_Quiescent_TEXprog",
-        "CD4_Naive_Memory","CD4_Exhausted","CD4_Treg","CD4_Th1_polarized",
+        "CD4_Naive_Memory","CD4_Exhausted","CD4_Treg","CD4_Th",
     ]
     pheno_order = [p for p in pheno_order if p in expr["phenotype"].unique()]
 
@@ -284,7 +284,7 @@ def plot_dotplot(adata, genes=None, key="phenotype", figsize=(18, 7)):
         "CD8_Activated_TRM","CD8_Quiescent_Memory","CD8_Quiescent_Naive",
         "CD8_Quiescent_TEXprog",
         "CD4_Naive_Memory","CD4_Exhausted","CD4_Treg",
-        "CD4_Th1_polarized","CD4_Th2_polarized",
+        "CD4_Th",
     ]
     pheno_order = [p for p in pheno_order if p in expr["phenotype"].unique()]
 
