@@ -19,3 +19,6 @@ gbm_report/
 
 # One-off spatial outputs
 pipeline/spatial_cell_typing*.vec
+
+# Gene vector outputs (regenerable from genevector runs)
+pipeline/scripts/*.vec
