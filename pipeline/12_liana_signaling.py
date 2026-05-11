@@ -78,9 +78,12 @@ print(f"Dropped {n_dropped} cells with NaN/empty phenotype; {adata.n_obs} remain
 
 # %%
 # ---- Apply coarse myeloid regrouping (T cells pass through untouched) ----
+# Cast to object so we can introduce new label values (Microglia, Mac_Immunosupp,
+# etc.) that aren't in the original categorical levels.
+adata.obs["phenotype"] = adata.obs["phenotype"].astype(object)
 is_myeloid = adata.obs["phenotype"].isin(MYELOID_GROUPS.keys())
-remapped = regroup_obs(adata.obs.loc[is_myeloid, "phenotype"])
-adata.obs.loc[is_myeloid, "phenotype"] = remapped
+remapped = regroup_obs(adata.obs.loc[is_myeloid])
+adata.obs.loc[is_myeloid, "phenotype"] = remapped.values
 # Drop cells whose myeloid phenotype didn't map (Mast cell, immature, REMOVE)
 n_before = adata.n_obs
 adata = adata[~adata.obs["phenotype"].isna()].copy()
