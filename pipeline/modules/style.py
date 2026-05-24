@@ -4,9 +4,9 @@ All plotting code should import from here rather than redefining locally.
 
 # ── Tissues ────────────────────────────────────────────────────────────
 TISSUE_COLORS = {
-    "PBMC": "#f0bd00",
-    "CSF":  "#cd442a",
-    "TP":   "#7e9437",
+    "PBMC": "#b2182b",
+    "CSF":  "#2166ac",
+    "TP":   "#929292",
 }
 TISSUE_LABELS = {
     "PBMC": "PBMC",
@@ -17,8 +17,8 @@ TISSUE_ORDER = ("PBMC", "CSF", "TP")
 
 # ── Lineages ───────────────────────────────────────────────────────────
 LINEAGE_COLORS = {
-    "CD8": "#2166ac",
-    "CD4": "#b2182b",
+    "CD8": "#7e9437",
+    "CD4": "#cd442a",
 }
 LINEAGE_ORDER = ("CD8", "CD4")
 
