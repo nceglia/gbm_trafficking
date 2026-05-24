@@ -21,6 +21,8 @@ import pandas as pd
 import scanpy as sc
 from matplotlib.colors import TwoSlopeNorm
 from matplotlib.gridspec import GridSpec
+from scipy.cluster.hierarchy import leaves_list, linkage
+from tqdm import tqdm
 
 warnings.filterwarnings("ignore")
 
@@ -58,6 +60,16 @@ TOP_N_PER_EDGE = 8
 MIN_TOTAL_CELLS = 100
 MIN_PHENOTYPE_CELLS = 20
 MIN_PHENOTYPES = 2
+
+LIANA_N_PERMS = 100
+LIANA_N_JOBS = -1
+
+# Heatmap aesthetics
+HEATMAP_CLIP = 5.0            # symmetric log2fc clip for color only
+DOT_P_CUTOFF = 0.01           # side-specific p threshold for dot marker
+DOT_LFC_CUTOFF = 1.0          # |log2fc| threshold for dot marker
+DOT_SIZE = 8
+DEFAULT_PSEUDO = 0.01         # fallback when no positive lr_means in group
 
 TISSUES = ("PBMC", "CSF", "TP")
 SAME_TISSUE_EDGES = [("PBMC", "PBMC"), ("CSF", "CSF"), ("TP", "TP")]
@@ -248,59 +260,165 @@ for edge in EDGES:
           f"dst T={len(dst_t_idx)}, M={len(dst_m_idx)}")
 
 # %%
-# ---- Step 4: Run LIANA per side ----
-print("\nRunning LIANA per (edge, side)...")
+# ---- Step 4a: Pre-flight (gate filtering, no LIANA yet) ----
+print("\nPre-flight: filtering (edge, side) pools against LIANA gates...")
 liana_rows = []
 skip_log = []
 n_liana_rows_edge = {edge: {"src": 0, "dst": 0} for edge in EDGES}
 
+prepared = {}        # (edge, side) -> filtered AnnData or None
+preflight_rows = []
 
-def _run_liana(sub, edge, side):
+
+def _prepare_side(sub, edge, side):
     if sub is None or sub.n_obs < MIN_TOTAL_CELLS:
         skip_log.append({"edge": f"{edge[0]}->{edge[1]}", "side": side,
                          "reason": "fewer_than_100_total_cells",
                          "n_cells": 0 if sub is None else int(sub.n_obs)})
-        return None
+        return None, 0
     counts = sub.obs["phenotype"].value_counts()
+    n_phen = int((counts >= MIN_PHENOTYPE_CELLS).sum())
     keep_phenos = counts[counts >= MIN_PHENOTYPE_CELLS].index.tolist()
     if len(keep_phenos) < MIN_PHENOTYPES:
         skip_log.append({"edge": f"{edge[0]}->{edge[1]}", "side": side,
                          "reason": "fewer_than_2_phenotypes_with_20_cells",
                          "n_cells": int(sub.n_obs)})
-        return None
-    sub = sub[sub.obs["phenotype"].isin(keep_phenos)].copy()
-    sub.obs["phenotype"] = sub.obs["phenotype"].astype(str)
-    try:
-        li.mt.cellphonedb(
-            sub, groupby="phenotype", resource_name="consensus",
-            expr_prop=EXPR_PROP, verbose=False, use_raw=False,
-        )
-    except Exception as e:
-        skip_log.append({"edge": f"{edge[0]}->{edge[1]}", "side": side,
-                         "reason": f"liana_failed: {type(e).__name__}: {e}",
-                         "n_cells": int(sub.n_obs)})
-        return None
-    return sub.uns["liana_res"].copy()
+        return None, n_phen
+    filtered = sub[sub.obs["phenotype"].isin(keep_phenos)].copy()
+    filtered.obs["phenotype"] = filtered.obs["phenotype"].astype(str)
+    return filtered, n_phen
 
 
 for edge in EDGES:
     i, j = edge
     for side in ("src", "dst"):
         sub = edge_subsets[edge][side]
-        df = _run_liana(sub, edge, side)
-        if df is None:
-            print(f"  {i}->{j} {side}: SKIP")
+        filtered, n_phen = _prepare_side(sub, edge, side)
+        prepared[(edge, side)] = filtered
+        preflight_rows.append({
+            "edge": f"{i}->{j}",
+            "side": side,
+            "n_t_cells": n_t_cells_edge[edge][side],
+            "n_myeloid_cells": n_m_cells_edge[edge][side],
+            "n_phenotypes_ge20": n_phen,
+            "n_cells_after_gate": int(filtered.n_obs) if filtered is not None else 0,
+            "will_run": filtered is not None,
+        })
+
+preflight_df = pd.DataFrame(preflight_rows)
+preflight_df.to_csv(OUT_DIR / "preflight.csv", index=False)
+
+total_cells_all_sides = int(
+    (preflight_df["n_t_cells"] + preflight_df["n_myeloid_cells"]).sum()
+)
+total_cells_run = int(preflight_df.loc[preflight_df["will_run"],
+                                        "n_cells_after_gate"].sum())
+n_sides_run = int(preflight_df["will_run"].sum())
+n_sides_skip = int((~preflight_df["will_run"]).sum())
+
+print(f"\n  {'edge':<14}{'side':>5}{'n_T':>8}{'n_M':>8}{'n_phen20':>10}"
+      f"{'gated':>10}{'run':>6}")
+for r in preflight_rows:
+    print(f"  {r['edge']:<14}{r['side']:>5}{r['n_t_cells']:>8}"
+          f"{r['n_myeloid_cells']:>8}{r['n_phenotypes_ge20']:>10}"
+          f"{r['n_cells_after_gate']:>10}{('Y' if r['will_run'] else '.'):>6}")
+print(f"\nSides to run: {n_sides_run}; skip: {n_sides_skip}; "
+      f"total cells (all sides): {total_cells_all_sides}; "
+      f"total cells (gated runs): {total_cells_run}")
+
+try:
+    _res = li.rs.select_resource("consensus")
+    n_lr_consensus = int(_res.drop_duplicates(
+        subset=["ligand_complex", "receptor_complex"]).shape[0]) \
+        if hasattr(_res, "shape") else int(len(_res))
+except Exception:
+    n_lr_consensus = None
+if n_lr_consensus is not None:
+    print(f"Consensus resource: ~{n_lr_consensus} unique L-R pairs")
+    avg_phen = float(preflight_df.loc[preflight_df["will_run"],
+                                       "n_phenotypes_ge20"].mean() or 0.0)
+    est_pair_rows = n_lr_consensus * (avg_phen * avg_phen)
+    print(f"Estimated upper-bound output rows: ~{int(est_pair_rows * n_sides_run):,} "
+          f"(n_lr × phen² × n_sides; avg phen={avg_phen:.1f})")
+
+# %%
+# ---- Step 4b: Calibration + tqdm loop ----
+sides_to_run = [(edge, side, prepared[(edge, side)])
+                 for edge in EDGES for side in ("src", "dst")
+                 if prepared[(edge, side)] is not None]
+
+
+def _liana_call(sub):
+    li.mt.cellphonedb(
+        sub, groupby="phenotype", resource_name="consensus",
+        expr_prop=EXPR_PROP,
+        n_perms=LIANA_N_PERMS, n_jobs=LIANA_N_JOBS,
+        verbose=False, use_raw=False,
+    )
+    return sub.uns["liana_res"].copy()
+
+
+def _tag_and_collect(df, edge, side):
+    i, j = edge
+    df = df.copy()
+    df["side"] = side
+    df["edge"] = f"{i}->{j}"
+    df["src_tissue"] = i
+    df["dst_tissue"] = j
+    df["n_t_cells"] = n_t_cells_edge[edge][side]
+    df["n_myeloid_cells"] = n_m_cells_edge[edge][side]
+    liana_rows.append(df)
+    n_liana_rows_edge[edge][side] = int(len(df))
+
+
+if not sides_to_run:
+    print("\nNo (edge, side) pools pass the gates; skipping LIANA.")
+else:
+    sides_to_run.sort(key=lambda x: x[2].n_obs)
+    cal_edge, cal_side, cal_sub = sides_to_run[0]
+    cal_n = int(cal_sub.n_obs)
+    print(f"\nCalibration: {cal_edge[0]}->{cal_edge[1]} {cal_side} "
+          f"(n={cal_n} cells)")
+    t_cal = time.time()
+    try:
+        cal_df = _liana_call(cal_sub)
+        cal_secs = time.time() - t_cal
+        _tag_and_collect(cal_df, cal_edge, cal_side)
+    except Exception as e:
+        cal_secs = None
+        skip_log.append({"edge": f"{cal_edge[0]}->{cal_edge[1]}",
+                         "side": cal_side,
+                         "reason": f"liana_failed: {type(e).__name__}: {e}",
+                         "n_cells": cal_n})
+        print(f"  Calibration FAILED: {e}")
+
+    others = sides_to_run[1:]
+    others_n = sum(int(s.n_obs) for _, _, s in others)
+    if cal_secs and cal_n > 0 and len(others):
+        est_total_secs = cal_secs * others_n / cal_n
+        print(f"Calibration: {cal_secs:.1f}s on {cal_n} cells. "
+              f"Estimated total: {est_total_secs / 60:.1f} min over "
+              f"{len(others)} remaining runs.")
+    elif cal_secs:
+        print(f"Calibration: {cal_secs:.1f}s on {cal_n} cells. "
+              f"No remaining runs.")
+
+    for edge, side, sub in tqdm(others, desc="LIANA (edge, side)", unit="run"):
+        i, j = edge
+        n = int(sub.n_obs)
+        t0 = time.time()
+        try:
+            df = _liana_call(sub)
+        except Exception as e:
+            skip_log.append({"edge": f"{i}->{j}", "side": side,
+                             "reason": f"liana_failed: {type(e).__name__}: {e}",
+                             "n_cells": n})
+            tqdm.write(f"  {i}->{j} {side}: FAIL n={n} ({e})")
             continue
-        df = df.copy()
-        df["side"] = side
-        df["edge"] = f"{i}->{j}"
-        df["src_tissue"] = i
-        df["dst_tissue"] = j
-        df["n_t_cells"] = n_t_cells_edge[edge][side]
-        df["n_myeloid_cells"] = n_m_cells_edge[edge][side]
-        liana_rows.append(df)
-        n_liana_rows_edge[edge][side] = int(len(df))
-        print(f"  {i}->{j} {side}: {len(df)} L-R rows")
+        secs = time.time() - t0
+        _tag_and_collect(df, edge, side)
+        tqdm.write(f"  {i}->{j} {side}: n={n} cells, {secs:.1f}s, "
+                   f"{len(df)} L-R rows")
 
 if liana_rows:
     liana_full = pd.concat(liana_rows, ignore_index=True)
@@ -358,10 +476,32 @@ if len(liana_full):
         "src_p": pvt_p["src"],
         "dst_p": pvt_p["dst"],
     }).reset_index()
+
+    # Half-min pseudocount per (edge, direction). Avoids the 1e-6 blow-up
+    # when one side is exactly zero. Falls back to DEFAULT_PSEUDO if no
+    # positive lr_means exist in the group.
+    pos_long = pd.concat([
+        diff[["edge", "direction", "src_lr_means"]]
+            .rename(columns={"src_lr_means": "v"}),
+        diff[["edge", "direction", "dst_lr_means"]]
+            .rename(columns={"dst_lr_means": "v"}),
+    ], ignore_index=True)
+    pos_long = pos_long[pos_long["v"].notna() & (pos_long["v"] > 0)]
+    pseudo_by_group = (pos_long.groupby(["edge", "direction"])["v"].min()
+                                .mul(0.5).to_dict())
+    diff["_pseudo"] = [
+        pseudo_by_group.get((e, d), DEFAULT_PSEUDO)
+        for e, d in zip(diff["edge"], diff["direction"])
+    ]
     diff["log2fc"] = np.log2(
-        (diff["dst_lr_means"].fillna(0) + 1e-6)
-        / (diff["src_lr_means"].fillna(0) + 1e-6)
+        (diff["dst_lr_means"].fillna(0) + diff["_pseudo"])
+        / (diff["src_lr_means"].fillna(0) + diff["_pseudo"])
     )
+    diff["extreme"] = (
+        diff["src_lr_means"].fillna(0).eq(0)
+        | diff["dst_lr_means"].fillna(0).eq(0)
+    )
+    diff = diff.drop(columns=["_pseudo"])
     diff["min_p"] = diff[["src_p", "dst_p"]].min(axis=1, skipna=True)
     sig_mask = (
         (diff["src_p"].fillna(1.0) < LIANA_PVAL_CUTOFF)
@@ -371,7 +511,7 @@ if len(liana_full):
 else:
     diff = pd.DataFrame(columns=KEY_COLS + [
         "src_lr_means", "dst_lr_means", "src_p", "dst_p",
-        "log2fc", "min_p"])
+        "log2fc", "extreme", "min_p"])
 
 diff.to_csv(OUT_DIR / "signaling_edge_differential.csv", index=False)
 print(f"signaling_edge_differential.csv: {len(diff)} rows")
@@ -397,12 +537,16 @@ for edge in EDGES:
                          & (sub["dst_p"].fillna(1.0) < 0.05)).sum())
         n_src_up = int(((sub["log2fc"] < -1)
                          & (sub["src_p"].fillna(1.0) < 0.05)).sum())
+        # Rewiring volume: only non-extreme rows with min(src_p, dst_p) < 0.05.
+        # Extreme rows are dominated by the pseudocount and inflate the sum.
+        rv_mask = (sub["min_p"].fillna(1.0) < 0.05) & (~sub["extreme"])
+        rewiring_volume = float(sub.loc[rv_mask, "log2fc"].abs().sum())
         summary_rows.append({
             "edge": elabel, "direction": direction,
             "n_lr_significant_either": int(len(sub)),
             "n_dst_up": n_dst_up,
             "n_src_up": n_src_up,
-            "rewiring_volume": float(sub["log2fc"].abs().sum()),
+            "rewiring_volume": rewiring_volume,
         })
 summary_df = pd.DataFrame(summary_rows)
 summary_df.to_csv(OUT_DIR / "signaling_edge_summary.csv", index=False)
@@ -416,20 +560,40 @@ def _build_dir_matrix(direction):
     sub = diff[diff["direction"] == direction].copy()
     if not len(sub):
         return None, None, None
+    # Exclude extreme one-sided rows from the heatmap row pool. They live
+    # in the CSV but distort row ranking and color scale.
+    sub = sub[(~sub["extreme"])
+               & (sub["src_lr_means"].fillna(0) > 0)
+               & (sub["dst_lr_means"].fillna(0) > 0)].copy()
+    if not len(sub):
+        return None, None, None
     sub["lr_pair"] = (sub["ligand_complex"].astype(str)
                        + " → " + sub["receptor_complex"].astype(str))
+
+    # Per-edge signed Z-score of log2fc. Outlier rows can no longer
+    # dominate ranking — they're normalized against the edge's own
+    # log2fc distribution.
+    def _zscore(g):
+        v = g.values.astype(float)
+        mu = np.nanmean(v)
+        sd = np.nanstd(v)
+        if not np.isfinite(sd) or sd <= 1e-12:
+            return pd.Series(np.zeros_like(v), index=g.index)
+        return pd.Series((v - mu) / sd, index=g.index)
+
+    sub["lfc_z"] = sub.groupby("edge")["log2fc"].transform(_zscore)
 
     top_pairs = set()
     for edge in EDGES:
         i, j = edge
         elabel = f"{i}->{j}"
-        es = sub[sub["edge"] == elabel].copy()
+        es = sub[sub["edge"] == elabel]
         if not len(es):
             continue
-        es["abs_lfc"] = es["log2fc"].abs()
-        per_pair = (es.groupby("lr_pair")["abs_lfc"].max()
-                      .sort_values(ascending=False))
-        top_pairs.update(per_pair.head(TOP_N_PER_EDGE).index.tolist())
+        es_pp = (es.assign(absz=es["lfc_z"].abs())
+                    .groupby("lr_pair")["absz"].max()
+                    .sort_values(ascending=False))
+        top_pairs.update(es_pp.head(TOP_N_PER_EDGE).index.tolist())
 
     if not top_pairs:
         return None, None, None
@@ -443,10 +607,14 @@ def _build_dir_matrix(direction):
     src_p_mat = (sub.groupby(["lr_pair", "edge"])["src_p"].min()
                     .unstack("edge").reindex(columns=edge_cols))
 
-    row_order = (mat.abs().max(axis=1).sort_values(ascending=False).index)
-    mat = mat.loc[row_order]
-    dst_p_mat = dst_p_mat.loc[row_order]
-    src_p_mat = src_p_mat.loc[row_order]
+    # Hierarchical clustering of rows (per direction panel) on log2fc.
+    if mat.shape[0] >= 2:
+        link_mat = np.nan_to_num(mat.values, nan=0.0)
+        Z = linkage(link_mat, method="average", metric="euclidean")
+        order = leaves_list(Z)
+        mat = mat.iloc[order]
+        dst_p_mat = dst_p_mat.iloc[order]
+        src_p_mat = src_p_mat.iloc[order]
 
     sig_mat = np.zeros_like(mat.values, dtype=bool)
     for ri in range(mat.shape[0]):
@@ -454,11 +622,14 @@ def _build_dir_matrix(direction):
             v = mat.iat[ri, ci]
             if pd.isna(v):
                 continue
-            if v >= 0:
-                p = dst_p_mat.iat[ri, ci]
-            else:
-                p = src_p_mat.iat[ri, ci]
-            if pd.notna(p) and p < 0.05:
+            src_p_v = src_p_mat.iat[ri, ci]
+            dst_p_v = dst_p_mat.iat[ri, ci]
+            if pd.isna(src_p_v) and pd.isna(dst_p_v):
+                # L-R pair not tested on this edge → no dot.
+                continue
+            p = dst_p_v if v >= 0 else src_p_v
+            if (pd.notna(p) and p < DOT_P_CUTOFF
+                    and abs(v) > DOT_LFC_CUTOFF):
                 sig_mat[ri, ci] = True
     return mat, sig_mat, (dst_p_mat, src_p_mat)
 
@@ -474,15 +645,8 @@ else:
     n_rows_t = t_mat.shape[0] if t_mat is not None else 0
     height_total = 1.6 + 0.30 * max(n_rows_m, n_rows_t)
 
-    max_abs = 0.0
-    for mat in (m_mat, t_mat):
-        if mat is not None:
-            v = np.nanmax(np.abs(mat.values))
-            if np.isfinite(v):
-                max_abs = max(max_abs, float(v))
-    if max_abs <= 0:
-        max_abs = 1.0
-    norm = TwoSlopeNorm(vmin=-max_abs, vcenter=0.0, vmax=max_abs)
+    # Color scale clipped to ±HEATMAP_CLIP. Raw values stay in CSV.
+    norm = TwoSlopeNorm(vmin=-HEATMAP_CLIP, vcenter=0.0, vmax=HEATMAP_CLIP)
     cmap = plt.get_cmap("RdBu_r")
 
     fig = plt.figure(figsize=(15, max(height_total, 4.5)))
@@ -518,7 +682,7 @@ else:
         ax_bar.set_xlim(-0.5, len(edge_cols) - 0.5)
         ax_bar.set_xticks([])
         ax_bar.set_ylim(0, vol_max * 1.1)
-        ax_bar.set_ylabel("rewire vol", fontsize=8)
+        ax_bar.set_ylabel("rewire\n(sum |log2fc|,\np<0.05, raw)", fontsize=7)
         ax_bar.tick_params(axis="y", labelsize=7)
         for s in ("top", "right"):
             ax_bar.spines[s].set_visible(False)
@@ -536,7 +700,10 @@ else:
             for s in ("top", "right"):
                 ax.spines[s].set_visible(False)
             return None
-        im = ax.imshow(mat.values, aspect="auto", cmap=cmap, norm=norm)
+        # Clip values for color only; raw values remain in `mat` for the
+        # underlying CSV.
+        disp = np.clip(mat.values, -HEATMAP_CLIP, HEATMAP_CLIP)
+        im = ax.imshow(disp, aspect="auto", cmap=cmap, norm=norm)
         ax.set_xticks(range(len(edge_cols)))
         ax.set_xticklabels(edge_cols, rotation=45, ha="right", fontsize=8)
         for tick, (i, j) in zip(ax.get_xticklabels(), EDGES):
@@ -551,9 +718,9 @@ else:
         for ri in range(mat.shape[0]):
             for ci in range(mat.shape[1]):
                 if sig_mat[ri, ci]:
-                    ax.scatter(ci, ri, s=14, marker="o",
-                                facecolor="black", edgecolor="white",
-                                linewidth=0.5, zorder=3)
+                    ax.scatter(ci, ri, s=DOT_SIZE, marker="o",
+                                facecolor="black", edgecolor="none",
+                                zorder=3)
         ax.axvline(2.5, color="black", lw=0.8, alpha=0.5)
         return im
 
@@ -570,14 +737,16 @@ else:
 
     fig.suptitle(
         "Branch-restricted L-R differential (src vs dst pool)",
-        fontsize=13, fontweight="bold", y=0.985,
+        fontsize=13, fontweight="bold", y=0.995,
     )
     fig.text(
-        0.5, 0.06,
-        "columns: 9 (src→dst) edges, same-tissue first then cross-tissue. "
-        "Color = mean log₂fc across (source, target) pairs within an L-R "
-        "pair. Dot = side-specific p<0.05 (dst_p for log₂fc≥0, src_p else).",
+        0.5, 0.04,
+        "Branch-restricted L-R differential. Columns: 9 (src->dst) edges, "
+        "same-tissue first then cross-tissue. Color = log2(dst/src) of "
+        "lr_means, clipped to [-5,+5] for display. Dots: side-specific "
+        "p<0.01 and |log2fc|>1. Rows clustered within direction panel.",
         ha="center", va="bottom", fontsize=8, color="dimgray", style="italic",
+        wrap=True,
     )
 
     png_path = OUT_DIR / "signaling_edge_heatmap.png"
