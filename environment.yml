@@ -1,0 +1,60 @@
+# Reproducible micromamba/conda env for the GBM trafficking pipeline.
+#
+#   micromamba env create -f environment.yml -n gbm-trafficking
+#   micromamba activate gbm-trafficking
+#
+# The local `trafficking` package is installed editable so `from
+# trafficking.inference import run_inference` works without re-installing
+# after edits.
+#
+# NOT INCLUDED (private/external — install separately if the scripts that
+# reference them need to run):
+#   - genevector  (used in scripts/figure1 work)
+#   - stcr        (used in some clonotype helpers)
+name: gbm-trafficking
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - python=3.12
+  - pip
+  # core scientific stack
+  - numpy>=1.26
+  - pandas>=2.0
+  - scipy>=1.11
+  - scikit-learn>=1.3
+  - statsmodels>=0.14
+  - networkx>=3.0
+  - h5py>=3.10
+  - pillow>=10
+  - tqdm>=4.65
+  # plotting
+  - matplotlib>=3.8
+  - seaborn>=0.13
+  - plotly>=5.20
+  - python-kaleido>=0.2
+  # single-cell
+  - anndata>=0.10
+  - scanpy>=1.11
+  - igraph>=0.11
+  - leidenalg>=0.10
+  - umap-learn>=0.5
+  # bayesian / probabilistic / GPU
+  - pytorch>=2.2
+  - pyro-ppl>=1.9
+  - pip:
+    # harmonypy 2.0+ matches the API the pipeline calls directly
+    - harmonypy>=2.0
+    # pseudotime
+    - palantir>=1.4
+    # gene-set / DE / signaling
+    - gseapy>=1.1
+    - pydeseq2>=0.4
+    - scirpy>=0.16
+    - pertpy>=0.7
+    - liana>=1.0
+    # plotting extras
+    - matplotlib-venn>=0.11
+    - adjustText>=1.0
+    # install the local trafficking package editable
+    - -e .

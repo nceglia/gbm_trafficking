@@ -13,6 +13,13 @@ from .ctmc import (StateSpace, build_generator, decompose_generator,
                    observations_from_dataset, observations_from_dataset_by_patient,
                    migration_table, transition_table, expansion_table, rate_summary)
 
+from .empirical import (build_clone_state_vectors, build_empirical_P,
+                        decompose_P_logm, decompose_P_optimizer,
+                        rate_comparison_table, summary_report,
+                        build_clone_state_vectors_augmented,
+                        build_empirical_P_augmented,
+                        decompose_P_augmented, UNOBS_LABEL)
+
 from .style import (COLORS, TISSUE_ORDER, tissue_color, tissue_label, patient_color,
                     phenotype_color, init_phenotype_colors, init_colors_from_dataset,
                     get_phenotype_colormap, apply_style)

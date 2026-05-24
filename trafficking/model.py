@@ -5,7 +5,8 @@ import pyro.distributions as dist
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-def transition_model(theta, dst, n_dst, pat_ids, K, P, hierarchical=True):
+def transition_model(theta, dst, n_dst, pat_ids, K, P, hierarchical=True,
+                     dest_fracs=None):
     """Bayesian transition model.
 
     Generative process:
@@ -14,8 +15,19 @@ def transition_model(theta, dst, n_dst, pat_ids, K, P, hierarchical=True):
       For each clone c:
         π_c = θ_c @ T[patient_c]             — expected destination distribution
         dst_c ~ Multinomial(n_c, π_c)         — observed destination counts
+
+    When ``dest_fracs`` is supplied (a tensor of shape (K,) summing to 1),
+    the Dirichlet prior is recentered on the empirical marginal composition
+    at the destination tissue: ``α = dest_fracs * K``. Total concentration
+    stays at K so the prior is equally diffuse — only its mean shifts from
+    uniform to the empirical baseline.
     """
-    alpha = torch.ones(K, device=device)
+    if dest_fracs is not None:
+        dest_floor = dest_fracs.to(device).clamp(min=0.01)
+        dest_floor = dest_floor / dest_floor.sum()
+        alpha = dest_floor * float(K)
+    else:
+        alpha = torch.ones(K, device=device)
 
     if hierarchical and P > 1:
         kappa = pyro.sample("kappa", dist.Gamma(5.0, 1.0))
@@ -40,15 +52,28 @@ def transition_model(theta, dst, n_dst, pat_ids, K, P, hierarchical=True):
         pyro.factor("obs", log_lik)
 
 
-def transition_guide(theta, dst, n_dst, pat_ids, K, P, hierarchical=True):
-    """Variational guide — learns Dirichlet concentrations for all latent variables."""
+def transition_guide(theta, dst, n_dst, pat_ids, K, P, hierarchical=True,
+                     dest_fracs=None):
+    """Variational guide — learns Dirichlet concentrations for all latent variables.
+
+    When ``dest_fracs`` is provided, the ``T_global_conc`` parameter is
+    initialised so every row is centred on the empirical destination
+    composition (× 5), matching the model prior. With ``dest_fracs=None``
+    we fall back to the symmetric initialisation used historically.
+    """
     if hierarchical and P > 1:
         kappa_loc = pyro.param("kappa_loc", torch.tensor(5.0, device=device),
                                constraint=torch.distributions.constraints.positive)
         pyro.sample("kappa", dist.Delta(kappa_loc))
 
-        T_global_conc = pyro.param("T_global_conc",
-                                    torch.ones(K, K, device=device) * 5.0,
+        if dest_fracs is not None:
+            dest_floor = dest_fracs.to(device).clamp(min=0.01)
+            dest_floor = dest_floor / dest_floor.sum()
+            row = dest_floor * 5.0
+            T_global_conc_init = row.unsqueeze(0).repeat(K, 1).contiguous()
+        else:
+            T_global_conc_init = torch.ones(K, K, device=device) * 5.0
+        T_global_conc = pyro.param("T_global_conc", T_global_conc_init,
                                     constraint=torch.distributions.constraints.positive)
         with pyro.plate("src_state", K, dim=-1):
             pyro.sample("T_global", dist.Dirichlet(T_global_conc))

@@ -5,14 +5,21 @@ from pyro.optim import ClippedAdam
 import numpy as np
 import pandas as pd
 
-from .data import extract_transitions, extract_temporal_transitions, prepare_tensors, summary
+from .data import (extract_transitions, extract_temporal_transitions,
+                   prepare_tensors, summary, compute_dest_phenotype_fracs)
 from .model import transition_model, transition_guide
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-def run_svi(data, phenotypes, n_steps=3000, lr=0.01, hierarchical=True, verbose=True):
-    """Run stochastic variational inference on extracted transition data."""
+def run_svi(data, phenotypes, n_steps=3000, lr=0.01, hierarchical=True,
+            verbose=True, dest_fracs=None):
+    """Run stochastic variational inference on extracted transition data.
+
+    ``dest_fracs`` (optional, torch tensor of shape (K,)) is threaded into
+    the model/guide as the prior centre. ``None`` reproduces the flat
+    Dirichlet(1) behaviour.
+    """
     theta, dst, n_dst, pat_ids, pat_names = prepare_tensors(data)
     K = len(phenotypes)
     P = len(pat_names)
@@ -23,7 +30,8 @@ def run_svi(data, phenotypes, n_steps=3000, lr=0.01, hierarchical=True, verbose=
 
     losses = []
     for step in range(n_steps):
-        loss = svi.step(theta, dst, n_dst, pat_ids, K, P, hierarchical)
+        loss = svi.step(theta, dst, n_dst, pat_ids, K, P, hierarchical,
+                        dest_fracs)
         losses.append(loss)
         if verbose and step % 500 == 0:
             print(f"  Step {step}: ELBO = {loss:.1f}")
@@ -37,6 +45,7 @@ def run_svi(data, phenotypes, n_steps=3000, lr=0.01, hierarchical=True, verbose=
         "pat_ids": pat_ids, "pat_names": pat_names,
         "K": K, "P": P, "phenotypes": phenotypes,
         "hierarchical": hierarchical,
+        "dest_fracs": dest_fracs,
     }
 
 
@@ -44,7 +53,7 @@ def sample_posterior(svi_result, n_samples=2000):
     """Draw posterior samples from the learned guide."""
     args = (svi_result["theta"], svi_result["dst"], svi_result["n_dst"],
             svi_result["pat_ids"], svi_result["K"], svi_result["P"],
-            svi_result["hierarchical"])
+            svi_result["hierarchical"], svi_result.get("dest_fracs"))
 
     T_samples, kappa_samples, T_patient_samples = [], [], []
 
@@ -75,8 +84,14 @@ def sample_posterior(svi_result, n_samples=2000):
 
 def run_inference(adata, t1, t2, lineage="CD8", temporal=True,
                   n_steps=3000, lr=0.01, hierarchical=True, n_samples=2000,
-                  verbose=True, **kwargs):
-    """Full pipeline: extract data → run SVI → sample posterior."""
+                  verbose=True, dest_fracs=None, **kwargs):
+    """Full pipeline: extract data → run SVI → sample posterior.
+
+    By default, the Dirichlet prior on ``T_global`` is centred on the
+    empirical phenotype composition at the destination tissue ``t2``
+    (filtered by ``lineage``). Pass ``dest_fracs`` explicitly to override,
+    or pass an all-ones tensor to recover the flat prior.
+    """
     if verbose:
         print(f"=== {lineage} {t1} → {t2} ===")
 
@@ -92,8 +107,31 @@ def run_inference(adata, t1, t2, lineage="CD8", temporal=True,
     if verbose:
         summary(data, phenotypes)
 
+    if dest_fracs is None:
+        dest_fracs_series = compute_dest_phenotype_fracs(adata, t2, lineage)
+        vec = np.array([float(dest_fracs_series.get(p, 1e-6))
+                        for p in phenotypes], dtype=np.float32)
+        if vec.sum() <= 0:
+            vec = np.full_like(vec, 1.0 / len(vec))
+        else:
+            vec = vec / vec.sum()
+        dest_fracs_tensor = torch.tensor(vec, dtype=torch.float, device=device)
+        if verbose:
+            print(f"  Dest phenotype fracs @ {t2} ({lineage}) — prior centre:")
+            for p, f in zip(phenotypes, vec):
+                print(f"    {p:>14s}: {f:.3f}")
+    else:
+        if not isinstance(dest_fracs, torch.Tensor):
+            dest_fracs_tensor = torch.tensor(
+                np.asarray(dest_fracs, dtype=np.float32),
+                dtype=torch.float, device=device)
+        else:
+            dest_fracs_tensor = dest_fracs.to(device=device, dtype=torch.float)
+        dest_fracs_tensor = dest_fracs_tensor / dest_fracs_tensor.sum()
+
     svi_result = run_svi(data, phenotypes, n_steps=n_steps, lr=lr,
-                         hierarchical=hierarchical, verbose=verbose)
+                         hierarchical=hierarchical, verbose=verbose,
+                         dest_fracs=dest_fracs_tensor)
     result = sample_posterior(svi_result, n_samples=n_samples)
     return result, data, phenotypes
 

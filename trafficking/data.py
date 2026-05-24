@@ -27,6 +27,31 @@ def _count_phenotypes(cells, phenotype_col, pidx, K):
     return counts
 
 
+def compute_dest_phenotype_fracs(adata, tissue, lineage,
+                                 phenotype_key="phenotype",
+                                 tissue_key="tissue"):
+    """Empirical phenotype fractions at a destination tissue.
+
+    Returns a pandas Series indexed by the shortened phenotype names that
+    ``_clean_tcr`` produces (so the index aligns with the phenotype list
+    returned by :func:`extract_temporal_transitions`).
+    """
+    mask = adata.obs[tissue_key] == tissue
+    if lineage:
+        level1 = adata.obs[phenotype_key].apply(
+            lambda x: "CD8" if "CD8" in str(x) else "CD4")
+        mask = mask & (level1 == lineage)
+    pheno_col = (adata.obs.loc[mask, phenotype_key]
+                 .astype(str)
+                 .str.replace("CD8_Activated_", "", regex=False)
+                 .str.replace("CD8_Quiescent_", "", regex=False)
+                 .str.replace("CD4_", "", regex=False))
+    counts = pheno_col.value_counts()
+    if counts.empty:
+        return pd.Series(dtype=float)
+    return counts / counts.sum()
+
+
 def extract_transitions(adata, t1, t2, lineage="CD8", clone_key="trb",
                         phenotype_key="phenotype", tissue_key="tissue",
                         patient_key="patient"):
