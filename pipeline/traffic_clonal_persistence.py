@@ -1,23 +1,28 @@
 # %%
 
+import sys
 from pathlib import Path
 
 import scanpy as sc
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from modules.clone_helpers import (
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO_ROOT / "pipeline"))
+
+from modules import paths  # noqa: E402
+from modules.clone_helpers import (  # noqa: E402
     categorize_edge,
     infer_lineage_from_phenotype,
     parse_node_id,
     shorten_phenotype_label,
 )
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
 OUTPUT_DIR = REPO_ROOT / "results" / "07_clonal_trafficking"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-adata = sc.read("/Users/ceglian/Codebase/GitHub/gbm_trafficking/data/objects/GBM_TCR_POS_TCELLS.h5ad")
+adata = sc.read(str(paths.H5AD_TCELLS))
 tcr = adata.obs[adata.obs["trb"].notna()].copy()
 tcr["tissue"] = tcr["tissue"].astype(str)
 tcr["phenotype"] = tcr["phenotype"].astype(str)

@@ -34,14 +34,16 @@ except ImportError:
 # ---- Config ----
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
+sys.path.insert(0, str(REPO_ROOT / "pipeline"))
 
 from pipeline.modules.myeloid_groups import MYELOID_GROUPS, regroup_obs
+from modules import paths  # noqa: E402
 
-COMBINED_PATH = "/Users/ceglian/Codebase/GitHub/gbm_trafficking/data/objects/GBM_TCR_POS_TCELLS_MYELOID_combined.h5ad"
-PATHWAY_DEFS_PATH = REPO_ROOT / "results" / "10_temporal_scores" / "pathway_definitions.csv"
-PATHWAY_CORRS_PATH = REPO_ROOT / "results" / "11_cross_lineage_correlations" / "pathway_correlations.csv"
+COMBINED_PATH = paths.H5AD_TCELLS_MYELOID
+PATHWAY_DEFS_PATH = paths.TEMPORAL_SCORES_DIR / "pathway_definitions.csv"
+PATHWAY_CORRS_PATH = paths.CROSS_LINEAGE_CORR_DIR / "pathway_correlations.csv"
 
-OUTPUT_DIR = REPO_ROOT / "results" / "12_liana_signaling"
+OUTPUT_DIR = paths.LIANA_SIGNALING_DIR
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 MIN_TOTAL_CELLS = 100
@@ -271,3 +273,4 @@ except Exception as e:
     print(f"\nOutput dir size unavailable: {e}")
 
 print(f"Elapsed: {elapsed:.1f}s ({elapsed / 60:.2f} min)")
+# %%

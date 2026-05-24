@@ -22,10 +22,12 @@ warnings.filterwarnings("ignore")
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "pipeline"))
 
+from modules import paths  # noqa: E402
+
 # %%
 # ---- Config ----
-DATA_PATH = Path("/Users/ceglian/Codebase/GitHub/gbm_trafficking/data/objects/MYELOID_GBM.h5ad")
-OUTPUT_DIR = REPO_ROOT / "results" / "10_temporal_scores"
+DATA_PATH = paths.H5AD_MYELOID
+OUTPUT_DIR = paths.TEMPORAL_SCORES_DIR
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 PATHWAY_DEF_PATH = OUTPUT_DIR / "pathway_definitions.csv"
