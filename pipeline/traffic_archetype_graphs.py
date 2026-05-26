@@ -825,77 +825,98 @@ plt.close(fig)
 
 # %%
 # =========================================================
-# Plot 5: top-5 MERGED archetype retained graphs
+# Plot 5: top-N MERGED archetype retained graphs (4×5 grid)
 # =========================================================
-print("\nPlotting top-5 merged archetype graphs...")
-top5_merged_new = list(range(min(5, n_merged)))
-fig, axes = plt.subplots(1, len(top5_merged_new),
-                         figsize=(len(top5_merged_new) * 4.0, 4.0),
-                         squeeze=False)
-for col, new_id in enumerate(top5_merged_new):
-    ax = axes[0, col]
-    edges = merged_rep_edges[new_id]
-    old_id = merged_rep_old_id[new_id]
-    n_clones = merged_counts[old_id]
-    n_src = len(merged_sources[old_id])
-    desc = _describe_archetype(edges)
-    nodes_in_graph = set()
-    for (a_ti, a_tp), (b_ti, b_tp) in edges:
-        nodes_in_graph.add((a_ti, a_tp))
-        nodes_in_graph.add((b_ti, b_tp))
-    # For merged: "observed in majority" = union of observed nodes
-    # across all clones in any of the absorbed strict archetypes.
-    obs_freq = {}
-    for strict_id in merged_sources[old_id]:
-        for cid in clone_lists[strict_id]:
-            for n_ in clone_graphs[cid][1]:
-                obs_freq[n_] = obs_freq.get(n_, 0) + 1
-    observed_majority = {n_ for n_, c in obs_freq.items()
-                         if c >= 0.5 * n_clones}
-    for j in range(T):
-        for k in range(3):
-            ax.plot(j, 2 - k, "o", color="#dddddd",
-                    markersize=6, zorder=1)
-    for (a_ti, a_tp), (b_ti, b_tp) in edges:
-        arr = FancyArrowPatch(
-            posA=(a_tp, 2 - a_ti), posB=(b_tp, 2 - b_ti),
-            arrowstyle="-|>", mutation_scale=14,
-            color="#555", lw=1.2,
-            shrinkA=10, shrinkB=10,
-            connectionstyle="arc3,rad=0.0", zorder=2,
-        )
-        ax.add_patch(arr)
-    for (ti, tp) in nodes_in_graph:
-        x, y = tp, 2 - ti
-        color = TISSUE_COLORS[TISSUES[ti]]
-        if (ti, tp) in observed_majority:
-            ax.plot(x, y, "o", markerfacecolor=color,
-                    markeredgecolor="black", markersize=14, zorder=3)
-        else:
-            ax.plot(x, y, "o", markerfacecolor="white",
-                    markeredgecolor=color, markersize=14, mew=2,
-                    zorder=3)
-    ax.set_xticks(range(T))
-    ax.set_xticklabels([f"T{t}" for t in TPS], fontsize=8)
-    ax.set_yticks([0, 1, 2])
-    ax.set_yticklabels([TISSUES[2], TISSUES[1], TISSUES[0]],
-                        fontsize=8)
-    for tick, tname in zip(ax.get_yticklabels(),
-                            [TISSUES[2], TISSUES[1], TISSUES[0]]):
-        tick.set_color(TISSUE_COLORS.get(tname, "#444"))
-        tick.set_fontweight("bold")
-    ax.set_ylim(-0.5, 2.5)
-    ax.set_xlim(-0.5, T - 0.5)
-    ax.set_title(f"M{new_id}: n={n_clones} (absorbed {n_src})\n{desc}",
-                  fontsize=9, linespacing=1.15)
-    for s in ("top", "right"):
-        ax.spines[s].set_visible(False)
-fig.suptitle("Top-5 merged-archetype retained graphs",
-             fontsize=11, fontweight="bold", y=1.02)
-fig.tight_layout()
-fig.savefig(OUT_DIR / "merged_top_graphs.png",
-            dpi=DPI, bbox_inches="tight")
-plt.close(fig)
+print(f"\nPlotting top-{TOP_N} merged archetype graphs...")
+
+
+def _draw_merged_grid(merged_ids_subset, out_path, title_suffix):
+    n_cols_g = 5
+    n_rows_g = int(np.ceil(len(merged_ids_subset) / n_cols_g))
+    fig, axes = plt.subplots(n_rows_g, n_cols_g,
+                             figsize=(n_cols_g * 4.0, n_rows_g * 2.8),
+                             squeeze=False)
+    for slot, new_id in enumerate(merged_ids_subset):
+        ax = axes[slot // n_cols_g, slot % n_cols_g]
+        edges = merged_rep_edges[new_id]
+        old_id = merged_rep_old_id[new_id]
+        n_clones = merged_counts[old_id]
+        n_src = len(merged_sources[old_id])
+        desc = _describe_archetype(edges)
+        nodes_in_graph = set()
+        for (a_ti, a_tp), (b_ti, b_tp) in edges:
+            nodes_in_graph.add((a_ti, a_tp))
+            nodes_in_graph.add((b_ti, b_tp))
+        obs_freq = {}
+        for strict_id in merged_sources[old_id]:
+            for cid in clone_lists[strict_id]:
+                for n_ in clone_graphs[cid][1]:
+                    obs_freq[n_] = obs_freq.get(n_, 0) + 1
+        observed_majority = {n_ for n_, c in obs_freq.items()
+                             if c >= 0.5 * n_clones}
+        for j in range(T):
+            for k in range(3):
+                ax.plot(j, 2 - k, "o", color="#dddddd",
+                        markersize=5, zorder=1)
+        for (a_ti, a_tp), (b_ti, b_tp) in edges:
+            arr = FancyArrowPatch(
+                posA=(a_tp, 2 - a_ti), posB=(b_tp, 2 - b_ti),
+                arrowstyle="-|>", mutation_scale=12,
+                color="#555", lw=1.1,
+                shrinkA=9, shrinkB=9,
+                connectionstyle="arc3,rad=0.0", zorder=2,
+            )
+            ax.add_patch(arr)
+        for (ti, tp) in nodes_in_graph:
+            x, y = tp, 2 - ti
+            color = TISSUE_COLORS[TISSUES[ti]]
+            if (ti, tp) in observed_majority:
+                ax.plot(x, y, "o", markerfacecolor=color,
+                        markeredgecolor="black", markersize=12,
+                        zorder=3)
+            else:
+                ax.plot(x, y, "o", markerfacecolor="white",
+                        markeredgecolor=color, markersize=12,
+                        mew=1.8, zorder=3)
+        ax.set_xticks(range(T))
+        ax.set_xticklabels([f"T{t}" for t in TPS], fontsize=7)
+        ax.set_yticks([0, 1, 2])
+        ax.set_yticklabels([TISSUES[2], TISSUES[1], TISSUES[0]],
+                            fontsize=7)
+        for tick, tname in zip(ax.get_yticklabels(),
+                                [TISSUES[2], TISSUES[1], TISSUES[0]]):
+            tick.set_color(TISSUE_COLORS.get(tname, "#444"))
+            tick.set_fontweight("bold")
+        ax.set_ylim(-0.5, 2.5)
+        ax.set_xlim(-0.5, T - 0.5)
+        ax.set_title(f"M{new_id}: n={n_clones} (absorbed {n_src})\n{desc}",
+                      fontsize=8, linespacing=1.15)
+        for s in ("top", "right"):
+            ax.spines[s].set_visible(False)
+    for k in range(len(merged_ids_subset), n_rows_g * n_cols_g):
+        axes[k // n_cols_g, k % n_cols_g].axis("off")
+    fig.suptitle(f"Top-{len(merged_ids_subset)} merged-archetype "
+                 f"retained graphs{title_suffix}",
+                 fontsize=11, fontweight="bold", y=1.00)
+    fig.tight_layout()
+    fig.savefig(out_path, dpi=DPI, bbox_inches="tight")
+    plt.close(fig)
+
+
+# All-merged top-20.
+top_merged_all = list(range(min(TOP_N, n_merged)))
+_draw_merged_grid(top_merged_all,
+                   OUT_DIR / "merged_top_graphs.png", "")
+
+# Multi-tissue merged top-20 (≥2 tissues touched).
+merged_multi_ids = [m for m in range(n_merged)
+                    if len(tissues_per[merged_rep_old_id[m]]) >= 2]
+top_merged_multi = merged_multi_ids[:TOP_N]
+print(f"  multi-tissue merged archetypes total: "
+      f"{len(merged_multi_ids):,}; plotting top {len(top_merged_multi)}")
+_draw_merged_grid(top_merged_multi,
+                   OUT_DIR / "merged_top_graphs_multi_tissue.png",
+                   " (multi-tissue, ≥2 tissues)")
 
 
 # %%

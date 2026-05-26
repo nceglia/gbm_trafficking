@@ -371,6 +371,7 @@ steps:
       - results/traffic_archetype_graphs/merged_archetype_summary.csv
       - results/traffic_archetype_graphs/merge_map.csv
       - results/traffic_archetype_graphs/merged_top_graphs.png
+      - results/traffic_archetype_graphs/merged_top_graphs_multi_tissue.png
       - results/traffic_archetype_graphs/merged_size_distribution.png
       - results/traffic_archetype_graphs/merge_flow.png
       - results/traffic_archetype_graphs/subset_diagnostic.png
