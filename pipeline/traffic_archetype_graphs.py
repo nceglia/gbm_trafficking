@@ -17,6 +17,7 @@ Writes to results/traffic_archetype_graphs/:
   archetype_top_graphs.png, archetype_size_distribution.png,
   subset_diagnostic.png, archetype_phenotypes.png
 """
+import argparse
 import json
 import sys
 import time
@@ -47,6 +48,14 @@ from modules.style import (  # noqa: E402
 
 OUT_DIR = paths.TRAFFIC_ARCHETYPE_GRAPHS_DIR
 OUT_DIR.mkdir(parents=True, exist_ok=True)
+
+_argp = argparse.ArgumentParser(add_help=False)
+_argp.add_argument(
+    "--heat-threshold", type=float, default=0.30,
+    help="Edge frequency threshold for trafficking_heat (per-panel "
+         "normalized; default 0.30).")
+_args, _ = _argp.parse_known_args()
+HEAT_EDGE_THRESHOLD = _args.heat_threshold
 
 TISSUES = list(TISSUE_ORDER)
 TISSUE_IDX = {t: i for i, t in enumerate(TISSUES)}
@@ -1120,10 +1129,11 @@ for label, panel_set in HEAT_PANELS:
         "n_inferred": n_inferred_node,
     })
 
-HEAT_EDGE_THRESHOLD = 0.30
 NODE_SIZE_BASE = 13
 NODE_SIZE_MAX = NODE_SIZE_BASE * 1.5
 NODE_SIZE_MIN = NODE_SIZE_BASE / 8.0
+print(f"  edge threshold (per-panel normalized): "
+      f"{HEAT_EDGE_THRESHOLD:.2f}")
 
 # Row order: CSF on top, TP middle, PBMC bottom.
 HEAT_ROW_ORDER = ["CSF", "TP", "PBMC"]
@@ -1155,7 +1165,8 @@ for col, pdat in enumerate(panel_data):
         kept_nodes.add(u); kept_nodes.add(v)
     n_dropped_edges = len(edge_count) - len(kept_edges)
 
-    # Draw retained edges.
+    # Draw retained edges. Sharper arrowhead: longer, narrower head
+    # than the default "-|>", with mutation_scale tuned for the grid.
     if max_edge > 0:
         log_max = np.log1p(max_edge)
         for (u, v), cnt in kept_edges.items():
@@ -1166,7 +1177,8 @@ for col, pdat in enumerate(panel_data):
             arr = FancyArrowPatch(
                 posA=(a_tp, HEAT_Y[a_ti]),
                 posB=(b_tp, HEAT_Y[b_ti]),
-                arrowstyle="-|>", mutation_scale=12,
+                arrowstyle="-|>,head_length=0.55,head_width=0.20",
+                mutation_scale=14,
                 color=color, lw=lw,
                 shrinkA=9, shrinkB=9,
                 connectionstyle="arc3,rad=0.0", zorder=2,
@@ -1206,25 +1218,46 @@ for col, pdat in enumerate(panel_data):
     ax.set_ylim(-0.5, 2.5)
     ax.set_xlim(-0.5, T - 0.5)
     ax.set_title(
-        f"{pdat['label']}  (n={pdat['n_clones']} clones)\n"
-        f"max edge n = {max_edge}  ·  "
-        f"edges shown ≥{HEAT_EDGE_THRESHOLD:.0%}  ·  "
-        f"dropped {n_dropped_edges}/{len(edge_count)}",
-        fontsize=9, fontweight="bold", linespacing=1.25)
+        f"{pdat['label']}  (n={pdat['n_clones']} clones)",
+        fontsize=11, fontweight="bold")
     for s in ("top", "right", "bottom", "left"):
         ax.spines[s].set_visible(False)
     ax.tick_params(length=0)
 
-fig.subplots_adjust(left=0.04, right=0.97, top=0.88,
-                     bottom=0.18, wspace=0.10)
-cax = fig.add_axes([0.20, 0.06, 0.6, 0.022])
+fig.subplots_adjust(left=0.04, right=0.97, top=0.86,
+                     bottom=0.24, wspace=0.10)
+
+# Colorbar (left half of the legend strip).
+cax = fig.add_axes([0.07, 0.10, 0.42, 0.022])
 sm = ScalarMappable(cmap=inferno_cmap, norm=Normalize(vmin=0, vmax=1))
 sm.set_array([])
 cb = fig.colorbar(sm, cax=cax, orientation="horizontal")
-cb.set_label("Edge frequency (per-panel normalized)", fontsize=9)
+cb.set_label("Edge frequency (per-panel normalized)",
+             fontsize=9)
 cb.ax.tick_params(labelsize=8)
-fig.suptitle("Trafficking heat across per-clone retained graphs",
-             fontsize=12, fontweight="bold", y=0.98)
+
+# Node-size legend (right half).
+lax = fig.add_axes([0.55, 0.07, 0.42, 0.10])
+lax.set_xlim(0, 1); lax.set_ylim(0, 1)
+size_fracs = [0.0, 0.25, 0.50, 0.75, 1.0]
+x_positions = np.linspace(0.10, 0.90, len(size_fracs))
+for f, x in zip(size_fracs, x_positions):
+    sz = NODE_SIZE_MIN + (NODE_SIZE_MAX - NODE_SIZE_MIN) * f
+    lax.plot(x, 0.65, "o", markerfacecolor="#444",
+             markeredgecolor="black", markersize=sz, zorder=3)
+    lax.text(x, 0.20, f"{int(f * 100)}%",
+             ha="center", va="top", fontsize=8)
+lax.text(0.5, 0.95,
+         "Node size: occupancy per panel (% of panel max)",
+         ha="center", va="top", fontsize=9)
+for s in ("top", "right", "bottom", "left"):
+    lax.spines[s].set_visible(False)
+lax.set_xticks([]); lax.set_yticks([])
+
+fig.suptitle(
+    f"Trafficking heat across per-clone retained graphs  "
+    f"(edge threshold ≥ {HEAT_EDGE_THRESHOLD:.0%})",
+    fontsize=12, fontweight="bold", y=0.97)
 fig.savefig(OUT_DIR / "trafficking_heat.png",
             dpi=DPI, bbox_inches="tight")
 fig.savefig(OUT_DIR / "trafficking_heat.pdf",
