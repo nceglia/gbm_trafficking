@@ -374,6 +374,8 @@ steps:
       - results/traffic_archetype_graphs/merged_top_graphs_multi_tissue.png
       - results/traffic_archetype_graphs/merged_size_distribution.png
       - results/traffic_archetype_graphs/merge_flow.png
+      - results/traffic_archetype_graphs/trafficking_heat.png
+      - results/traffic_archetype_graphs/trafficking_heat.pdf
       - results/traffic_archetype_graphs/subset_diagnostic.png
       - results/traffic_archetype_graphs/archetype_phenotypes.png
     depends_on: [qc_scrublet_doublets]

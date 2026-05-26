@@ -1072,4 +1072,125 @@ print(f"\ntiebreaker invocations: "
       f"earliest={_TB_COUNTS['earliest']:,}, "
       f"latest={_TB_COUNTS['latest']:,}")
 
+
+# %%
+# =========================================================
+# Trafficking heat: 4-panel per-edge frequency across clones,
+# filtered by tissue scope.
+# =========================================================
+print("\nPlotting trafficking heat (4-panel)...")
+from matplotlib.cm import ScalarMappable  # noqa: E402
+from matplotlib.colors import Normalize  # noqa: E402
+
+clone_tissues = {
+    cid: frozenset(ti for (ti, _tp) in obs_nodes)
+    for cid, (_edges, obs_nodes) in clone_graphs.items()
+}
+PBMC_I = TISSUE_IDX["PBMC"]; CSF_I = TISSUE_IDX["CSF"]; TP_I = TISSUE_IDX["TP"]
+HEAT_PANELS = [
+    ("CSF ↔ TP",   frozenset({CSF_I, TP_I})),
+    ("PBMC ↔ TP",  frozenset({PBMC_I, TP_I})),
+    ("PBMC ↔ CSF", frozenset({PBMC_I, CSF_I})),
+    ("All",        frozenset({PBMC_I, CSF_I, TP_I})),
+]
+
+panel_data = []
+for label, panel_set in HEAT_PANELS:
+    cids = [c for c, t in clone_tissues.items() if t == panel_set]
+    edge_count = {}
+    n_observed_node = {}
+    n_inferred_node = {}
+    for cid in cids:
+        edges, obs_nodes = clone_graphs[cid]
+        nodes_on_path = set()
+        for u, v in edges:
+            nodes_on_path.add(u); nodes_on_path.add(v)
+            edge_count[(u, v)] = edge_count.get((u, v), 0) + 1
+        for node in nodes_on_path:
+            if node in obs_nodes:
+                n_observed_node[node] = n_observed_node.get(node, 0) + 1
+            else:
+                n_inferred_node[node] = n_inferred_node.get(node, 0) + 1
+    max_edge = max(edge_count.values()) if edge_count else 0
+    print(f"  {label}: n_clones={len(cids)}, max_edge_count={max_edge}")
+    panel_data.append({
+        "label": label, "n_clones": len(cids),
+        "edge_count": edge_count, "max_edge": max_edge,
+        "n_observed": n_observed_node,
+        "n_inferred": n_inferred_node,
+    })
+
+fig, axes = plt.subplots(1, 4, figsize=(20, 5))
+inferno_cmap = plt.get_cmap("inferno")
+for col, pdat in enumerate(panel_data):
+    ax = axes[col]
+    edge_count = pdat["edge_count"]
+    max_edge = pdat["max_edge"]
+    n_observed_node = pdat["n_observed"]
+    n_inferred_node = pdat["n_inferred"]
+    for j in range(T):
+        for k in range(3):
+            ax.plot(j, 2 - k, "o", color="#dddddd",
+                    markersize=5, zorder=1)
+    if max_edge > 0:
+        log_max = np.log1p(max_edge)
+        for (u, v), cnt in edge_count.items():
+            (a_ti, a_tp), (b_ti, b_tp) = u, v
+            heat = cnt / max_edge
+            lw = 0.8 + 4.0 * np.log1p(cnt) / log_max
+            color = inferno_cmap(heat)
+            arr = FancyArrowPatch(
+                posA=(a_tp, 2 - a_ti),
+                posB=(b_tp, 2 - b_ti),
+                arrowstyle="-|>", mutation_scale=12,
+                color=color, lw=lw,
+                shrinkA=9, shrinkB=9,
+                connectionstyle="arc3,rad=0.0", zorder=2,
+            )
+            ax.add_patch(arr)
+    all_panel_nodes = set(n_observed_node.keys()) | set(n_inferred_node.keys())
+    for (ti, tp) in all_panel_nodes:
+        x, y = tp, 2 - ti
+        color = TISSUE_COLORS[TISSUES[ti]]
+        if n_observed_node.get((ti, tp), 0) > 0:
+            ax.plot(x, y, "o", markerfacecolor=color,
+                    markeredgecolor="black", markersize=13, zorder=3)
+        elif n_inferred_node.get((ti, tp), 0) > 0:
+            ax.plot(x, y, "o", markerfacecolor="white",
+                    markeredgecolor=color, markersize=13, mew=1.8,
+                    zorder=3)
+    ax.set_xticks(range(T))
+    ax.set_xticklabels([f"T{t}" for t in TPS], fontsize=9)
+    ax.set_yticks([0, 1, 2])
+    ax.set_yticklabels([TISSUES[2], TISSUES[1], TISSUES[0]], fontsize=9)
+    for tick, tname in zip(ax.get_yticklabels(),
+                            [TISSUES[2], TISSUES[1], TISSUES[0]]):
+        tick.set_color(TISSUE_COLORS.get(tname, "#444"))
+        tick.set_fontweight("bold")
+    ax.set_ylim(-0.5, 2.5)
+    ax.set_xlim(-0.5, T - 0.5)
+    ax.set_title(f"{pdat['label']}  (n={pdat['n_clones']} clones)\n"
+                  f"max edge n = {max_edge}",
+                  fontsize=10, fontweight="bold", linespacing=1.25)
+    for s in ("top", "right", "bottom", "left"):
+        ax.spines[s].set_visible(False)
+    ax.tick_params(length=0)
+
+fig.subplots_adjust(left=0.04, right=0.97, top=0.88,
+                     bottom=0.18, wspace=0.10)
+cax = fig.add_axes([0.20, 0.06, 0.6, 0.022])
+sm = ScalarMappable(cmap=inferno_cmap, norm=Normalize(vmin=0, vmax=1))
+sm.set_array([])
+cb = fig.colorbar(sm, cax=cax, orientation="horizontal")
+cb.set_label("Edge frequency (per-panel normalized)", fontsize=9)
+cb.ax.tick_params(labelsize=8)
+fig.suptitle("Trafficking heat across per-clone retained graphs",
+             fontsize=12, fontweight="bold", y=0.98)
+fig.savefig(OUT_DIR / "trafficking_heat.png",
+            dpi=DPI, bbox_inches="tight")
+fig.savefig(OUT_DIR / "trafficking_heat.pdf",
+            bbox_inches="tight")
+plt.close(fig)
+
+
 print(f"\nDone. All outputs in {OUT_DIR}")
