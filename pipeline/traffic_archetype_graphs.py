@@ -419,6 +419,99 @@ plt.close(fig)
 
 # %%
 # =========================================================
+# Plot 1b: top-N MULTI-TISSUE archetype retained graphs
+# (filter to archetypes touching ≥2 tissues; preserve original IDs)
+# =========================================================
+print(f"\nPlotting top-{TOP_N} multi-tissue archetype graphs...")
+
+
+def _n_unique_tissues(edges):
+    s = set()
+    for (a_ti, _), (b_ti, _) in edges:
+        s.add(a_ti); s.add(b_ti)
+    return len(s)
+
+
+multi_archs = [(i, edges, cids)
+               for i, (edges, cids) in enumerate(archetypes_sorted)
+               if _n_unique_tissues(edges) >= 2]
+top_multi = multi_archs[:TOP_N]
+print(f"  multi-tissue archetypes total: {len(multi_archs):,}; "
+      f"plotting top {len(top_multi)}")
+
+n_cols_m = 5
+n_rows_m = int(np.ceil(len(top_multi) / n_cols_m))
+fig, axes = plt.subplots(n_rows_m, n_cols_m,
+                         figsize=(n_cols_m * 4.0, n_rows_m * 2.8),
+                         squeeze=False)
+for slot, (orig_id, edges, cids) in enumerate(top_multi):
+    ax = axes[slot // n_cols_m, slot % n_cols_m]
+    n_clones = len(cids)
+    desc = _describe_archetype(edges)
+    nodes_in_graph = set()
+    for (a_ti, a_tp), (b_ti, b_tp) in edges:
+        nodes_in_graph.add((a_ti, a_tp))
+        nodes_in_graph.add((b_ti, b_tp))
+    obs_freq = {}
+    for cid in cids:
+        for n_ in clone_graphs[cid][1]:
+            obs_freq[n_] = obs_freq.get(n_, 0) + 1
+    observed_majority = {n_ for n_, c in obs_freq.items()
+                         if c >= 0.5 * n_clones}
+    for j in range(T):
+        for k in range(3):
+            ax.plot(j, 2 - k, "o", color="#dddddd",
+                    markersize=5, zorder=1)
+    for (a_ti, a_tp), (b_ti, b_tp) in edges:
+        arr = FancyArrowPatch(
+            posA=(a_tp, 2 - a_ti),
+            posB=(b_tp, 2 - b_ti),
+            arrowstyle="-|>", mutation_scale=12,
+            color="#555", lw=1.1,
+            shrinkA=9, shrinkB=9,
+            connectionstyle="arc3,rad=0.0", zorder=2,
+        )
+        ax.add_patch(arr)
+    for (ti, tp) in nodes_in_graph:
+        x, y = tp, 2 - ti
+        tname = TISSUES[ti]
+        color = TISSUE_COLORS[tname]
+        if (ti, tp) in observed_majority:
+            ax.plot(x, y, "o", markerfacecolor=color,
+                    markeredgecolor="black", markersize=12, zorder=3)
+        else:
+            ax.plot(x, y, "o", markerfacecolor="white",
+                    markeredgecolor=color, markersize=12, mew=1.8,
+                    zorder=3)
+    ax.set_xticks(range(T))
+    ax.set_xticklabels([f"T{t}" for t in TPS], fontsize=7)
+    ax.set_yticks([0, 1, 2])
+    ax.set_yticklabels([TISSUES[2], TISSUES[1], TISSUES[0]],
+                        fontsize=7)
+    for tick, tname in zip(ax.get_yticklabels(),
+                            [TISSUES[2], TISSUES[1], TISSUES[0]]):
+        tick.set_color(TISSUE_COLORS.get(tname, "#444"))
+        tick.set_fontweight("bold")
+    ax.set_ylim(-0.5, 2.5)
+    ax.set_xlim(-0.5, T - 0.5)
+    ax.set_title(f"A{orig_id}: n={n_clones}\n{desc}",
+                  fontsize=8, linespacing=1.15)
+    for s in ("top", "right"):
+        ax.spines[s].set_visible(False)
+    ax.set_aspect("auto")
+for k in range(len(top_multi), n_rows_m * n_cols_m):
+    axes[k // n_cols_m, k % n_cols_m].axis("off")
+fig.suptitle(f"Top-{TOP_N} multi-tissue archetypes "
+             f"(≥2 tissues; original archetype IDs preserved)",
+             fontsize=11, fontweight="bold", y=1.00)
+fig.tight_layout()
+fig.savefig(OUT_DIR / "archetype_top_graphs_multi_tissue.png",
+            dpi=DPI, bbox_inches="tight")
+plt.close(fig)
+
+
+# %%
+# =========================================================
 # Plot 2: top-20 size distribution
 # =========================================================
 print("Plotting top-20 size distribution...")

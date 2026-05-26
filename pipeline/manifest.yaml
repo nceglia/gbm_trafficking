@@ -365,6 +365,7 @@ steps:
       - results/traffic_archetype_graphs/archetype_summary.csv
       - results/traffic_archetype_graphs/subset_matrix.csv
       - results/traffic_archetype_graphs/archetype_top_graphs.png
+      - results/traffic_archetype_graphs/archetype_top_graphs_multi_tissue.png
       - results/traffic_archetype_graphs/archetype_size_distribution.png
       - results/traffic_archetype_graphs/subset_diagnostic.png
       - results/traffic_archetype_graphs/archetype_phenotypes.png
