@@ -9,8 +9,8 @@ spuriously. Writes:
   results/qc_doublets/scrublet_summary.csv        (per-cell scores)
   results/qc_doublets/doublet_score_hist.png      (per-batch histogram)
 
-Original GBM_TCR_POS_TCELLS.h5ad is untouched; downstream scripts opt
-in to the singlets file via paths.H5AD_TCELLS_SINGLETS.
+Reads paths.H5AD_TCELLS_RAW (celltyping output). Downstream pipeline steps
+use paths.H5AD_TCELLS, which points at the singlets file written here.
 
 Implementation note: scrublet 0.2.3 + annoy 1.17.x collapses all cells
 to identical scores when use_approx_neighbors=True (the default). We
@@ -49,8 +49,8 @@ FALLBACK_THRESHOLD = 0.25
 # =========================================================
 # Load + per-batch Scrublet
 # =========================================================
-print(f"Loading {paths.H5AD_TCELLS.name}...")
-adata = sc.read(str(paths.H5AD_TCELLS))
+print(f"Loading {paths.H5AD_TCELLS_RAW.name}...")
+adata = sc.read(str(paths.H5AD_TCELLS_RAW))
 print(f"  {adata.n_obs:,} cells × {adata.n_vars:,} genes")
 
 adata.obs["doublet_score"] = np.nan

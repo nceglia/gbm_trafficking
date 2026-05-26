@@ -17,7 +17,7 @@ See [`AUDIT.md`](AUDIT.md) for lineage and TCR constraints.
 - **traffic_tcr**: `traffic_bayesian_comparison`, `traffic_bayesian_sankey`, `traffic_branch_dispersion`, `traffic_branch_dispersion_jsd`, `traffic_branch_dispersion_switching`, `traffic_branch_dispersion_temporal`, `traffic_branch_empirics`, `traffic_clonal_persistence`, `traffic_clonality`, `traffic_migration_rates`, `traffic_migration_rates_figures`, `traffic_migration_rates_per_tp`, `traffic_phenotype_degs`, `traffic_pseudotime_phenotypes_cd4`, `traffic_pseudotime_phenotypes_cd8`, `traffic_temporal_trajectories`, `traffic_tissue_separability`, `traffic_transcriptome_cosine`
 - **signaling**: `signaling_branch_intersection`, `signaling_intersect_pathways`, `signaling_liana_pathways`
 - **figures**: `figure_main2_trafficking`
-- **explorers**: `explorer_clone_network`, `explorer_full_report`, `explorer_signaling`, `explorer_temporal`
+- **explorers**: `explorer_clone_network`, `explorer_full_report`, `explorer_signaling`, `explorer_temporal`, `viewer_landing`
 
 ## Graph
 
@@ -61,11 +61,14 @@ flowchart TD
     traffic_tissue_separability_myeloid["traffic tissue separability myeloid"]:::pathway
     traffic_transcriptome_cosine["traffic transcriptome cosine"]:::traffic
     traffic_transcriptome_cosine_myeloid["traffic transcriptome cosine myeloid"]:::pathway
+    viewer_landing["viewer landing"]:::explorer
+    qc_scrublet_doublets --> explorer_clone_network
     traffic_branch_empirics --> explorer_clone_network
     signaling_liana_pathways --> explorer_signaling
     pathway_cross_lineage_corr --> explorer_signaling
     pathway_temporal_scores_tcell --> explorer_temporal
     pathway_temporal_scores_myeloid --> explorer_temporal
+    qc_scrublet_doublets --> figure_main2_trafficking
     traffic_migration_rates --> figure_main2_trafficking
     traffic_migration_rates_per_tp --> figure_main2_trafficking
     traffic_transcriptome_cosine --> figure_main2_trafficking
@@ -74,23 +77,41 @@ flowchart TD
     pathway_temporal_scores_myeloid --> pathway_cross_lineage_corr
     pathway_temporal_scores_tcell --> pathway_cross_lineage_corr_fine
     pathway_temporal_scores_myeloid --> pathway_cross_lineage_corr_fine
+    qc_scrublet_doublets --> pathway_de_gsea_prerank
     pathway_de_gsea_prerank --> pathway_proximity_network
     pathway_temporal_scores_tcell --> pathway_temporal_scores_myeloid
+    qc_scrublet_doublets --> pathway_temporal_scores_tcell
     pathway_de_gsea_prerank --> pathway_tissue_ternary
     signaling_liana_pathways --> signaling_intersect_pathways
     pathway_temporal_scores_tcell --> signaling_liana_pathways
     pathway_cross_lineage_corr --> signaling_liana_pathways
+    qc_scrublet_doublets --> traffic_bayesian_comparison
     traffic_migration_rates --> traffic_bayesian_comparison
+    qc_scrublet_doublets --> traffic_bayesian_sankey
     traffic_migration_rates --> traffic_bayesian_sankey
+    qc_scrublet_doublets --> traffic_branch_dispersion
     traffic_branch_empirics --> traffic_branch_dispersion_jsd
     traffic_branch_empirics --> traffic_branch_dispersion_switching
     traffic_migration_rates --> traffic_branch_dispersion_temporal
     traffic_migration_rates_per_tp --> traffic_branch_dispersion_temporal
+    qc_scrublet_doublets --> traffic_branch_empirics
     pathway_temporal_scores_myeloid --> traffic_branch_empirics
+    qc_scrublet_doublets --> traffic_clonal_persistence
+    qc_scrublet_doublets --> traffic_clonality
+    qc_scrublet_doublets --> traffic_migration_rates
     traffic_migration_rates --> traffic_migration_rates_figures
+    qc_scrublet_doublets --> traffic_migration_rates_per_tp
     traffic_pseudotime_phenotypes_cd8 --> traffic_phenotype_degs
     traffic_pseudotime_phenotypes_cd4 --> traffic_phenotype_degs
+    qc_scrublet_doublets --> traffic_pseudotime_phenotypes_cd4
+    qc_scrublet_doublets --> traffic_pseudotime_phenotypes_cd8
     qc_scrublet_doublets --> traffic_temporal_trajectories
+    qc_scrublet_doublets --> traffic_tissue_separability
+    qc_scrublet_doublets --> traffic_transcriptome_cosine
+    explorer_temporal --> viewer_landing
+    explorer_signaling --> viewer_landing
+    explorer_clone_network --> viewer_landing
+    explorer_full_report --> viewer_landing
 ```
 
 ## Topological waves
@@ -98,10 +119,14 @@ flowchart TD
 **Wave 0**
 - `explorer_full_report` — lineage: both
 - `pathway_de_gsea_myeloid` — lineage: myeloid
-- `pathway_de_gsea_prerank` — lineage: tcell
-- `pathway_temporal_scores_tcell` — lineage: tcell
 - `qc_scrublet_doublets` — lineage: tcell
 - `signaling_branch_intersection` — lineage: tcell (TCR)
+- `traffic_tissue_separability_myeloid` — lineage: myeloid
+- `traffic_transcriptome_cosine_myeloid` — lineage: myeloid
+
+**Wave 1**
+- `pathway_de_gsea_prerank` — lineage: tcell
+- `pathway_temporal_scores_tcell` — lineage: tcell
 - `traffic_branch_dispersion` — lineage: na (TCR)
 - `traffic_clonal_persistence` — lineage: na (TCR)
 - `traffic_clonality` — lineage: na (TCR)
@@ -109,12 +134,11 @@ flowchart TD
 - `traffic_migration_rates_per_tp` — lineage: na (TCR)
 - `traffic_pseudotime_phenotypes_cd4` — lineage: tcell
 - `traffic_pseudotime_phenotypes_cd8` — lineage: tcell
+- `traffic_temporal_trajectories` — lineage: na (TCR)
 - `traffic_tissue_separability` — lineage: tcell
-- `traffic_tissue_separability_myeloid` — lineage: myeloid
 - `traffic_transcriptome_cosine` — lineage: tcell
-- `traffic_transcriptome_cosine_myeloid` — lineage: myeloid
 
-**Wave 1**
+**Wave 2**
 - `figure_main2_trafficking` — lineage: tcell
 - `pathway_coenrichment_graph` — lineage: tcell
 - `pathway_proximity_network` — lineage: tcell
@@ -125,23 +149,25 @@ flowchart TD
 - `traffic_branch_dispersion_temporal` — lineage: na (TCR)
 - `traffic_migration_rates_figures` — lineage: na (TCR)
 - `traffic_phenotype_degs` — lineage: tcell
-- `traffic_temporal_trajectories` — lineage: na (TCR)
 
-**Wave 2**
+**Wave 3**
 - `explorer_temporal` — lineage: tcell
 - `pathway_cross_lineage_corr` — lineage: cross
 - `pathway_cross_lineage_corr_fine` — lineage: cross
 - `traffic_branch_empirics` — lineage: tcell (TCR)
 
-**Wave 3**
+**Wave 4**
 - `explorer_clone_network` — lineage: both
 - `signaling_liana_pathways` — lineage: both
 - `traffic_branch_dispersion_jsd` — lineage: na (TCR)
 - `traffic_branch_dispersion_switching` — lineage: na (TCR)
 
-**Wave 4**
+**Wave 5**
 - `explorer_signaling` — lineage: both
 - `signaling_intersect_pathways` — lineage: both
+
+**Wave 6**
+- `viewer_landing` — lineage: both
 
 ## Step reference
 
@@ -151,7 +177,6 @@ flowchart TD
 | `explorer_full_report` | `viewers/build/report.py` | explorers | both | `deploy/bundle/report/index.html` |
 | `explorer_signaling` | `viewers/build/signaling.py` | explorers | both | `deploy/bundle/signaling.html` |
 | `explorer_temporal` | `viewers/build/temporal.py` | explorers | tcell | `deploy/bundle/temporal.html` |
-| `viewer_landing` | `viewers/build/landing.py` | explorers | both | `deploy/bundle/index.html` |
 | `figure_main2_trafficking` | `figure_main2_trafficking.py` | figures | tcell | `results/07_figure2/figure2.png` |
 | `pathway_coenrichment_graph` | `pathway_coenrichment_graph.py` | pathway_tcell | tcell | `results/04_pseudobulk_de_gsea/pathway_coenrichment_GO_Biological_Process_2023.png` |
 | `pathway_cross_lineage_corr` | `pathway_cross_lineage_corr.py` | pathway_cross | cross | `results/11_cross_lineage_correlations/pathway_correlations.csv` |
@@ -186,6 +211,7 @@ flowchart TD
 | `traffic_tissue_separability_myeloid` | `traffic_tissue_separability.py` | pathway_myeloid | myeloid | `results/03_tissue_separability_myeloid/augur_results_cache.pkl` |
 | `traffic_transcriptome_cosine` | `traffic_transcriptome_cosine.py` | traffic_tcr | tcell | `results/transcriptome_similarity/cosine_distance_summary.csv` |
 | `traffic_transcriptome_cosine_myeloid` | `traffic_transcriptome_cosine.py` | pathway_myeloid | myeloid | `results/transcriptome_similarity_myeloid/cosine_distance_summary.csv` |
+| `viewer_landing` | `viewers/build/landing.py` | explorers | both | `deploy/bundle/index.html` |
 
 ## Data prep (manual, not in Snakemake `all`)
 

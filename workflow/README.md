@@ -47,3 +47,8 @@ snakemake -j 100 -s workflow/Snakefile --profile workflow/profiles/slurm all
 | `all` | All core steps (excludes `data_prep` scripts) |
 
 Prerequisites: see [`pipeline/AUDIT.md`](../pipeline/AUDIT.md).
+
+**T cells:** `qc_scrublet_doublets` runs first and writes
+`GBM_TCR_POS_TCELLS_singlets.h5ad`. All downstream T-cell rules read that file
+(`paths.H5AD_TCELLS` in code). Re-run Scrublet after updating the raw celltyping
+object.

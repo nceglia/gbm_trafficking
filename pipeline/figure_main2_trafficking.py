@@ -18,7 +18,7 @@ New category definitions (Panel D, F):
               (old MOVER_ONLY + BOTH merged)
 
 Reads:
-  data/objects/GBM_TCR_POS_TCELLS.h5ad
+  data/objects/GBM_TCR_POS_TCELLS_singlets.h5ad  (paths.H5AD_TCELLS)
   data/embeddings/X_umap.pkl
   results/transcriptome_similarity/
       cosine_distance_summary.csv                      (Panels B, C)
@@ -61,7 +61,9 @@ from modules.style import (  # noqa: E402
 
 # %%
 # ---- Config ----
-DATA_PATH = REPO_ROOT / "data" / "objects" / "GBM_TCR_POS_TCELLS.h5ad"
+from modules import paths  # noqa: E402
+
+DATA_PATH = paths.H5AD_TCELLS
 UMAP_PATH = REPO_ROOT / "data" / "embeddings" / "X_umap.pkl"
 MIG_CSV = (REPO_ROOT / "results" / "06c_empirical_Q"
            / "migration_rates.csv")

@@ -53,7 +53,9 @@ TICK_FS = 9
 ANNOT_FS = 8
 DPI = 200
 
-DATA_PATH = REPO_ROOT / "data" / "objects" / "GBM_TCR_POS_TCELLS.h5ad"
+from modules import paths  # noqa: E402
+
+DATA_PATH = paths.H5AD_TCELLS
 OUT_DIR = REPO_ROOT / "results" / "clonality"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 

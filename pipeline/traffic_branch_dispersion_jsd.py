@@ -57,7 +57,9 @@ LABEL_FS = 11
 TITLE_FS = 13
 DPI = 200
 
-DATA_PATH = REPO_ROOT / "data" / "objects" / "GBM_TCR_POS_TCELLS.h5ad"
+from modules import paths  # noqa: E402
+
+DATA_PATH = paths.H5AD_TCELLS
 SRC_06_DIR = REPO_ROOT / "results" / "06_branch_empirics"
 OUT_DIR = REPO_ROOT / "results" / "branch_dispersion_jsd"
 OUT_DIR.mkdir(parents=True, exist_ok=True)

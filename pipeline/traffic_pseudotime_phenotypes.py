@@ -29,6 +29,7 @@ warnings.filterwarnings("ignore")
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "pipeline"))
 
+from modules import paths
 from modules.clone_helpers import infer_lineage_from_phenotype
 from modules.style import (
     TCELL_PHENOTYPE_COLORS,
@@ -44,7 +45,7 @@ _parser.add_argument("--lineage", choices=["CD8", "CD4"], default="CD8")
 _args, _ = _parser.parse_known_args()
 LINEAGE = _args.lineage
 
-DATA_PATH = REPO_ROOT / "data" / "objects" / "GBM_TCR_POS_TCELLS.h5ad"
+DATA_PATH = paths.H5AD_TCELLS
 UMAP_PKL = REPO_ROOT / "data" / "embeddings" / "X_umap.pkl"
 OUT_DIR = REPO_ROOT / "results" / "13_pseudotime_phenotypes" / LINEAGE
 OUT_DIR.mkdir(parents=True, exist_ok=True)

@@ -15,6 +15,7 @@ data_prep:
   - id: build_combined_object
     file: scripts/build_combined_object.py
     writes: [data/objects/GBM_TCR_POS_TCELLS_MYELOID_combined.h5ad]
+    note: Use Scrublet-filtered T cells (paths.H5AD_TCELLS) when rebuilding combined
   - id: build_pathway_family_maps
     file: scripts/build_hallmark_family_map.py
     note: Also build_gobp_family_map.py, build_kegg_family_map.py → modules/pathway_families_*.tsv
@@ -35,11 +36,11 @@ steps:
     file: pathway_temporal_scores_tcell.py
     tier: pathway_tcell
     lineage: tcell
-    reads: [data/objects/GBM_TCR_POS_TCELLS.h5ad]
+    reads: [data/objects/GBM_TCR_POS_TCELLS_singlets.h5ad]
     writes:
       - results/10_temporal_scores/pathway_definitions.csv
       - results/10_temporal_scores/temporal_composition_tcell.csv
-    depends_on: []
+    depends_on: [qc_scrublet_doublets]
     resources: {mem_mb: 32000, runtime: 180}
 
   pathway_temporal_scores_myeloid:
@@ -82,10 +83,10 @@ steps:
     file: pathway_de_gsea_prerank.py
     tier: pathway_tcell
     lineage: tcell
-    reads: [data/objects/GBM_TCR_POS_TCELLS.h5ad]
+    reads: [data/objects/GBM_TCR_POS_TCELLS_singlets.h5ad]
     writes:
       - results/04_pseudobulk_de_gsea/clone_pseudobulk_gsea_dotheatmap_GO_Biological_Process_2023.png
-    depends_on: []
+    depends_on: [qc_scrublet_doublets]
     resources: {mem_mb: 32000, runtime: 240}
 
   pathway_de_gsea_myeloid:
@@ -135,10 +136,10 @@ steps:
     file: traffic_tissue_separability.py
     tier: traffic_tcr
     lineage: tcell
-    reads: [data/objects/GBM_TCR_POS_TCELLS.h5ad]
+    reads: [data/objects/GBM_TCR_POS_TCELLS_singlets.h5ad]
     writes:
       - results/03_tissue_separability/augur_results_cache.pkl
-    depends_on: []
+    depends_on: [qc_scrublet_doublets]
     cli_extra: ["--lineage", "tcell"]
     resources: {mem_mb: 32000, runtime: 180}
 
@@ -157,10 +158,10 @@ steps:
     file: traffic_transcriptome_cosine.py
     tier: traffic_tcr
     lineage: tcell
-    reads: [data/objects/GBM_TCR_POS_TCELLS.h5ad]
+    reads: [data/objects/GBM_TCR_POS_TCELLS_singlets.h5ad]
     writes:
       - results/transcriptome_similarity/cosine_distance_summary.csv
-    depends_on: []
+    depends_on: [qc_scrublet_doublets]
     cli_extra: ["--lineage", "tcell"]
     resources: {mem_mb: 32000, runtime: 120}
 
@@ -180,11 +181,11 @@ steps:
     tier: traffic_tcr
     lineage: na
     tcr_required: true
-    reads: [data/objects/GBM_TCR_POS_TCELLS.h5ad]
+    reads: [data/objects/GBM_TCR_POS_TCELLS_singlets.h5ad]
     writes:
       - results/06c_empirical_Q/P_empirical.csv
       - results/06c_empirical_Q/migration_rates.csv
-    depends_on: []
+    depends_on: [qc_scrublet_doublets]
     resources: {mem_mb: 32000, runtime: 240}
 
   traffic_migration_rates_per_tp:
@@ -192,10 +193,10 @@ steps:
     tier: traffic_tcr
     lineage: na
     tcr_required: true
-    reads: [data/objects/GBM_TCR_POS_TCELLS.h5ad]
+    reads: [data/objects/GBM_TCR_POS_TCELLS_singlets.h5ad]
     writes:
       - results/06d_empirical_Q_per_timepoint/block_retention_per_timepoint.csv
-    depends_on: []
+    depends_on: [qc_scrublet_doublets]
     resources: {mem_mb: 32000, runtime: 240}
 
   traffic_migration_rates_figures:
@@ -215,12 +216,12 @@ steps:
     lineage: na
     tcr_required: true
     reads:
-      - data/objects/GBM_TCR_POS_TCELLS.h5ad
+      - data/objects/GBM_TCR_POS_TCELLS_singlets.h5ad
       - results/06c_empirical_Q/P_empirical.csv
     writes:
       - results/06f_bayesian_comparison/bayesian_summary.csv
       - results/06f_bayesian_comparison/bayesian_vs_empirical.png
-    depends_on: [traffic_migration_rates]
+    depends_on: [qc_scrublet_doublets, traffic_migration_rates]
     resources: {mem_mb: 16000, runtime: 360, gres: gpu:1}
 
   traffic_bayesian_sankey:
@@ -228,10 +229,10 @@ steps:
     tier: traffic_tcr
     lineage: na
     tcr_required: true
-    reads: [data/objects/GBM_TCR_POS_TCELLS.h5ad]
+    reads: [data/objects/GBM_TCR_POS_TCELLS_singlets.h5ad]
     writes:
       - results/06g_bayesian_sankey/empirical_vs_bayesian_summary.csv
-    depends_on: [traffic_migration_rates]
+    depends_on: [qc_scrublet_doublets, traffic_migration_rates]
     resources: {mem_mb: 16000, runtime: 360, gres: gpu:1}
 
   traffic_branch_empirics:
@@ -240,12 +241,12 @@ steps:
     lineage: tcell
     tcr_required: true
     reads:
-      - data/objects/GBM_TCR_POS_TCELLS.h5ad
+      - data/objects/GBM_TCR_POS_TCELLS_singlets.h5ad
       - results/10_temporal_scores/temporal_composition_myeloid.csv
     writes:
       - results/06_branch_empirics/branch_empirics_main.png
       - results/06_branch_empirics/branches.csv
-    depends_on: [pathway_temporal_scores_myeloid]
+    depends_on: [qc_scrublet_doublets, pathway_temporal_scores_myeloid]
     resources: {mem_mb: 32000, runtime: 180}
 
   traffic_branch_dispersion:
@@ -253,10 +254,10 @@ steps:
     tier: traffic_tcr
     lineage: na
     tcr_required: true
-    reads: [data/objects/GBM_TCR_POS_TCELLS.h5ad]
+    reads: [data/objects/GBM_TCR_POS_TCELLS_singlets.h5ad]
     writes:
       - results/branch_dispersion/stayer_vs_mover_table.csv
-    depends_on: []
+    depends_on: [qc_scrublet_doublets]
     resources: {mem_mb: 16000, runtime: 120}
 
   traffic_branch_dispersion_jsd:
@@ -287,7 +288,7 @@ steps:
     lineage: na
     tcr_required: true
     reads:
-      - data/objects/GBM_TCR_POS_TCELLS.h5ad
+      - data/objects/GBM_TCR_POS_TCELLS_singlets.h5ad
       - results/06d_empirical_Q_per_timepoint/block_retention_per_timepoint.csv
       - results/06c_empirical_Q/migration_rates.csv
     writes:
@@ -300,10 +301,10 @@ steps:
     tier: traffic_tcr
     lineage: na
     tcr_required: true
-    reads: [data/objects/GBM_TCR_POS_TCELLS.h5ad]
+    reads: [data/objects/GBM_TCR_POS_TCELLS_singlets.h5ad]
     writes:
       - results/clonality/clonality_summary.png
-    depends_on: []
+    depends_on: [qc_scrublet_doublets]
     resources: {mem_mb: 16000, runtime: 60}
 
   traffic_clonal_persistence:
@@ -311,10 +312,10 @@ steps:
     tier: traffic_tcr
     lineage: na
     tcr_required: true
-    reads: [data/objects/GBM_TCR_POS_TCELLS.h5ad]
+    reads: [data/objects/GBM_TCR_POS_TCELLS_singlets.h5ad]
     writes:
       - results/07_clonal_trafficking/cd8_clone_network.png
-    depends_on: []
+    depends_on: [qc_scrublet_doublets]
     resources: {mem_mb: 16000, runtime: 120}
 
   traffic_temporal_trajectories:
@@ -332,10 +333,10 @@ steps:
     file: traffic_pseudotime_phenotypes.py
     tier: traffic_tcr
     lineage: tcell
-    reads: [data/objects/GBM_TCR_POS_TCELLS.h5ad]
+    reads: [data/objects/GBM_TCR_POS_TCELLS_singlets.h5ad]
     writes:
       - results/13_pseudotime_phenotypes/CD8/fig3_pseudotime_profiles_CD8.png
-    depends_on: []
+    depends_on: [qc_scrublet_doublets]
     cli_extra: ["--lineage", "CD8"]
     resources: {mem_mb: 32000, runtime: 180}
 
@@ -343,10 +344,10 @@ steps:
     file: traffic_pseudotime_phenotypes.py
     tier: traffic_tcr
     lineage: tcell
-    reads: [data/objects/GBM_TCR_POS_TCELLS.h5ad]
+    reads: [data/objects/GBM_TCR_POS_TCELLS_singlets.h5ad]
     writes:
       - results/13_pseudotime_phenotypes/CD4/fig3_pseudotime_profiles_CD4.png
-    depends_on: []
+    depends_on: [qc_scrublet_doublets]
     cli_extra: ["--lineage", "CD4"]
     resources: {mem_mb: 32000, runtime: 180}
 
@@ -401,7 +402,7 @@ steps:
     tier: figures
     lineage: tcell
     reads:
-      - data/objects/GBM_TCR_POS_TCELLS.h5ad
+      - data/objects/GBM_TCR_POS_TCELLS_singlets.h5ad
       - data/embeddings/X_umap.pkl
       - results/06c_empirical_Q/migration_rates.csv
       - results/06d_empirical_Q_per_timepoint/block_retention_per_timepoint.csv
@@ -409,6 +410,7 @@ steps:
     writes:
       - results/07_figure2/figure2.png
     depends_on:
+      - qc_scrublet_doublets
       - traffic_migration_rates
       - traffic_migration_rates_per_tp
       - traffic_transcriptome_cosine
@@ -446,12 +448,12 @@ steps:
     lineage: both
     reads:
       - results/06_branch_empirics/edge_metrics_table.csv
-      - data/objects/GBM_TCR_POS_TCELLS.h5ad
+      - data/objects/GBM_TCR_POS_TCELLS_singlets.h5ad
       - data/objects/MYELOID_GBM.h5ad
     writes:
       - deploy/bundle/clone_network.html
       - results/clone_network_explorer/data_summary.txt
-    depends_on: [traffic_branch_empirics]
+    depends_on: [qc_scrublet_doublets, traffic_branch_empirics]
     resources: {mem_mb: 32000, runtime: 120}
 
   explorer_full_report:

@@ -21,6 +21,7 @@ warnings.filterwarnings("ignore")
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "pipeline"))
 
+from modules import paths
 from modules.clone_helpers import infer_lineage_from_phenotype
 from modules.constants import DIRECTED_TISSUE_PAIRS
 from modules.differential_expression import run_deseq2
@@ -28,7 +29,7 @@ from modules.pseudobulk import pseudobulk_counts_by_clone_tissue
 
 # %%
 # ---- Config ----
-DATA_PATH = REPO_ROOT / "data" / "objects" / "GBM_TCR_POS_TCELLS.h5ad"
+DATA_PATH = paths.H5AD_TCELLS
 OUTPUT_DIR = REPO_ROOT / "results" / "04_pseudobulk_de_gsea"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 

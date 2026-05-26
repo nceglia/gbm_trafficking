@@ -56,7 +56,9 @@ DPI = 200
 
 EMPTY_CELL_COLOR = "#e8e8e8"
 
-DATA_PATH = REPO_ROOT / "data" / "objects" / "GBM_TCR_POS_TCELLS.h5ad"
+from modules import paths  # noqa: E402
+
+DATA_PATH = paths.H5AD_TCELLS
 SRC_06_DIR = REPO_ROOT / "results" / "06_branch_empirics"
 OUT_DIR = REPO_ROOT / "results" / "branch_dispersion_switching"
 OUT_DIR.mkdir(parents=True, exist_ok=True)

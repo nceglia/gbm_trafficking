@@ -40,7 +40,9 @@ from trafficking.empirical import (  # noqa: E402
 
 # %%
 # ---- Config ----
-DATA_PATH = REPO_ROOT / "data" / "objects" / "GBM_TCR_POS_TCELLS.h5ad"
+from modules import paths  # noqa: E402
+
+DATA_PATH = paths.H5AD_TCELLS
 OUT_DIR = REPO_ROOT / "results" / "06d_empirical_Q_per_timepoint"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 

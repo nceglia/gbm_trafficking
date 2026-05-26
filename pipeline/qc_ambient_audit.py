@@ -13,7 +13,7 @@ is run:
       batches (ambient soup fingerprint)?
 
 Reads:
-  paths.H5AD_TCELLS_SINGLETS                  (cell-level scoring)
+  paths.H5AD_TCELLS                           (Scrublet-filtered singlets)
   paths.cellranger_h5(sample) for every sample (per-sample soup)
 
 Writes to results/qc_ambient_audit/:
@@ -80,8 +80,8 @@ LOW_UMI_PCT = 0.10
 # =========================================================
 # Load singlets AnnData + score every cell
 # =========================================================
-print(f"Loading {paths.H5AD_TCELLS_SINGLETS.name}...")
-adata = sc.read(str(paths.H5AD_TCELLS_SINGLETS))
+print(f"Loading {paths.H5AD_TCELLS.name}...")
+adata = sc.read(str(paths.H5AD_TCELLS))
 print(f"  {adata.n_obs:,} cells × {adata.n_vars:,} genes")
 
 if "log1p" in adata.layers:
@@ -581,7 +581,7 @@ for t in TISSUE_ORDER:
 summary = []
 summary.append("======== Ambient-RNA audit verdict ========")
 summary.append("")
-summary.append(f"Input: {paths.H5AD_TCELLS_SINGLETS.name}")
+summary.append(f"Input: {paths.H5AD_TCELLS.name}")
 summary.append(f"Cells scored: {adata.n_obs:,}")
 summary.append(f"Samples: {len(samples)}")
 summary.append("")

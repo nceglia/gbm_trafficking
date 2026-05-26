@@ -5,7 +5,7 @@ Pseudobulk per (phenotype, tissue, patient), then pairwise cosine
 distances per phenotype × tissue-pair, patient-matched and aggregate.
 
 Reads:
-  data/objects/GBM_TCR_POS_TCELLS.h5ad
+  data/objects/GBM_TCR_POS_TCELLS_singlets.h5ad  (paths.H5AD_TCELLS)
 
 Writes to results/transcriptome_similarity/:
   cosine_distance_summary.csv        (consumed by Figure 2 panels B/C)

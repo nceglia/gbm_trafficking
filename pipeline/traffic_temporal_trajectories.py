@@ -51,7 +51,7 @@ from modules.style import (  # noqa: E402
     TISSUE_ORDER,
 )
 
-DATA_PATH = paths.H5AD_TCELLS_SINGLETS
+DATA_PATH = paths.H5AD_TCELLS
 OUT_DIR = paths.TEMPORAL_TRAJECTORIES_DIR
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 MODULES_DIR = REPO_ROOT / "pipeline" / "modules"
@@ -63,6 +63,24 @@ MIN_CELLS_PB = 5
 MIN_PATIENTS = 3
 FDR_CSF = 0.10
 DPI = 200
+
+# Contamination QC: two-stage, minimum-aggression posture.
+#
+# Sample-level: drop pseudobulks from samples whose mean contamination-
+# explained fraction (from qc_ambient_audit) exceeds CONTAM_MAX. At
+# 0.20 this removes only the one egregious outlier (DFCI4-S5-L1-TP),
+# preserving CSF coverage.
+#
+# Cell-level: within samples whose contam exceeds CONTAM_SAMPLE_GATE,
+# drop individual cells scoring above CELL_OFF_LINEAGE_MAX on either
+# the myeloid or plasma panel. Clean samples lose no cells.
+CONTAM_MAX = 0.20
+CONTAM_SAMPLE_GATE = 0.05
+CELL_OFF_LINEAGE_MAX = 0.75
+CONTAM_CSV = (paths.RESULTS_DIR / "qc_ambient_audit"
+              / "contamination_fraction.csv")
+PER_CELL_SCORES_CSV = (paths.RESULTS_DIR / "qc_ambient_audit"
+                       / "per_cell_scores.csv")
 
 try:
     from adjustText import adjust_text
@@ -80,12 +98,14 @@ adata = sc.read(str(DATA_PATH))
 adata.obs["timepoint"] = adata.obs["timepoint"].astype(str)
 print(f"  {adata.n_obs:,} cells × {adata.n_vars:,} genes")
 
-obs = adata.obs[["trb", "tissue", "timepoint", "phenotype", "patient"]].copy()
+obs = adata.obs[["trb", "tissue", "timepoint", "phenotype", "patient",
+                  "sample"]].copy()
 obs = obs[obs["trb"].notna() & (obs["trb"].astype(str) != "")]
 obs["patient"] = obs["patient"].astype(str)
 obs["trb"] = obs["trb"].astype(str)
 obs["tissue"] = obs["tissue"].astype(str)
 obs["phenotype"] = obs["phenotype"].astype(str)
+obs["sample"] = obs["sample"].astype(str)
 obs["clone_id"] = obs["patient"] + "|" + obs["trb"]
 obs["lineage"] = np.where(obs["phenotype"].str.contains("CD8"), "CD8", "CD4")
 
@@ -117,6 +137,67 @@ for tis in TISSUES:
 
 # %%
 # =========================================================
+# QC filters from audit (sample + cell level)
+# =========================================================
+if CONTAM_CSV.exists() and PER_CELL_SCORES_CSV.exists():
+    contam_per_sample = pd.read_csv(CONTAM_CSV)
+    sample_contam = dict(zip(contam_per_sample["sample"],
+                              contam_per_sample["mean"]))
+    elevated_samples = {s for s, v in sample_contam.items()
+                         if v > CONTAM_SAMPLE_GATE}
+    dropped_samples = {s for s, v in sample_contam.items()
+                        if v > CONTAM_MAX}
+    print(f"\nQC: sample-level contam thresholds "
+          f"(gate={CONTAM_SAMPLE_GATE:.2f}, max={CONTAM_MAX:.2f})")
+    print(f"  elevated (cell-level filter applies): {len(elevated_samples)}")
+    print(f"  dropped (sample-level filter): {len(dropped_samples)} → "
+          f"{sorted(dropped_samples)}")
+
+    scores = pd.read_csv(PER_CELL_SCORES_CSV, index_col=0)
+    obs_p = obs_p.join(scores[["myeloid_score", "plasma_score"]],
+                         how="left")
+    n_pre = len(obs_p)
+    # First, drop every cell whose parent sample exceeds CONTAM_MAX
+    # (sample-level filter). Implemented at cell-level so the drop
+    # also takes effect inside multi-lane pseudobulks.
+    sample_kick_mask = obs_p["sample"].isin(dropped_samples)
+    n_sample_kicked = int(sample_kick_mask.sum())
+    obs_p = obs_p.loc[~sample_kick_mask].copy()
+    cell_drop_mask = (
+        obs_p["sample"].isin(elevated_samples)
+        & ((obs_p["myeloid_score"] > CELL_OFF_LINEAGE_MAX)
+           | (obs_p["plasma_score"] > CELL_OFF_LINEAGE_MAX))
+    )
+    obs_p = obs_p.loc[~cell_drop_mask].copy()
+    n_dropped_cells = int(cell_drop_mask.sum())
+    print(f"\nQC: sample-level filter (contam > {CONTAM_MAX:.2f})")
+    print(f"  cells dropped (from {len(dropped_samples)} samples): "
+          f"{n_sample_kicked:,}")
+    print(f"\nQC: cell-level filter "
+          f"(score > {CELL_OFF_LINEAGE_MAX:.2f} in elevated samples)")
+    print(f"  cells dropped: {n_dropped_cells:,} / {n_pre - n_sample_kicked:,} "
+          f"({n_dropped_cells / max(n_pre - n_sample_kicked, 1) * 100:.2f}%)")
+    by_sample = (obs_p[obs_p["sample"].isin(elevated_samples)]
+                 .groupby("sample", observed=True).size().to_dict())
+    by_sample_pre = (obs[obs["persistent"]
+                          & obs["sample"].isin(elevated_samples)]
+                     .groupby("sample", observed=True).size().to_dict())
+    if by_sample:
+        print("  per-sample persistent-cell counts (post vs pre):")
+        for s in sorted(elevated_samples & set(by_sample_pre.keys())):
+            pre = by_sample_pre.get(s, 0)
+            post = by_sample.get(s, 0)
+            print(f"    {s:<35s}  {pre:5d} → {post:5d}  "
+                  f"({(pre-post)/max(pre,1)*100:.1f}% removed)")
+else:
+    sample_contam = {}
+    dropped_samples = set()
+    print(f"\nQC: contamination CSVs not found — skipping QC filters")
+    print(f"  expected: {CONTAM_CSV.name}, {PER_CELL_SCORES_CSV.name}")
+
+
+# %%
+# =========================================================
 # Pseudobulk per (patient × tissue × timepoint × lineage)
 # =========================================================
 PB_PATH = OUT_DIR / "pseudobulk.h5ad"
@@ -138,8 +219,13 @@ else:
         row_sum = np.asarray(
             counts_layer[grp["pos"].values, :].sum(axis=0)).ravel()
         rows.append(row_sum)
+        # Take the unique sample for this group (each grp is one
+        # patient × tissue × timepoint × lineage; sample is fixed).
+        sample_ids = grp["sample"].unique()
+        sample_id = sample_ids[0] if len(sample_ids) == 1 else "|".join(sample_ids)
         meta_rows.append({"patient": pat, "tissue": tis,
                           "timepoint": str(t), "lineage": lin,
+                          "sample": sample_id,
                           "n_cells": int(len(grp))})
     meta = pd.DataFrame(meta_rows)
     n_pat_combo = (meta.groupby(["tissue", "timepoint", "lineage"],
@@ -444,17 +530,70 @@ signature = (pd.concat(sig_rows, ignore_index=True)
              if sig_rows else pd.DataFrame())
 signature.to_csv(OUT_DIR / "csf_emptying_signature.csv", index=False)
 
-print(f"  signature features: {len(signature)}")
+print(f"  CSF-down signature features: {len(signature)}")
 if not signature.empty:
     print(signature.groupby(["type", "lineage"]).size().to_string())
-    print("\n  Top 20 by |beta_CSF|:")
+
+
+# %%
+# =========================================================
+# TP-up signatures (well-powered side of the draining contrast)
+# =========================================================
+print("\nBuilding TP-up and robust-intersection signatures...")
+tp_up_rows = []
+robust_rows = []
+for source_name, df, feature_col in [("gene", genes_wide, "gene"),
+                                      ("pathway", pw_wide, "pathway")]:
+    if df.empty:
+        continue
+    needed = {"padj_TP", "beta_TP", "beta_CSF"}
+    if not needed.issubset(df.columns):
+        continue
+    # TP-up + direction-only CSF≤0 — "arrival at TP from low-CSF baseline".
+    tp_up_mask = (
+        (df["padj_TP"] < FDR_CSF)
+        & (df["beta_TP"] > 0)
+        & (df["beta_CSF"] <= 0)
+    )
+    tp_up = df[tp_up_mask].copy()
+    tp_up["type"] = source_name
+    tp_up["feature"] = tp_up[feature_col]
+    tp_up_rows.append(tp_up)
+    # Robust intersection: significant in BOTH directions.
+    needed_robust = {"padj_CSF", "padj_TP", "beta_CSF", "beta_TP"}
+    if needed_robust.issubset(df.columns):
+        robust_mask = (
+            (df["padj_CSF"] < FDR_CSF)
+            & (df["padj_TP"] < FDR_CSF)
+            & (df["beta_CSF"] < 0)
+            & (df["beta_TP"] > 0)
+        )
+        rob = df[robust_mask].copy()
+        rob["type"] = source_name
+        rob["feature"] = rob[feature_col]
+        robust_rows.append(rob)
+
+tp_up_sig = (pd.concat(tp_up_rows, ignore_index=True)
+             if tp_up_rows else pd.DataFrame())
+robust_sig = (pd.concat(robust_rows, ignore_index=True)
+              if robust_rows else pd.DataFrame())
+tp_up_sig.to_csv(OUT_DIR / "tp_up_signature.csv", index=False)
+robust_sig.to_csv(OUT_DIR / "draining_robust_signature.csv", index=False)
+
+print(f"  TP-up signature features:        {len(tp_up_sig)}")
+if not tp_up_sig.empty:
+    print(tp_up_sig.groupby(["type", "lineage"]).size().to_string())
+print(f"  Robust (CSF↓∩TP↑) features:      {len(robust_sig)}")
+if not robust_sig.empty:
+    print(robust_sig.groupby(["type", "lineage"]).size().to_string())
+    print("\n  Top 20 robust draining features by |beta_CSF|:")
     cols_show = ["type", "lineage", "feature",
                  "beta_CSF", "beta_TP", "beta_PBMC",
                  "padj_CSF", "padj_TP", "padj_PBMC"]
-    cols_show = [c for c in cols_show if c in signature.columns]
-    print(signature.assign(_abs=lambda d: d["beta_CSF"].abs())
-                   .sort_values("_abs", ascending=False)
-                   .head(20)[cols_show].to_string(index=False))
+    cols_show = [c for c in cols_show if c in robust_sig.columns]
+    print(robust_sig.assign(_abs=lambda d: d["beta_CSF"].abs())
+                    .sort_values("_abs", ascending=False)
+                    .head(20)[cols_show].to_string(index=False))
 
 
 # %%

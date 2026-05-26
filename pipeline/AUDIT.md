@@ -65,9 +65,19 @@ Not part of Snakemake `all` or tier targets:
 | `retype_global.py`, `retype_v2.py`, `posthoc_treg_adjustment.py`, `run_genevector_t_cells.py` | Object variants / ad hoc |
 | `figure1_clone_network.py` | Figure 1 (separate from main DAG) |
 
+## T-cell AnnData convention
+
+| Constant | File | Use |
+|----------|------|-----|
+| `paths.H5AD_TCELLS_RAW` | `GBM_TCR_POS_TCELLS.h5ad` | Celltyping output; **Scrublet input only** |
+| `paths.H5AD_TCELLS` | `GBM_TCR_POS_TCELLS_singlets.h5ad` | **Default for all analysis drivers** |
+
+Run `qc_scrublet_doublets` before any other T-cell step. Snakemake encodes this via
+`depends_on: [qc_scrublet_doublets]` on downstream rules.
+
 ## Prerequisites before `snakemake all`
 
-1. `data/objects/GBM_TCR_POS_TCELLS.h5ad`
+1. `data/objects/GBM_TCR_POS_TCELLS.h5ad` (then run `qc_scrublet_doublets` → singlets)
 2. `data/objects/MYELOID_GBM.h5ad`
 3. `data/objects/GBM_TCR_POS_TCELLS_MYELOID_combined.h5ad` (signaling tier)
 4. `data/embeddings/X_umap.pkl` (Figure 2)

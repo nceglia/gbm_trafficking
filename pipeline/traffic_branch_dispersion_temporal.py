@@ -55,7 +55,9 @@ TRANSITION_LABELS = [f"{a}→{b}" for a, b in TRANSITIONS]
 MIN_PER_CATEGORY = 10
 DPI = 200
 
-DATA_PATH = REPO_ROOT / "data" / "objects" / "GBM_TCR_POS_TCELLS.h5ad"
+from modules import paths  # noqa: E402
+
+DATA_PATH = paths.H5AD_TCELLS
 RETENTION_PATH = (REPO_ROOT / "results" / "06d_empirical_Q_per_timepoint"
                   / "block_retention_per_timepoint.csv")
 MIGRATION_PATH = (REPO_ROOT / "results" / "06c_empirical_Q"

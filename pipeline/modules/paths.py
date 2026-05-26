@@ -19,12 +19,13 @@ DATA_DIR        = REPO_ROOT / "data"
 OBJECTS_DIR     = DATA_DIR / "objects"
 EMBEDDINGS_DIR  = DATA_DIR / "embeddings"
 
-# ── AnnData objects (canonical T cell file + variants) ────────────────
-# Original full T cell object — everything to date reads from this.
-H5AD_TCELLS              = OBJECTS_DIR / "GBM_TCR_POS_TCELLS.h5ad"
-# Doublet-filtered version produced by scrublet_doublet_qc.py.
-# Scripts adopt this opt-in, not all at once.
+# ── AnnData objects (T cell) ──────────────────────────────────────────
+# Raw object from celltyping (input to Scrublet only).
+H5AD_TCELLS_RAW          = OBJECTS_DIR / "GBM_TCR_POS_TCELLS.h5ad"
+# Doublet-filtered object from qc_scrublet_doublets.py.
 H5AD_TCELLS_SINGLETS     = OBJECTS_DIR / "GBM_TCR_POS_TCELLS_singlets.h5ad"
+# Default T-cell AnnData for all analysis drivers (post-Scrublet).
+H5AD_TCELLS              = H5AD_TCELLS_SINGLETS
 # Combined T + myeloid object used by signaling scripts.
 H5AD_TCELLS_MYELOID      = OBJECTS_DIR / "GBM_TCR_POS_TCELLS_MYELOID_combined.h5ad"
 # Retyped / all-genes / GeneVector variants.
