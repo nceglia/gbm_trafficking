@@ -349,25 +349,56 @@ clone_meta["retained_graph_edges"] = clone_meta["clone_id"].map(
 
 # %%
 # =========================================================
-# Edge-subset merging
-# Each archetype with edges ⊆ another archetype's edges is absorbed
-# into its maximal superset (chosen by clone count on ties).
+# Path-subset merging
+# Each archetype whose root-to-leaf path-set is a strict subset of
+# another archetype's path-set is absorbed into its maximal superset
+# (chosen by clone count on ties). Stricter than edge-subset: a graph
+# whose paths extend a shorter graph's leaves does NOT contain it.
 # =========================================================
-print("\nEdge-subset merging...")
+print("\nPath-subset merging...")
 edge_lists = [edges for edges, _ in archetypes_sorted]
 clone_lists = [cids for _, cids in archetypes_sorted]
 n_arch = len(edge_lists)
 
-# Strict-subset relation: subset_of[i] = {j : edges(i) ⊊ edges(j)}.
+
+def _root_to_leaf_paths(edges):
+    """Return frozenset of root-to-leaf paths (tuples of nodes)
+    enumerated by DFS over the DAG defined by edges."""
+    if not edges:
+        return frozenset()
+    out_adj = {}
+    nodes = set()
+    has_in = set()
+    for src, dst in edges:
+        out_adj.setdefault(src, []).append(dst)
+        nodes.add(src); nodes.add(dst)
+        has_in.add(dst)
+    roots = sorted(nodes - has_in)
+    paths = set()
+    stack = [(r, (r,)) for r in roots]
+    while stack:
+        node, path = stack.pop()
+        succs = out_adj.get(node, ())
+        if not succs:
+            paths.add(path)
+            continue
+        for nxt in succs:
+            stack.append((nxt, path + (nxt,)))
+    return frozenset(paths)
+
+
+path_sets = [_root_to_leaf_paths(e) for e in edge_lists]
+
+# Strict-subset relation: subset_of[i] = {j : paths(i) ⊊ paths(j)}.
 subset_of = [set() for _ in range(n_arch)]
 for i in range(n_arch):
-    e_i = edge_lists[i]
-    if not e_i:
+    p_i = path_sets[i]
+    if not p_i:
         continue
     for j in range(n_arch):
         if i == j:
             continue
-        if e_i < edge_lists[j]:
+        if p_i < path_sets[j]:
             subset_of[i].add(j)
 
 # Each archetype's maximal supersets = its supersets not contained in
