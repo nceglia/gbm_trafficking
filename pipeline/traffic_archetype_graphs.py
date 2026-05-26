@@ -389,14 +389,31 @@ def _root_to_leaf_paths(edges):
 
 path_sets = [_root_to_leaf_paths(e) for e in edge_lists]
 
-# Strict-subset relation: subset_of[i] = {j : paths(i) ⊊ paths(j)}.
+
+def _tissues_in(edges):
+    s = set()
+    for (a_ti, _), (b_ti, _) in edges:
+        s.add(a_ti); s.add(b_ti)
+    return frozenset(s)
+
+
+tissues_per = [_tissues_in(e) for e in edge_lists]
+
+# Strict-subset relation under two constraints:
+#   (1) paths(i) ⊊ paths(j)             (existing path-subset rule)
+#   (2) tissues(i) == tissues(j)        (NEW: identical tissue scope)
+# (2) prevents a PBMC↔TP archetype from being absorbed into an
+# all-tissue archetype even if its paths happen to be sub-paths there.
 subset_of = [set() for _ in range(n_arch)]
 for i in range(n_arch):
     p_i = path_sets[i]
     if not p_i:
         continue
+    t_i = tissues_per[i]
     for j in range(n_arch):
         if i == j:
+            continue
+        if tissues_per[j] != t_i:
             continue
         if p_i < path_sets[j]:
             subset_of[i].add(j)
