@@ -1177,7 +1177,50 @@ for col, pdat in enumerate(panel_data):
     kept_nodes = set()
     for (u, v) in kept_edges:
         kept_nodes.add(u); kept_nodes.add(v)
+    # For each forward-leaf node (no outgoing kept edge, not at the
+    # terminal timepoint), restore its strongest below-threshold
+    # outgoing edge — these are "graph completion" rescues, not noise
+    # promotion. Only if no outgoing edge exists at all (a true dead
+    # end across the cohort) do we prune the node by removing its
+    # incoming edges. Iterate until stable.
+    last_tp_idx = T - 1
+    n_rescued_edges = 0
+    n_pruned_leaves = 0
+    while True:
+        out_deg = {n: 0 for n in kept_nodes}
+        for (u, _v) in kept_edges:
+            if u in out_deg:
+                out_deg[u] += 1
+        forward_leaves = {n for n in kept_nodes
+                           if out_deg.get(n, 0) == 0
+                           and n[1] < last_tp_idx}
+        if not forward_leaves:
+            break
+        rescued = 0
+        unrescuable = set()
+        for leaf in forward_leaves:
+            cands = [((u, v), c) for (u, v), c in edge_count.items()
+                     if u == leaf and (u, v) not in kept_edges
+                     and v not in inferred_only]
+            if cands:
+                (u, v), c = max(cands, key=lambda kv: kv[1])
+                kept_edges[(u, v)] = c
+                rescued += 1
+            else:
+                unrescuable.add(leaf)
+        n_rescued_edges += rescued
+        if unrescuable:
+            kept_edges = {(u, v): c for (u, v), c in kept_edges.items()
+                          if v not in unrescuable}
+            n_pruned_leaves += len(unrescuable)
+        kept_nodes = set()
+        for (u, v) in kept_edges:
+            kept_nodes.add(u); kept_nodes.add(v)
+        if rescued == 0 and not unrescuable:
+            break
     n_dropped_edges = len(edge_count) - len(kept_edges)
+    print(f"    rescued {n_rescued_edges} below-threshold edges; "
+          f"pruned {n_pruned_leaves} truly-dead-end nodes")
 
     # Draw retained edges. Sharper arrowhead: longer, narrower head
     # than the default "-|>", with mutation_scale tuned for the grid.
