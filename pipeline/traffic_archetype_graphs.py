@@ -115,6 +115,9 @@ bin_obs_e_idx = bin_obs_e.set_index("clone_id").sort_index()
 bin_obs_groups = bin_obs_e_idx.groupby(level=0)
 INF = float("inf")
 
+# Tiebreaker invocation counters (reset before the main loop).
+_TB_COUNTS = {"earliest": 0, "latest": 0}
+
 
 def _retained_edges(observed_set):
     """observed_set: set of (tissue_idx, tp_idx). Return frozenset of
@@ -122,10 +125,14 @@ def _retained_edges(observed_set):
     cheapest forward paths between every observed node and its next
     observed node in each tissue's timeline.
 
-    Tiebreaker hierarchy when multiple paths share the minimum cost:
-      (a) earliest first cross-tissue edge (lower step index wins)
-      (b) fewer total cross-tissue edges
-      (c) lexicographic on the tissue sequence
+    Context-aware tiebreaker: for each (u, v) pair, count how many
+    observations of v's tissue fall strictly between u_tp and v_tp.
+    If any exist, prefer earliest first cross-tissue (the clone clearly
+    spent intermediate time in the destination tissue). Otherwise, prefer
+    latest first cross-tissue (stay in source as long as possible — do
+    not invent intermediate destination-tissue nodes we never observed).
+
+    Secondary keys remain (b) fewer total crosses, (c) lex on sequence.
     """
     if len(observed_set) < 2:
         return frozenset()
@@ -164,14 +171,25 @@ def _retained_edges(observed_set):
             cands = paths_at[n][v_ti]
             if not cands:
                 continue
-            # Hierarchical tiebreaker.
-            def _key(seq):
+            n_intermediate = sum(
+                1 for tp in obs_by_tissue[v_ti]
+                if u_tp < tp < v_tp
+            )
+            prefer_earliest = n_intermediate > 0
+            if prefer_earliest:
+                _TB_COUNTS["earliest"] += 1
+            else:
+                _TB_COUNTS["latest"] += 1
+
+            def _key(seq, prefer_earliest=prefer_earliest):
                 first_cross = next(
                     (k for k in range(1, len(seq))
                      if seq[k] != seq[k - 1]), len(seq))
                 n_crosses = sum(1 for k in range(1, len(seq))
                                 if seq[k] != seq[k - 1])
-                return (first_cross, n_crosses, seq)
+                fc_term = first_cross if prefer_earliest else -first_cross
+                return (fc_term, n_crosses, seq)
+
             best_seq = min(cands, key=_key)
             for k in range(n):
                 edges.add(((best_seq[k], u_tp + k),
@@ -1049,5 +1067,9 @@ if big_tents:
     for new_id, old_id, n_src, n_cl in big_tents[:10]:
         print(f"  M{new_id}: {n_src} strict → {n_cl} clones — "
               f"{_describe_archetype(edge_lists[old_id])}")
+
+print(f"\ntiebreaker invocations: "
+      f"earliest={_TB_COUNTS['earliest']:,}, "
+      f"latest={_TB_COUNTS['latest']:,}")
 
 print(f"\nDone. All outputs in {OUT_DIR}")
