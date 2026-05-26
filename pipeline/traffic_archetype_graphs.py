@@ -341,76 +341,76 @@ clone_meta[["trb", "patient", "clone_id", "archetype_id",
 
 # %%
 # =========================================================
-# Plot 1: top-5 archetype retained graphs
+# Plot 1: top-N archetype retained graphs (TOP_N = 20)
 # =========================================================
-print("\nPlotting top-5 archetype graphs...")
-top5 = archetypes_sorted[:5]
-fig, axes = plt.subplots(1, 5, figsize=(20, 4.2), squeeze=False)
-for col, (edges, cids) in enumerate(top5):
-    ax = axes[0, col]
+print(f"\nPlotting top-{TOP_N} archetype graphs...")
+top_archs = archetypes_sorted[:TOP_N]
+n_cols = 5
+n_rows = int(np.ceil(len(top_archs) / n_cols))
+fig, axes = plt.subplots(n_rows, n_cols,
+                         figsize=(n_cols * 4.0, n_rows * 2.8),
+                         squeeze=False)
+for idx, (edges, cids) in enumerate(top_archs):
+    ax = axes[idx // n_cols, idx % n_cols]
     n_clones = len(cids)
     desc = _describe_archetype(edges)
-    # Layout: x = timepoint index, y = tissue index (PBMC top → TP bottom).
     nodes_in_graph = set()
     for (a_ti, a_tp), (b_ti, b_tp) in edges:
         nodes_in_graph.add((a_ti, a_tp))
         nodes_in_graph.add((b_ti, b_tp))
-    # Mark which nodes are observed in at least 60% of this archetype's
-    # clones (since strict equality already requires identical edge
-    # sets, observed nodes per clone are essentially the same).
     obs_freq = {}
     for cid in cids:
         for n_ in clone_graphs[cid][1]:
             obs_freq[n_] = obs_freq.get(n_, 0) + 1
     observed_majority = {n_ for n_, c in obs_freq.items()
                          if c >= 0.5 * n_clones}
-    # Draw grid lattice (faint).
     for j in range(T):
         for k in range(3):
             ax.plot(j, 2 - k, "o", color="#dddddd",
-                    markersize=6, zorder=1)
-    # Draw edges.
+                    markersize=5, zorder=1)
     for (a_ti, a_tp), (b_ti, b_tp) in edges:
         arr = FancyArrowPatch(
             posA=(a_tp, 2 - a_ti),
             posB=(b_tp, 2 - b_ti),
-            arrowstyle="-|>", mutation_scale=14,
-            color="#555", lw=1.2,
-            shrinkA=10, shrinkB=10,
+            arrowstyle="-|>", mutation_scale=12,
+            color="#555", lw=1.1,
+            shrinkA=9, shrinkB=9,
             connectionstyle="arc3,rad=0.0", zorder=2,
         )
         ax.add_patch(arr)
-    # Draw nodes — observed filled, on-path unobserved hollow.
     for (ti, tp) in nodes_in_graph:
         x, y = tp, 2 - ti
         tname = TISSUES[ti]
         color = TISSUE_COLORS[tname]
         if (ti, tp) in observed_majority:
             ax.plot(x, y, "o", markerfacecolor=color,
-                    markeredgecolor="black", markersize=14, zorder=3)
+                    markeredgecolor="black", markersize=12, zorder=3)
         else:
             ax.plot(x, y, "o", markerfacecolor="white",
-                    markeredgecolor=color, markersize=14, mew=2,
+                    markeredgecolor=color, markersize=12, mew=1.8,
                     zorder=3)
     ax.set_xticks(range(T))
-    ax.set_xticklabels([f"T{t}" for t in TPS], fontsize=8)
+    ax.set_xticklabels([f"T{t}" for t in TPS], fontsize=7)
     ax.set_yticks([0, 1, 2])
     ax.set_yticklabels([TISSUES[2], TISSUES[1], TISSUES[0]],
-                        fontsize=8)
+                        fontsize=7)
     for tick, tname in zip(ax.get_yticklabels(),
                             [TISSUES[2], TISSUES[1], TISSUES[0]]):
         tick.set_color(TISSUE_COLORS.get(tname, "#444"))
         tick.set_fontweight("bold")
     ax.set_ylim(-0.5, 2.5)
     ax.set_xlim(-0.5, T - 0.5)
-    ax.set_title(f"A{col}: n={n_clones}\n{desc}",
-                  fontsize=9, linespacing=1.15)
+    ax.set_title(f"A{idx}: n={n_clones}\n{desc}",
+                  fontsize=8, linespacing=1.15)
     for s in ("top", "right"):
         ax.spines[s].set_visible(False)
     ax.set_aspect("auto")
-fig.suptitle("Top-5 retained-path archetypes (filled = majority-observed; "
-             "hollow = on-path inferred)",
-             fontsize=11, fontweight="bold", y=1.02)
+# Hide unused panels if any.
+for k in range(len(top_archs), n_rows * n_cols):
+    axes[k // n_cols, k % n_cols].axis("off")
+fig.suptitle(f"Top-{TOP_N} retained-path archetypes "
+             "(filled = majority-observed; hollow = on-path inferred)",
+             fontsize=11, fontweight="bold", y=1.00)
 fig.tight_layout()
 fig.savefig(OUT_DIR / "archetype_top_graphs.png",
             dpi=DPI, bbox_inches="tight")
@@ -511,7 +511,8 @@ for a_idx in range(5):
             ax.set_title(tis, fontsize=9, fontweight="bold",
                           color=TISSUE_COLORS.get(tis, "#444"))
         if ti == 0:
-            ax.set_ylabel(f"A{a_idx}\n(n={len(top5[a_idx][1])})",
+            ax.set_ylabel(
+                f"A{a_idx}\n(n={len(archetypes_sorted[a_idx][1])})",
                           fontsize=8, rotation=0, ha="right",
                           va="center", labelpad=22)
         ax.tick_params(length=0)
