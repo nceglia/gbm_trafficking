@@ -1191,7 +1191,7 @@ for col, pdat in enumerate(panel_data):
             arr = FancyArrowPatch(
                 posA=(a_tp, HEAT_Y[a_ti]),
                 posB=(b_tp, HEAT_Y[b_ti]),
-                arrowstyle="-|>,head_length=0.85,head_width=0.15",
+                arrowstyle="-|>,head_length=0.30,head_width=0.15",
                 mutation_scale=16,
                 color=color, lw=lw,
                 shrinkA=9, shrinkB=9,
