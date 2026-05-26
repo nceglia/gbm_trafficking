@@ -51,9 +51,9 @@ OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 _argp = argparse.ArgumentParser(add_help=False)
 _argp.add_argument(
-    "--heat-threshold", type=float, default=0.30,
+    "--heat-threshold", type=float, default=0.20,
     help="Edge frequency threshold for trafficking_heat (per-panel "
-         "normalized; default 0.30).")
+         "normalized; default 0.20).")
 _args, _ = _argp.parse_known_args()
 HEAT_EDGE_THRESHOLD = _args.heat_threshold
 
@@ -1088,8 +1088,14 @@ print(f"\ntiebreaker invocations: "
 # filtered by tissue scope.
 # =========================================================
 print("\nPlotting trafficking heat (4-panel)...")
+from matplotlib import rcParams  # noqa: E402
 from matplotlib.cm import ScalarMappable  # noqa: E402
 from matplotlib.colors import Normalize  # noqa: E402
+
+_orig_font_family = rcParams["font.family"]
+_orig_font_sans = rcParams["font.sans-serif"]
+rcParams["font.family"] = "sans-serif"
+rcParams["font.sans-serif"] = ["Arial", "Helvetica", "DejaVu Sans"]
 
 clone_tissues = {
     cid: frozenset(ti for (ti, _tp) in obs_nodes)
@@ -1185,11 +1191,13 @@ for col, pdat in enumerate(panel_data):
             arr = FancyArrowPatch(
                 posA=(a_tp, HEAT_Y[a_ti]),
                 posB=(b_tp, HEAT_Y[b_ti]),
-                arrowstyle="-|>,head_length=0.55,head_width=0.20",
-                mutation_scale=14,
+                arrowstyle="-|>,head_length=0.85,head_width=0.15",
+                mutation_scale=16,
                 color=color, lw=lw,
                 shrinkA=9, shrinkB=9,
-                connectionstyle="arc3,rad=0.0", zorder=2,
+                connectionstyle="arc3,rad=0.0",
+                joinstyle="miter", capstyle="butt",
+                zorder=2,
             )
             ax.add_patch(arr)
 
@@ -1210,30 +1218,30 @@ for col, pdat in enumerate(panel_data):
         # Only observed nodes reach this loop (inferred-only nodes
         # were dropped above along with their edges).
         ax.plot(x, y, "o", markerfacecolor=color,
-                markeredgecolor="black", markersize=size, zorder=3)
+                markeredgecolor="none", markersize=size, zorder=3)
 
     ax.set_xticks(range(T))
-    ax.set_xticklabels([f"T{t}" for t in TPS], fontsize=9)
+    ax.set_xticklabels([f"T{t}" for t in TPS], fontsize=10)
     y_pos = [HEAT_Y[TISSUE_IDX[t]] for t in HEAT_ROW_ORDER]
     ax.set_yticks(y_pos)
-    ax.set_yticklabels(HEAT_ROW_ORDER, fontsize=9)
+    ax.set_yticklabels(HEAT_ROW_ORDER, fontsize=13)
     for tick, tname in zip(ax.get_yticklabels(), HEAT_ROW_ORDER):
         tick.set_color(TISSUE_COLORS.get(tname, "#444"))
         tick.set_fontweight("bold")
     ax.set_ylim(-0.5, 2.5)
     ax.set_xlim(-0.5, T - 0.5)
     ax.set_title(
-        f"{pdat['label']}  (n={pdat['n_clones']} clones)",
-        fontsize=11, fontweight="bold")
+        f"{pdat['label']}  ({pdat['n_clones']} clones)",
+        fontsize=12, fontweight="bold")
     for s in ("top", "right", "bottom", "left"):
         ax.spines[s].set_visible(False)
     ax.tick_params(length=0)
 
-fig.subplots_adjust(left=0.04, right=0.97, top=0.86,
-                     bottom=0.28, wspace=0.10)
+fig.subplots_adjust(left=0.04, right=0.97, top=0.88,
+                     bottom=0.30, wspace=0.10)
 
-# Colorbar — left side of the bottom legend strip.
-cax = fig.add_axes([0.08, 0.14, 0.55, 0.022])
+# Colorbar — left side of the bottom legend strip (narrower).
+cax = fig.add_axes([0.10, 0.16, 0.38, 0.020])
 sm = ScalarMappable(cmap=inferno_cmap, norm=Normalize(vmin=0, vmax=1))
 sm.set_array([])
 cb = fig.colorbar(sm, cax=cax, orientation="horizontal")
@@ -1241,18 +1249,19 @@ cb.set_label("Edge frequency (per-panel normalized)",
              fontsize=9)
 cb.ax.tick_params(labelsize=8)
 
-# Node-size legend — compact, right side.
-lax = fig.add_axes([0.75, 0.06, 0.18, 0.12])
+# Node-size legend — compact, right side, more vertical separation
+# between dots/labels and the title.
+lax = fig.add_axes([0.75, 0.04, 0.18, 0.18])
 lax.set_xlim(0, 1); lax.set_ylim(0, 1)
 size_fracs = [0.0, 0.25, 0.50, 0.75, 1.0]
 x_positions = np.linspace(0.10, 0.90, len(size_fracs))
 for f, x in zip(size_fracs, x_positions):
     sz = NODE_SIZE_MIN + (NODE_SIZE_MAX - NODE_SIZE_MIN) * f
-    lax.plot(x, 0.65, "o", markerfacecolor="#444",
-             markeredgecolor="black", markersize=sz, zorder=3)
-    lax.text(x, 0.30, f"{int(f * 100)}%",
+    lax.plot(x, 0.75, "o", markerfacecolor="#444",
+             markeredgecolor="none", markersize=sz, zorder=3)
+    lax.text(x, 0.45, f"{int(f * 100)}%",
              ha="center", va="top", fontsize=7)
-lax.text(0.5, 0.02,
+lax.text(0.5, 0.05,
          "Node size: occupancy (% of panel max)",
          ha="center", va="bottom", fontsize=8)
 for s in ("top", "right", "bottom", "left"):
@@ -1260,14 +1269,17 @@ for s in ("top", "right", "bottom", "left"):
 lax.set_xticks([]); lax.set_yticks([])
 
 fig.suptitle(
-    f"Trafficking heat across per-clone retained graphs  "
-    f"(edge threshold ≥ {HEAT_EDGE_THRESHOLD:.0%})",
-    fontsize=12, fontweight="bold", y=0.97)
+    "Cross compartment T cell traffic patterns",
+    fontsize=13, fontweight="bold", y=0.97)
 fig.savefig(OUT_DIR / "trafficking_heat.png",
             dpi=DPI, bbox_inches="tight")
 fig.savefig(OUT_DIR / "trafficking_heat.pdf",
             bbox_inches="tight")
 plt.close(fig)
+
+# Restore font config (only the heat figure uses Arial).
+rcParams["font.family"] = _orig_font_family
+rcParams["font.sans-serif"] = _orig_font_sans
 
 
 print(f"\nDone. All outputs in {OUT_DIR}")
