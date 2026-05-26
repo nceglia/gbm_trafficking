@@ -1155,10 +1155,18 @@ for col, pdat in enumerate(panel_data):
             ax.plot(j, HEAT_Y[ti], "o", color="#dddddd",
                     markersize=5, zorder=1)
 
-    # Threshold edges + collect kept nodes.
+    # Drop inferred-only nodes (n_observed == 0 for the panel).
+    # Edges incident to such nodes are also dropped.
+    all_nodes_in_panel = set(n_observed_node.keys()) | set(n_inferred_node.keys())
+    inferred_only = {n for n in all_nodes_in_panel
+                      if n_observed_node.get(n, 0) == 0}
+    # Threshold edges + drop edges touching inferred-only nodes.
     kept_edges = {
         (u, v): cnt for (u, v), cnt in edge_count.items()
-        if max_edge > 0 and (cnt / max_edge) >= HEAT_EDGE_THRESHOLD
+        if max_edge > 0
+        and (cnt / max_edge) >= HEAT_EDGE_THRESHOLD
+        and u not in inferred_only
+        and v not in inferred_only
     }
     kept_nodes = set()
     for (u, v) in kept_edges:
@@ -1199,13 +1207,10 @@ for col, pdat in enumerate(panel_data):
                 occ / panel_max_occ)
         else:
             size = NODE_SIZE_BASE
-        if n_observed_node.get((ti, tp), 0) > 0:
-            ax.plot(x, y, "o", markerfacecolor=color,
-                    markeredgecolor="black", markersize=size, zorder=3)
-        elif n_inferred_node.get((ti, tp), 0) > 0:
-            ax.plot(x, y, "o", markerfacecolor="white",
-                    markeredgecolor=color, markersize=size, mew=1.8,
-                    zorder=3)
+        # Only observed nodes reach this loop (inferred-only nodes
+        # were dropped above along with their edges).
+        ax.plot(x, y, "o", markerfacecolor=color,
+                markeredgecolor="black", markersize=size, zorder=3)
 
     ax.set_xticks(range(T))
     ax.set_xticklabels([f"T{t}" for t in TPS], fontsize=9)
@@ -1225,10 +1230,10 @@ for col, pdat in enumerate(panel_data):
     ax.tick_params(length=0)
 
 fig.subplots_adjust(left=0.04, right=0.97, top=0.86,
-                     bottom=0.24, wspace=0.10)
+                     bottom=0.28, wspace=0.10)
 
-# Colorbar (left half of the legend strip).
-cax = fig.add_axes([0.07, 0.10, 0.42, 0.022])
+# Colorbar — left side of the bottom legend strip.
+cax = fig.add_axes([0.08, 0.14, 0.55, 0.022])
 sm = ScalarMappable(cmap=inferno_cmap, norm=Normalize(vmin=0, vmax=1))
 sm.set_array([])
 cb = fig.colorbar(sm, cax=cax, orientation="horizontal")
@@ -1236,8 +1241,8 @@ cb.set_label("Edge frequency (per-panel normalized)",
              fontsize=9)
 cb.ax.tick_params(labelsize=8)
 
-# Node-size legend (right half).
-lax = fig.add_axes([0.55, 0.07, 0.42, 0.10])
+# Node-size legend — compact, right side.
+lax = fig.add_axes([0.75, 0.06, 0.18, 0.12])
 lax.set_xlim(0, 1); lax.set_ylim(0, 1)
 size_fracs = [0.0, 0.25, 0.50, 0.75, 1.0]
 x_positions = np.linspace(0.10, 0.90, len(size_fracs))
@@ -1245,11 +1250,11 @@ for f, x in zip(size_fracs, x_positions):
     sz = NODE_SIZE_MIN + (NODE_SIZE_MAX - NODE_SIZE_MIN) * f
     lax.plot(x, 0.65, "o", markerfacecolor="#444",
              markeredgecolor="black", markersize=sz, zorder=3)
-    lax.text(x, 0.20, f"{int(f * 100)}%",
-             ha="center", va="top", fontsize=8)
-lax.text(0.5, 0.95,
-         "Node size: occupancy per panel (% of panel max)",
-         ha="center", va="top", fontsize=9)
+    lax.text(x, 0.30, f"{int(f * 100)}%",
+             ha="center", va="top", fontsize=7)
+lax.text(0.5, 0.02,
+         "Node size: occupancy (% of panel max)",
+         ha="center", va="bottom", fontsize=8)
 for s in ("top", "right", "bottom", "left"):
     lax.spines[s].set_visible(False)
 lax.set_xticks([]); lax.set_yticks([])
