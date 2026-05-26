@@ -14,7 +14,7 @@ See [`AUDIT.md`](AUDIT.md) for lineage and TCR constraints.
 - **pathway_tcell**: `pathway_coenrichment_graph`, `pathway_de_gsea_prerank`, `pathway_proximity_network`, `pathway_temporal_scores_tcell`, `pathway_tissue_ternary`
 - **pathway_myeloid**: `pathway_de_gsea_myeloid`, `pathway_temporal_scores_myeloid`, `traffic_tissue_separability_myeloid`, `traffic_transcriptome_cosine_myeloid`
 - **pathway_cross**: `pathway_cross_lineage_corr`, `pathway_cross_lineage_corr_fine`
-- **traffic_tcr**: `traffic_bayesian_comparison`, `traffic_bayesian_sankey`, `traffic_branch_dispersion`, `traffic_branch_dispersion_jsd`, `traffic_branch_dispersion_switching`, `traffic_branch_dispersion_temporal`, `traffic_branch_empirics`, `traffic_clonal_persistence`, `traffic_clonality`, `traffic_migration_rates`, `traffic_migration_rates_figures`, `traffic_migration_rates_per_tp`, `traffic_phenotype_degs`, `traffic_pseudotime_phenotypes_cd4`, `traffic_pseudotime_phenotypes_cd8`, `traffic_temporal_trajectories`, `traffic_tissue_separability`, `traffic_transcriptome_cosine`
+- **traffic_tcr**: `traffic_archetypes`, `traffic_bayesian_comparison`, `traffic_bayesian_sankey`, `traffic_branch_dispersion`, `traffic_branch_dispersion_jsd`, `traffic_branch_dispersion_switching`, `traffic_branch_dispersion_temporal`, `traffic_branch_empirics`, `traffic_clonal_persistence`, `traffic_clonality`, `traffic_migration_rates`, `traffic_migration_rates_figures`, `traffic_migration_rates_per_tp`, `traffic_phenotype_degs`, `traffic_pseudotime_phenotypes_cd4`, `traffic_pseudotime_phenotypes_cd8`, `traffic_temporal_trajectories`, `traffic_tissue_separability`, `traffic_transcriptome_cosine`
 - **signaling**: `signaling_branch_intersection`, `signaling_intersect_pathways`, `signaling_liana_pathways`
 - **figures**: `figure_main2_trafficking`
 - **explorers**: `explorer_clone_network`, `explorer_full_report`, `explorer_signaling`, `explorer_temporal`, `viewer_landing`
@@ -41,6 +41,7 @@ flowchart TD
     signaling_branch_intersection["signaling branch intersection"]:::signaling
     signaling_intersect_pathways["signaling intersect pathways"]:::signaling
     signaling_liana_pathways["signaling liana pathways"]:::signaling
+    traffic_archetypes["traffic archetypes"]:::traffic
     traffic_bayesian_comparison["traffic bayesian comparison"]:::traffic
     traffic_bayesian_sankey["traffic bayesian sankey"]:::traffic
     traffic_branch_dispersion["traffic branch dispersion"]:::traffic
@@ -85,6 +86,8 @@ flowchart TD
     signaling_liana_pathways --> signaling_intersect_pathways
     pathway_temporal_scores_tcell --> signaling_liana_pathways
     pathway_cross_lineage_corr --> signaling_liana_pathways
+    qc_scrublet_doublets --> traffic_archetypes
+    traffic_migration_rates --> traffic_archetypes
     qc_scrublet_doublets --> traffic_bayesian_comparison
     traffic_migration_rates --> traffic_bayesian_comparison
     qc_scrublet_doublets --> traffic_bayesian_sankey
@@ -144,6 +147,7 @@ flowchart TD
 - `pathway_proximity_network` — lineage: tcell
 - `pathway_temporal_scores_myeloid` — lineage: myeloid
 - `pathway_tissue_ternary` — lineage: tcell
+- `traffic_archetypes` — lineage: na (TCR)
 - `traffic_bayesian_comparison` — lineage: na (TCR)
 - `traffic_bayesian_sankey` — lineage: na (TCR)
 - `traffic_branch_dispersion_temporal` — lineage: na (TCR)
@@ -191,6 +195,7 @@ flowchart TD
 | `signaling_branch_intersection` | `signaling_branch_intersection.py` | signaling | tcell | `results/06b_branch_signaling/branches.csv` |
 | `signaling_intersect_pathways` | `signaling_intersect_pathways.py` | signaling | both | `results/12_liana_signaling/signaling_edges_summary.csv` |
 | `signaling_liana_pathways` | `signaling_liana_pathways.py` | signaling | both | `results/12_liana_signaling/signaling_edges.csv` |
+| `traffic_archetypes` | `traffic_archetypes.py` | traffic_tcr | na | `results/traffic_archetypes/clone_archetypes.csv` |
 | `traffic_bayesian_comparison` | `traffic_bayesian_comparison.py` | traffic_tcr | na | `results/06f_bayesian_comparison/bayesian_summary.csv` |
 | `traffic_bayesian_sankey` | `traffic_bayesian_sankey.py` | traffic_tcr | na | `results/06g_bayesian_sankey/empirical_vs_bayesian_summary.csv` |
 | `traffic_branch_dispersion` | `traffic_branch_dispersion.py` | traffic_tcr | na | `results/branch_dispersion/stayer_vs_mover_table.csv` |

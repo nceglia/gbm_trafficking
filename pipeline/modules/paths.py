@@ -98,6 +98,7 @@ CROSS_LINEAGE_CORR_GROUPED_DIR = RESULTS_DIR / "11_cross_lineage_correlations_gr
 LIANA_SIGNALING_DIR          = RESULTS_DIR / "12_liana_signaling"
 PSEUDOTIME_PHENOTYPES_DIR    = RESULTS_DIR / "13_pseudotime_phenotypes"
 PHENOTYPE_DEGS_DIR           = RESULTS_DIR / "14_phenotype_degs"
+TRAFFIC_ARCHETYPES_DIR       = RESULTS_DIR / "traffic_archetypes"
 
 # Standalone analyses (non-numbered)
 BRANCH_DISPERSION_DIR           = RESULTS_DIR / "branch_dispersion"
