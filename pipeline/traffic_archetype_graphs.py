@@ -1161,18 +1161,19 @@ for col, pdat in enumerate(panel_data):
             ax.plot(j, HEAT_Y[ti], "o", color="#dddddd",
                     markersize=5, zorder=1)
 
-    # Drop inferred-only nodes (n_observed == 0 for the panel).
-    # Edges incident to such nodes are also dropped.
-    all_nodes_in_panel = set(n_observed_node.keys()) | set(n_inferred_node.keys())
-    inferred_only = {n for n in all_nodes_in_panel
-                      if n_observed_node.get(n, 0) == 0}
-    # Threshold edges + drop edges touching inferred-only nodes.
+    # Diagnostic: edges total → after threshold cut.
+    n_total = len(edge_count)
+    n_after_threshold = sum(
+        1 for (u, v), cnt in edge_count.items()
+        if max_edge > 0 and (cnt / max_edge) >= HEAT_EDGE_THRESHOLD
+    )
+    print(f"    edges: total={n_total}, "
+          f"after threshold={n_after_threshold} "
+          f"(−{n_total - n_after_threshold})")
+    # Threshold-only edge cut; inferred-only nodes are retained.
     kept_edges = {
         (u, v): cnt for (u, v), cnt in edge_count.items()
-        if max_edge > 0
-        and (cnt / max_edge) >= HEAT_EDGE_THRESHOLD
-        and u not in inferred_only
-        and v not in inferred_only
+        if max_edge > 0 and (cnt / max_edge) >= HEAT_EDGE_THRESHOLD
     }
     kept_nodes = set()
     for (u, v) in kept_edges:
@@ -1200,8 +1201,7 @@ for col, pdat in enumerate(panel_data):
         unrescuable = set()
         for leaf in forward_leaves:
             cands = [((u, v), c) for (u, v), c in edge_count.items()
-                     if u == leaf and (u, v) not in kept_edges
-                     and v not in inferred_only]
+                     if u == leaf and (u, v) not in kept_edges]
             if cands:
                 (u, v), c = max(cands, key=lambda kv: kv[1])
                 kept_edges[(u, v)] = c
@@ -1258,10 +1258,15 @@ for col, pdat in enumerate(panel_data):
                 occ / panel_max_occ)
         else:
             size = NODE_SIZE_BASE
-        # Only observed nodes reach this loop (inferred-only nodes
-        # were dropped above along with their edges).
-        ax.plot(x, y, "o", markerfacecolor=color,
-                markeredgecolor="none", markersize=size, zorder=3)
+        # Observed nodes: filled (tissue color, no outline).
+        # Inferred-only nodes: hollow (white fill, tissue-color outline).
+        if n_observed_node.get((ti, tp), 0) > 0:
+            ax.plot(x, y, "o", markerfacecolor=color,
+                    markeredgecolor="none", markersize=size, zorder=3)
+        else:
+            ax.plot(x, y, "o", markerfacecolor="white",
+                    markeredgecolor=color, markersize=size, mew=1.6,
+                    zorder=3)
 
     ax.set_xticks(range(T))
     ax.set_xticklabels([f"T{t}" for t in TPS], fontsize=10)
