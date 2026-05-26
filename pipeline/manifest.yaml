@@ -352,6 +352,25 @@ steps:
     depends_on: [qc_scrublet_doublets, traffic_migration_rates]
     resources: {mem_mb: 16000, runtime: 300}
 
+  traffic_archetype_graphs:
+    file: traffic_archetype_graphs.py
+    tier: traffic_tcr
+    lineage: na
+    tcr_required: true
+    reads:
+      - data/objects/GBM_TCR_POS_TCELLS_singlets.h5ad
+    writes:
+      - results/traffic_archetype_graphs/clone_archetypes.csv
+      - results/traffic_archetype_graphs/archetype_graphs.csv
+      - results/traffic_archetype_graphs/archetype_summary.csv
+      - results/traffic_archetype_graphs/subset_matrix.csv
+      - results/traffic_archetype_graphs/archetype_top_graphs.png
+      - results/traffic_archetype_graphs/archetype_size_distribution.png
+      - results/traffic_archetype_graphs/subset_diagnostic.png
+      - results/traffic_archetype_graphs/archetype_phenotypes.png
+    depends_on: [qc_scrublet_doublets]
+    resources: {mem_mb: 16000, runtime: 60}
+
   traffic_pseudotime_phenotypes_cd8:
     file: traffic_pseudotime_phenotypes.py
     tier: traffic_tcr

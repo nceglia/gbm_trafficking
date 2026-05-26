@@ -99,6 +99,7 @@ LIANA_SIGNALING_DIR          = RESULTS_DIR / "12_liana_signaling"
 PSEUDOTIME_PHENOTYPES_DIR    = RESULTS_DIR / "13_pseudotime_phenotypes"
 PHENOTYPE_DEGS_DIR           = RESULTS_DIR / "14_phenotype_degs"
 TRAFFIC_ARCHETYPES_DIR       = RESULTS_DIR / "traffic_archetypes"
+TRAFFIC_ARCHETYPE_GRAPHS_DIR = RESULTS_DIR / "traffic_archetype_graphs"
 
 # Standalone analyses (non-numbered)
 BRANCH_DISPERSION_DIR           = RESULTS_DIR / "branch_dispersion"
