@@ -8,7 +8,7 @@ pipeline/data/ontology/
 __pycache__/
 *.pyc
 *.egg-info/
-build/
+/build/
 
 # macOS
 .DS_Store

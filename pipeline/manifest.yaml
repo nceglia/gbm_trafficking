@@ -415,7 +415,7 @@ steps:
     resources: {mem_mb: 32000, runtime: 120}
 
   explorer_temporal:
-    file: explorer_temporal.py
+    file: viewers/build/temporal.py
     tier: explorers
     lineage: tcell
     reads:
@@ -425,23 +425,23 @@ steps:
       - results/10_temporal_scores/temporal_pathway_scores_myeloid.csv
       - results/10_temporal_scores/temporal_gene_expression_tcell.csv
       - results/10_temporal_scores/temporal_gene_expression_myeloid.csv
-    writes: [gbm_temporal_explorer.html]
+    writes: [deploy/bundle/temporal.html]
     depends_on: [pathway_temporal_scores_tcell, pathway_temporal_scores_myeloid]
     resources: {mem_mb: 8000, runtime: 30}
 
   explorer_signaling:
-    file: explorer_signaling.py
+    file: viewers/build/signaling.py
     tier: explorers
     lineage: both
     reads:
       - results/12_liana_signaling/signaling_edges.csv
       - results/11_cross_lineage_correlations/pathway_correlations.csv
-    writes: [gbm_signaling_explorer.html]
+    writes: [deploy/bundle/signaling.html]
     depends_on: [signaling_liana_pathways, pathway_cross_lineage_corr]
     resources: {mem_mb: 8000, runtime: 30}
 
   explorer_clone_network:
-    file: explorer_clone_network.py
+    file: viewers/build/clone_network.py
     tier: explorers
     lineage: both
     reads:
@@ -449,20 +449,38 @@ steps:
       - data/objects/GBM_TCR_POS_TCELLS.h5ad
       - data/objects/MYELOID_GBM.h5ad
     writes:
-      - results/clone_network_explorer/index.html
+      - deploy/bundle/clone_network.html
+      - results/clone_network_explorer/data_summary.txt
     depends_on: [traffic_branch_empirics]
     resources: {mem_mb: 32000, runtime: 120}
 
   explorer_full_report:
-    file: explorer_full_report.py
+    file: viewers/build/report.py
     tier: explorers
     lineage: both
     reads:
       - results/10_temporal_scores/temporal_composition_tcell.csv
-    writes: [gbm_report/index.html]
+    writes: [deploy/bundle/report/index.html]
     depends_on: []
     note: Aggregator — run last after other tiers
     resources: {mem_mb: 8000, runtime: 30}
+
+  viewer_landing:
+    file: viewers/build/landing.py
+    tier: explorers
+    lineage: both
+    reads:
+      - deploy/bundle/temporal.html
+      - deploy/bundle/signaling.html
+      - deploy/bundle/clone_network.html
+      - deploy/bundle/report/index.html
+    writes: [deploy/bundle/index.html]
+    depends_on:
+      - explorer_temporal
+      - explorer_signaling
+      - explorer_clone_network
+      - explorer_full_report
+    resources: {mem_mb: 512, runtime: 1}
 
 # Snakemake aggregate targets
 targets:

@@ -147,10 +147,11 @@ flowchart TD
 
 | Step | Script | Tier | Lineage | Sentinel output |
 |------|--------|------|---------|-----------------|
-| `explorer_clone_network` | `explorer_clone_network.py` | explorers | both | `results/clone_network_explorer/index.html` |
-| `explorer_full_report` | `explorer_full_report.py` | explorers | both | `gbm_report/index.html` |
-| `explorer_signaling` | `explorer_signaling.py` | explorers | both | `gbm_signaling_explorer.html` |
-| `explorer_temporal` | `explorer_temporal.py` | explorers | tcell | `gbm_temporal_explorer.html` |
+| `explorer_clone_network` | `viewers/build/clone_network.py` | explorers | both | `deploy/bundle/clone_network.html` |
+| `explorer_full_report` | `viewers/build/report.py` | explorers | both | `deploy/bundle/report/index.html` |
+| `explorer_signaling` | `viewers/build/signaling.py` | explorers | both | `deploy/bundle/signaling.html` |
+| `explorer_temporal` | `viewers/build/temporal.py` | explorers | tcell | `deploy/bundle/temporal.html` |
+| `viewer_landing` | `viewers/build/landing.py` | explorers | both | `deploy/bundle/index.html` |
 | `figure_main2_trafficking` | `figure_main2_trafficking.py` | figures | tcell | `results/07_figure2/figure2.png` |
 | `pathway_coenrichment_graph` | `pathway_coenrichment_graph.py` | pathway_tcell | tcell | `results/04_pseudobulk_de_gsea/pathway_coenrichment_GO_Biological_Process_2023.png` |
 | `pathway_cross_lineage_corr` | `pathway_cross_lineage_corr.py` | pathway_cross | cross | `results/11_cross_lineage_correlations/pathway_correlations.csv` |
