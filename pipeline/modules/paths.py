@@ -38,6 +38,38 @@ H5AD_MYELOID             = OBJECTS_DIR / "MYELOID_GBM.h5ad"
 # ── Other embeddings / artifacts ──────────────────────────────────────
 UMAP_PKL = EMBEDDINGS_DIR / "X_umap.pkl"
 
+# ── Cellranger per-sample outputs (78 samples) ────────────────────────
+# These are CellRanger *filtered* outputs (filtered_feature_bc_matrix.h5
+# format — barcodes × features, cell-called by CellRanger). The companion
+# CSVs are the per-barcode TCR contigs (`<sample>.csv`) and per-clonotype
+# table (`<sample>_clonotypes.csv`).
+#
+# Raw (unfiltered) matrices are NOT in the repo — anything that needs
+# the empty-droplet ambient profile (e.g. CellBender) would have to
+# source those upstream.
+CELLRANGER_DIR = DATA_DIR / "cellranger_output"
+
+
+def cellranger_h5(sample: str) -> Path:
+    """Filtered feature×barcode matrix for one sample."""
+    return CELLRANGER_DIR / f"{sample}.h5"
+
+
+def cellranger_contigs(sample: str) -> Path:
+    """Per-barcode VDJ contigs CSV for one sample."""
+    return CELLRANGER_DIR / f"{sample}.csv"
+
+
+def cellranger_clonotypes(sample: str) -> Path:
+    """Per-clonotype consensus CSV for one sample."""
+    return CELLRANGER_DIR / f"{sample}_clonotypes.csv"
+
+
+def cellranger_samples() -> list[str]:
+    """Enumerate every CellRanger sample present on disk."""
+    return sorted(p.stem for p in CELLRANGER_DIR.glob("*.h5"))
+
+
 # ── Results root + per-step output dirs ───────────────────────────────
 # Scripts should write to RESULTS_DIR / "<step_dir>" and lookups should
 # go through these constants so a future rename touches one file, not 20.
@@ -75,6 +107,23 @@ CLONALITY_DIR                   = RESULTS_DIR / "clonality"
 CLONE_NETWORK_EXPLORER_DIR      = RESULTS_DIR / "clone_network_explorer"
 SIGNALING_EXPLORER_DIR          = RESULTS_DIR / "signaling_explorer"
 FIGURE1_DIR                     = RESULTS_DIR / "figure1"
+CLONAL_TRAFFICKING_DIR          = RESULTS_DIR / "07_clonal_trafficking"
+PSEUDOBULK_DE_GSEA_MYELOID_DIR  = RESULTS_DIR / "04_pseudobulk_de_gsea_myeloid"
+TISSUE_SEPARABILITY_MYELOID_DIR = RESULTS_DIR / "03_tissue_separability_myeloid"
+TRANSCRIPTOME_SIMILARITY_MYELOID_DIR = RESULTS_DIR / "transcriptome_similarity_myeloid"
+EMPIRICAL_Q_FIGURES_DIR         = EMPIRICAL_Q_DIR / "figures"
+
+# Repo-root HTML / report artifacts (legacy — prefer deploy/bundle/)
+VIEWER_BUNDLE_DIR           = REPO_ROOT / "deploy" / "bundle"
+VIEWER_TEMPORAL_HTML        = VIEWER_BUNDLE_DIR / "temporal.html"
+VIEWER_SIGNALING_HTML       = VIEWER_BUNDLE_DIR / "signaling.html"
+VIEWER_CLONE_NETWORK_HTML   = VIEWER_BUNDLE_DIR / "clone_network.html"
+VIEWER_REPORT_DIR           = VIEWER_BUNDLE_DIR / "report"
+VIEWER_LANDING_HTML         = VIEWER_BUNDLE_DIR / "index.html"
+
+GBM_TEMPORAL_EXPLORER_HTML  = VIEWER_TEMPORAL_HTML
+GBM_SIGNALING_EXPLORER_HTML = VIEWER_SIGNALING_HTML
+GBM_REPORT_DIR              = VIEWER_REPORT_DIR
 
 
 def ensure(*paths: Path) -> None:
