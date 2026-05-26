@@ -1120,6 +1120,16 @@ for label, panel_set in HEAT_PANELS:
         "n_inferred": n_inferred_node,
     })
 
+HEAT_EDGE_THRESHOLD = 0.30
+NODE_SIZE_BASE = 13
+NODE_SIZE_MAX = NODE_SIZE_BASE * 1.5
+NODE_SIZE_MIN = NODE_SIZE_BASE / 8.0
+
+# Row order: CSF on top, TP middle, PBMC bottom.
+HEAT_ROW_ORDER = ["CSF", "TP", "PBMC"]
+HEAT_Y = {TISSUE_IDX[t]: (len(HEAT_ROW_ORDER) - 1 - i)
+          for i, t in enumerate(HEAT_ROW_ORDER)}
+
 fig, axes = plt.subplots(1, 4, figsize=(20, 5))
 inferno_cmap = plt.get_cmap("inferno")
 for col, pdat in enumerate(panel_data):
@@ -1128,50 +1138,79 @@ for col, pdat in enumerate(panel_data):
     max_edge = pdat["max_edge"]
     n_observed_node = pdat["n_observed"]
     n_inferred_node = pdat["n_inferred"]
+
+    # Background lattice (full grid, pale gray) in new row order.
     for j in range(T):
-        for k in range(3):
-            ax.plot(j, 2 - k, "o", color="#dddddd",
+        for ti in range(3):
+            ax.plot(j, HEAT_Y[ti], "o", color="#dddddd",
                     markersize=5, zorder=1)
+
+    # Threshold edges + collect kept nodes.
+    kept_edges = {
+        (u, v): cnt for (u, v), cnt in edge_count.items()
+        if max_edge > 0 and (cnt / max_edge) >= HEAT_EDGE_THRESHOLD
+    }
+    kept_nodes = set()
+    for (u, v) in kept_edges:
+        kept_nodes.add(u); kept_nodes.add(v)
+    n_dropped_edges = len(edge_count) - len(kept_edges)
+
+    # Draw retained edges.
     if max_edge > 0:
         log_max = np.log1p(max_edge)
-        for (u, v), cnt in edge_count.items():
+        for (u, v), cnt in kept_edges.items():
             (a_ti, a_tp), (b_ti, b_tp) = u, v
             heat = cnt / max_edge
             lw = 0.8 + 4.0 * np.log1p(cnt) / log_max
             color = inferno_cmap(heat)
             arr = FancyArrowPatch(
-                posA=(a_tp, 2 - a_ti),
-                posB=(b_tp, 2 - b_ti),
+                posA=(a_tp, HEAT_Y[a_ti]),
+                posB=(b_tp, HEAT_Y[b_ti]),
                 arrowstyle="-|>", mutation_scale=12,
                 color=color, lw=lw,
                 shrinkA=9, shrinkB=9,
                 connectionstyle="arc3,rad=0.0", zorder=2,
             )
             ax.add_patch(arr)
-    all_panel_nodes = set(n_observed_node.keys()) | set(n_inferred_node.keys())
-    for (ti, tp) in all_panel_nodes:
-        x, y = tp, 2 - ti
+
+    # Per-panel node occupation count = observed + inferred.
+    node_occ = {n: n_observed_node.get(n, 0) + n_inferred_node.get(n, 0)
+                for n in kept_nodes}
+    panel_max_occ = max(node_occ.values()) if node_occ else 0
+
+    for (ti, tp) in kept_nodes:
+        x, y = tp, HEAT_Y[ti]
         color = TISSUE_COLORS[TISSUES[ti]]
+        occ = node_occ[(ti, tp)]
+        if panel_max_occ > 0:
+            size = NODE_SIZE_MIN + (NODE_SIZE_MAX - NODE_SIZE_MIN) * (
+                occ / panel_max_occ)
+        else:
+            size = NODE_SIZE_BASE
         if n_observed_node.get((ti, tp), 0) > 0:
             ax.plot(x, y, "o", markerfacecolor=color,
-                    markeredgecolor="black", markersize=13, zorder=3)
+                    markeredgecolor="black", markersize=size, zorder=3)
         elif n_inferred_node.get((ti, tp), 0) > 0:
             ax.plot(x, y, "o", markerfacecolor="white",
-                    markeredgecolor=color, markersize=13, mew=1.8,
+                    markeredgecolor=color, markersize=size, mew=1.8,
                     zorder=3)
+
     ax.set_xticks(range(T))
     ax.set_xticklabels([f"T{t}" for t in TPS], fontsize=9)
-    ax.set_yticks([0, 1, 2])
-    ax.set_yticklabels([TISSUES[2], TISSUES[1], TISSUES[0]], fontsize=9)
-    for tick, tname in zip(ax.get_yticklabels(),
-                            [TISSUES[2], TISSUES[1], TISSUES[0]]):
+    y_pos = [HEAT_Y[TISSUE_IDX[t]] for t in HEAT_ROW_ORDER]
+    ax.set_yticks(y_pos)
+    ax.set_yticklabels(HEAT_ROW_ORDER, fontsize=9)
+    for tick, tname in zip(ax.get_yticklabels(), HEAT_ROW_ORDER):
         tick.set_color(TISSUE_COLORS.get(tname, "#444"))
         tick.set_fontweight("bold")
     ax.set_ylim(-0.5, 2.5)
     ax.set_xlim(-0.5, T - 0.5)
-    ax.set_title(f"{pdat['label']}  (n={pdat['n_clones']} clones)\n"
-                  f"max edge n = {max_edge}",
-                  fontsize=10, fontweight="bold", linespacing=1.25)
+    ax.set_title(
+        f"{pdat['label']}  (n={pdat['n_clones']} clones)\n"
+        f"max edge n = {max_edge}  ·  "
+        f"edges shown ≥{HEAT_EDGE_THRESHOLD:.0%}  ·  "
+        f"dropped {n_dropped_edges}/{len(edge_count)}",
+        fontsize=9, fontweight="bold", linespacing=1.25)
     for s in ("top", "right", "bottom", "left"):
         ax.spines[s].set_visible(False)
     ax.tick_params(length=0)
