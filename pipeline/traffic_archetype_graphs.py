@@ -1258,15 +1258,12 @@ for col, pdat in enumerate(panel_data):
                 occ / panel_max_occ)
         else:
             size = NODE_SIZE_BASE
-        # Observed nodes: filled (tissue color, no outline).
-        # Inferred-only nodes: hollow (white fill, tissue-color outline).
-        if n_observed_node.get((ti, tp), 0) > 0:
-            ax.plot(x, y, "o", markerfacecolor=color,
-                    markeredgecolor="none", markersize=size, zorder=3)
-        else:
-            ax.plot(x, y, "o", markerfacecolor="white",
-                    markeredgecolor=color, markersize=size, mew=1.6,
-                    zorder=3)
+        # Treat inferred nodes as real: same fill style as observed
+        # nodes. Size already reflects total occupancy (observed +
+        # inferred) so the visual encodes node frequency without
+        # distinguishing the source.
+        ax.plot(x, y, "o", markerfacecolor=color,
+                markeredgecolor="none", markersize=size, zorder=3)
 
     ax.set_xticks(range(T))
     ax.set_xticklabels([f"T{t}" for t in TPS], fontsize=10)
