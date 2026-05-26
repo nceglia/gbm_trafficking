@@ -1,4 +1,5 @@
 # %%
+import argparse
 import os
 import pickle
 import sys
@@ -21,16 +22,30 @@ warnings.filterwarnings("ignore")
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "pipeline"))
 
-from modules.constants import DIRECTED_TISSUE_PAIRS
-from modules.style import LINEAGE_COLORS, TISSUE_COLORS
+from modules import paths  # noqa: E402
+from modules.constants import DIRECTED_TISSUE_PAIRS  # noqa: E402
+from modules.style import LINEAGE_COLORS, TISSUE_COLORS  # noqa: E402
 
 # %%
 # ---- Config ----
-DATA_PATH = REPO_ROOT / "data" / "objects" / "GBM_TCR_POS_TCELLS.h5ad"
-OUTPUT_DIR = REPO_ROOT / "results" / "03_tissue_separability"
-CACHE_FILE = OUTPUT_DIR / "augur_results_cache.pkl"
+_parser = argparse.ArgumentParser(description="Augur tissue separability.")
+_parser.add_argument(
+    "--lineage",
+    choices=["tcell", "myeloid"],
+    default="tcell",
+    help="Input AnnData and output directory (default: tcell).",
+)
+_args = _parser.parse_args()
 
-OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+if _args.lineage == "myeloid":
+    DATA_PATH = paths.H5AD_MYELOID
+    OUTPUT_DIR = paths.TISSUE_SEPARABILITY_MYELOID_DIR
+else:
+    DATA_PATH = paths.H5AD_TCELLS
+    OUTPUT_DIR = paths.TISSUE_SEPARABILITY_DIR
+
+CACHE_FILE = OUTPUT_DIR / "augur_results_cache.pkl"
+paths.ensure(OUTPUT_DIR)
 
 TISSUES = ("PBMC", "CSF", "TP")
 TISSUE_PAIRS = list(DIRECTED_TISSUE_PAIRS)
@@ -218,7 +233,6 @@ for ax, (t1, t2) in zip(axes, TISSUE_PAIRS):
 plt.suptitle("Augur: Tissue Separability per Phenotype (AUC)", fontsize=15, fontweight="bold")
 plt.tight_layout()
 plt.savefig(OUTPUT_DIR / "augur_auc_barplot.png", dpi=200, bbox_inches="tight")
-plt.show()
 
 # %%
 # ============================================================
@@ -245,7 +259,6 @@ if len(patient_df) > 0:
     plt.suptitle("Augur AUC per Patient", fontsize=14, fontweight="bold")
     plt.tight_layout()
     plt.savefig(OUTPUT_DIR / "augur_per_patient.png", dpi=200, bbox_inches="tight")
-    plt.show()
 
 # %%
 # ============================================================
@@ -275,7 +288,6 @@ for ax, (t1, t2) in zip(axes, TISSUE_PAIRS):
 plt.suptitle("Augur AUC vs Cosine Distance", fontsize=13, fontweight="bold")
 plt.tight_layout()
 plt.savefig(OUTPUT_DIR / "augur_vs_cosine.png", dpi=200, bbox_inches="tight")
-plt.show()
 
 # %%
 # ============================================================
@@ -299,7 +311,6 @@ for pair_key, fi in feat_importance.items():
     ax.set_ylabel("")
     plt.tight_layout()
     plt.savefig(OUTPUT_DIR / f"augur_features_{pair_key}.png", dpi=200, bbox_inches="tight")
-    plt.show()
 
 # %%
 # ============================================================

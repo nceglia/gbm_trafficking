@@ -242,7 +242,6 @@ else:
         out_path = OUTPUT_DIR / f"clone_pseudobulk_gsea_dotheatmap_{LIBRARY_TAG}.png"
         plt.savefig(out_path, dpi=200, bbox_inches="tight")
         print(f"\nSaved dot-heatmap: {out_path}")
-        plt.show()
 
 print("\nDone.")
 

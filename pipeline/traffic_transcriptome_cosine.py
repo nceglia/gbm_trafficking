@@ -13,6 +13,7 @@ Writes to results/transcriptome_similarity/:
   tissue_cosine_boxplots.png
   tissue_cosine_per_patient.png
 """
+import argparse
 import sys
 import warnings
 from pathlib import Path
@@ -28,19 +29,44 @@ warnings.filterwarnings("ignore")
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "pipeline"))
 
+from modules import paths  # noqa: E402
 from modules.constants import MIN_CELLS, TISSUE_PAIRS, TISSUES  # noqa: E402
 from modules.pseudobulk import pseudobulk_mean_expression  # noqa: E402
 from modules.similarity import tissue_distances_per_phenotype  # noqa: E402
 from modules.style import (  # noqa: E402
+    MYELOID_PHENOTYPE_COLORS,
+    MYELOID_PHENOTYPE_LABELS,
+    MYELOID_PHENOTYPE_ORDER,
     TCELL_PHENOTYPE_COLORS,
     TCELL_PHENOTYPE_LABELS,
     TISSUE_COLORS,
     TISSUE_LABELS,
 )
 
-DATA_PATH = REPO_ROOT / "data" / "objects" / "GBM_TCR_POS_TCELLS.h5ad"
-OUTPUT_DIR = REPO_ROOT / "results" / "transcriptome_similarity"
-OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+_parser = argparse.ArgumentParser(description="Tissue cosine similarity per phenotype.")
+_parser.add_argument(
+    "--lineage",
+    choices=["tcell", "myeloid"],
+    default="tcell",
+)
+_args = _parser.parse_args()
+
+if _args.lineage == "myeloid":
+    DATA_PATH = paths.H5AD_MYELOID
+    OUTPUT_DIR = paths.TRANSCRIPTOME_SIMILARITY_MYELOID_DIR
+    PHENOTYPE_COLORS = MYELOID_PHENOTYPE_COLORS
+    PHENOTYPE_LABELS = MYELOID_PHENOTYPE_LABELS
+    PHENOTYPE_ORDER = list(MYELOID_PHENOTYPE_ORDER)
+else:
+    DATA_PATH = paths.H5AD_TCELLS
+    OUTPUT_DIR = paths.TRANSCRIPTOME_SIMILARITY_DIR
+    PHENOTYPE_COLORS = TCELL_PHENOTYPE_COLORS
+    PHENOTYPE_LABELS = TCELL_PHENOTYPE_LABELS
+    from modules.style import TCELL_PHENOTYPE_ORDER  # noqa: E402
+
+    PHENOTYPE_ORDER = list(TCELL_PHENOTYPE_ORDER)
+
+paths.ensure(OUTPUT_DIR)
 
 adata = sc.read(str(DATA_PATH))
 
@@ -159,7 +185,7 @@ def _pair_title(pair):
 # Heatmap: aggregate cosine distances
 fig, ax = plt.subplots(figsize=(10, 8))
 plot_data = agg.copy()
-plot_data.index = [TCELL_PHENOTYPE_LABELS.get(x, x) for x in plot_data.index]
+plot_data.index = [PHENOTYPE_LABELS.get(x, x) for x in plot_data.index]
 plot_data.columns = [_pair_title(c) for c in plot_data.columns]
 sns.heatmap(plot_data, annot=True, fmt=".3f", cmap="YlOrRd", ax=ax,
             linewidths=0.5)
@@ -168,7 +194,6 @@ ax.set_title("Cosine Distance Between Tissues per Phenotype\n"
 plt.tight_layout()
 plt.savefig(OUTPUT_DIR / "tissue_cosine_heatmap.png", dpi=200,
             bbox_inches="tight")
-plt.show()
 
 # Patient-matched boxplots
 fig, axes = plt.subplots(1, 3, figsize=(18, 6), sharey=True)
@@ -179,8 +204,8 @@ for ax, pair in zip(axes, [f"{t1}_vs_{t2}" for t1, t2 in TISSUE_PAIRS]):
         continue
     order = (sub.groupby("phenotype")["cosine_dist"].mean()
              .sort_values(ascending=False).index)
-    short_labels = [TCELL_PHENOTYPE_LABELS.get(x, x) for x in order]
-    palette = [TCELL_PHENOTYPE_COLORS.get(p, "#888") for p in order]
+    short_labels = [PHENOTYPE_LABELS.get(x, x) for x in order]
+    palette = [PHENOTYPE_COLORS.get(p, "#888") for p in order]
     sns.boxplot(data=sub, x="phenotype", y="cosine_dist", order=order,
                 ax=ax, palette=palette)
     sns.stripplot(data=sub, x="phenotype", y="cosine_dist", order=order,
@@ -196,7 +221,6 @@ plt.suptitle("Tissue Divergence per Phenotype (patient-matched)",
 plt.tight_layout()
 plt.savefig(OUTPUT_DIR / "tissue_cosine_boxplots.png", dpi=200,
             bbox_inches="tight")
-plt.show()
 
 # Per-patient heatmaps
 patients = sorted(pb_df["patient"].unique())
@@ -211,7 +235,7 @@ for ax, pat in zip(axes, patients):
         continue
     piv = pat_data.pivot_table(index="phenotype", columns="tissue_pair",
                                 values="cosine_dist")
-    piv.index = [TCELL_PHENOTYPE_LABELS.get(x, x) for x in piv.index]
+    piv.index = [PHENOTYPE_LABELS.get(x, x) for x in piv.index]
     piv.columns = [_pair_title(c) for c in piv.columns]
     sns.heatmap(piv, annot=True, fmt=".2f", cmap="YlOrRd", ax=ax,
                 linewidths=0.5, vmin=0, vmax=0.5,
@@ -223,6 +247,5 @@ plt.suptitle("Per-Patient Tissue Cosine Distances",
 plt.tight_layout()
 plt.savefig(OUTPUT_DIR / "tissue_cosine_per_patient.png", dpi=200,
             bbox_inches="tight")
-plt.show()
 
 print("\nDone.")

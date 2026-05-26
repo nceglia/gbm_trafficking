@@ -504,7 +504,6 @@ def plot_ternary(coords_df, library_tag,
     if savepath is not None:
         plt.savefig(savepath, dpi=200, bbox_inches="tight")
         print(f"Saved: {savepath}")
-    plt.show()
 
 
 if all_coords:
@@ -640,7 +639,6 @@ else:
     out_path = INPUT_DIR / "pathway_ternary_all_libraries_zscore.png"
     plt.savefig(out_path, dpi=200, bbox_inches="tight")
     print(f"\nSaved: {out_path}")
-    plt.show()
 
 print("\nDone.")
 

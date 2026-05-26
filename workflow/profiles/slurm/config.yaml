@@ -1,0 +1,17 @@
+executor: slurm
+jobs: 100
+latency-wait: 120
+
+default-resources:
+  mem_mb: 32000
+  runtime: 240
+  slurm_partition: ""
+
+envvars:
+  MPLBACKEND: Agg
+  OMP_NUM_THREADS: "1"
+  OPENBLAS_NUM_THREADS: "1"
+
+shell-prefix: "micromamba run -n gbm-trafficking "
+
+# Set partition in your cluster config or override per-rule in manifest resources.

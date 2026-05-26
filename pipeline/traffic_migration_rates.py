@@ -28,6 +28,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))           # for `trafficking`
 sys.path.insert(0, str(REPO_ROOT / "pipeline"))  # for `modules.style`
 
+from modules import paths  # noqa: E402
 from modules.style import TCELL_PHENOTYPE_ORDER  # noqa: E402
 
 from trafficking.ctmc import StateSpace  # noqa: E402
@@ -47,9 +48,9 @@ from scipy.stats import pearsonr, spearmanr  # noqa: E402
 
 # %%
 # ---- Config ----
-DATA_PATH = REPO_ROOT / "data" / "objects" / "GBM_TCR_POS_TCELLS.h5ad"
-OUT_DIR = REPO_ROOT / "results" / "06c_empirical_Q"
-OUT_DIR.mkdir(parents=True, exist_ok=True)
+DATA_PATH = paths.H5AD_TCELLS
+OUT_DIR = paths.EMPIRICAL_Q_DIR
+paths.ensure(OUT_DIR)
 
 TISSUES = ("PBMC", "CSF", "TP")
 PHENOTYPES = tuple(TCELL_PHENOTYPE_ORDER)

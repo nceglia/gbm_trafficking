@@ -1,0 +1,12 @@
+executor: local
+jobs: 4
+latency-wait: 60
+
+default-resources:
+  mem_mb: 16000
+  runtime: 120
+
+envvars:
+  MPLBACKEND: Agg
+
+shell-prefix: "micromamba run -n gbm-trafficking "

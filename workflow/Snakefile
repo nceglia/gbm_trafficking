@@ -1,0 +1,45 @@
+"""GBM trafficking Snakemake workflow.
+
+Regenerate rules after manifest changes:
+    python pipeline/workflow/render_snakemake.py
+    python pipeline/workflow/render_from_manifest.py
+
+Usage:
+    snakemake -j 4 --profile workflow/profiles/local
+    snakemake -j 50 --profile workflow/profiles/slurm -s workflow/Snakefile
+"""
+import yaml
+from pathlib import Path
+
+configfile: "config.yaml"
+
+include: "rules/generated.smk"
+
+_manifest_path = Path(config["manifest"])
+_steps = yaml.safe_load(_manifest_path.read_text())["steps"]
+_targets_cfg = yaml.safe_load(_manifest_path.read_text()).get("targets", {})
+
+
+def _sentinel(step_id):
+    writes = _steps.get(step_id, {}).get("writes") or []
+    return writes[0] if writes else None
+
+
+def _collect(step_ids):
+    return [p for sid in step_ids if (p := _sentinel(sid))]
+
+
+rule all:
+    input: [p for sid, spec in _steps.items() if (p := _sentinel(sid))],
+
+
+rule all_pathway:
+    input: _collect(_targets_cfg.get("all_pathway", [])),
+
+
+rule all_traffic_tcr:
+    input: _collect(_targets_cfg.get("all_traffic_tcr", [])),
+
+
+rule all_signaling:
+    input: _collect(_targets_cfg.get("all_signaling", [])),

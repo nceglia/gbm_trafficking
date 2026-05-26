@@ -7,7 +7,7 @@ then computes the cross-tissue contrast representing CSF emptying
 (CSF down + TP up).
 
 Reads:
-  data/objects/GBM_TCR_POS_TCELLS.h5ad
+  data/objects/GBM_TCR_POS_TCELLS_singlets.h5ad  (Scrublet-filtered)
 Writes to results/09_temporal/:
   pseudobulk.h5ad
   genes_<tissue>_<lineage>.csv
@@ -43,6 +43,7 @@ warnings.filterwarnings("ignore")
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "pipeline"))
 
+from modules import paths  # noqa: E402
 from modules.style import (  # noqa: E402
     LINEAGE_COLORS,
     PATHWAY_FAMILY_COLORS,
@@ -50,8 +51,8 @@ from modules.style import (  # noqa: E402
     TISSUE_ORDER,
 )
 
-DATA_PATH = REPO_ROOT / "data" / "objects" / "GBM_TCR_POS_TCELLS.h5ad"
-OUT_DIR = REPO_ROOT / "results" / "09_temporal"
+DATA_PATH = paths.H5AD_TCELLS_SINGLETS
+OUT_DIR = paths.TEMPORAL_TRAJECTORIES_DIR
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 MODULES_DIR = REPO_ROOT / "pipeline" / "modules"
 

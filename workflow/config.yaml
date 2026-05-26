@@ -1,0 +1,6 @@
+# Snakemake configuration (paths relative to repo root).
+manifest: pipeline/manifest.yaml
+repo_root: .
+
+# Micromamba env activated in profile shell prefixes.
+conda_env: gbm-trafficking

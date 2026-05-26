@@ -148,7 +148,6 @@ for lineage in ["CD8", "CD4"]:
     plt.suptitle(f"{lineage} Phenotype Redistribution Across Compartments", 
                  fontsize=14, fontweight="bold")
     plt.tight_layout()
-    plt.show()
 # %%
 tcr["level1"] = tcr["phenotype"].apply(infer_lineage_from_phenotype)
 tcr["pheno_short"] = tcr["phenotype"].apply(shorten_phenotype_label)
@@ -216,7 +215,6 @@ for lineage in ["CD8", "CD4"]:
     
     plt.suptitle(f"{lineage} Clone Trafficking (lineage-corrected)", fontsize=14, fontweight="bold")
     plt.tight_layout()
-    plt.show()
     
     print(f"\n{lineage}: {len(pt)} shared clones")
     print("Counts:")
@@ -476,7 +474,6 @@ def plot_clone_network(
         print(f"Saved: {savepath}")
 
     if standalone:
-        plt.show()
 
     return node_pos
 
