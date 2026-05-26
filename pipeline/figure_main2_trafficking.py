@@ -1648,6 +1648,91 @@ def _draw_panel_I(fig, strip_ax, axes_h, cax):
 
 # %%
 # =========================================================
+# Standalone per-panel figures (in addition to the composite)
+# =========================================================
+print("\nRendering per-panel standalone figures...")
+PANELS_DIR = OUT_DIR / "panels"
+PANELS_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def _save_panel(fig, letter):
+    png = PANELS_DIR / f"panel_{letter}.png"
+    pdf = PANELS_DIR / f"panel_{letter}.pdf"
+    fig.savefig(png, dpi=DPI_FIG, bbox_inches="tight")
+    fig.savefig(pdf, bbox_inches="tight")
+    plt.close(fig)
+    print(f"  wrote panel_{letter}.{{png,pdf}}")
+
+
+# A — 3 density UMAPs.
+fig = plt.figure(figsize=(10, 4))
+gs = gridspec.GridSpec(1, 3, figure=fig, wspace=0.06,
+                       left=0.04, right=0.97, top=0.93, bottom=0.07)
+_axes = [fig.add_subplot(gs[0, i]) for i in range(3)]
+_draw_panel_A(_axes)
+_save_panel(fig, "A")
+
+# B — tissue similarity triangle.
+fig, ax = plt.subplots(figsize=(4.5, 4.5))
+panel_tissue_triangle(ax, cosine_df)
+_save_panel(fig, "B")
+
+# C — per-phenotype divergence bars.
+fig, ax = plt.subplots(figsize=(8, 5))
+panel_phenotype_divergence(ax, cosine_df)
+fig.tight_layout()
+_save_panel(fig, "C")
+
+# D — resident vs migratory enrichment (3 sub-panels).
+fig = plt.figure(figsize=(11, 5))
+gs = gridspec.GridSpec(1, 3, figure=fig, wspace=0.10,
+                       left=0.10, right=0.97, top=0.93, bottom=0.10)
+for i, _tis in enumerate(TISSUES):
+    ax = fig.add_subplot(gs[0, i])
+    _draw_resmig_enrichment(ax, _tis, show_yticklabels=(i == 0))
+_save_panel(fig, "D")
+
+# E — ternary persistence.
+fig, ax = plt.subplots(figsize=(6, 5.5))
+_draw_ternary_single(ax)
+_save_panel(fig, "E")
+
+# F — within-tissue phenotypic flux.
+fig, ax = plt.subplots(figsize=(6, 4))
+_draw_panel_E(ax)
+fig.tight_layout()
+_save_panel(fig, "F")
+
+# G — migration flow network.
+fig, ax = plt.subplots(figsize=(5.5, 5.5))
+_draw_flow_network(ax)
+ax.set_title("Migration rates", fontsize=10, pad=4)
+_save_panel(fig, "G")
+
+# H — tissue retention over time.
+fig, ax = plt.subplots(figsize=(7, 4))
+_draw_panel_G(ax)
+fig.tight_layout()
+_save_panel(fig, "H")
+
+# I — pathway temporal stability (family strip + 3 heatmaps + cbar).
+fig = plt.figure(figsize=(11, 7))
+gs = gridspec.GridSpec(
+    1, 5, figure=fig,
+    width_ratios=[0.10, 1.0, 1.0, 1.0, 0.05], wspace=0.06,
+    left=0.32, right=0.95, top=0.92, bottom=0.10,
+)
+_ax_strip = fig.add_subplot(gs[0, 0])
+_ax_p1 = fig.add_subplot(gs[0, 1])
+_ax_p2 = fig.add_subplot(gs[0, 2])
+_ax_p3 = fig.add_subplot(gs[0, 3])
+_cax = fig.add_subplot(gs[0, 4])
+_draw_panel_I(fig, _ax_strip, [_ax_p1, _ax_p2, _ax_p3], _cax)
+_save_panel(fig, "I")
+
+
+# %%
+# =========================================================
 # Composite Figure 2
 # =========================================================
 if RENDER_FULL_FIGURE:
