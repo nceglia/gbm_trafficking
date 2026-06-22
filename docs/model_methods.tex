@@ -290,12 +290,11 @@ $j = (i_j,r_j,c_j)$          & clone-level observation, $j=1,\ldots,J$\\
 $x_j,\,y_j \in \Znn^{L}$     & source / destination count vectors\\
 $\Nsrc_j,\,\Ndst_j$          & source / destination totals\\
 $\theta_j \in \simplex{L-1}$ & empirical source probability vector\\
-$\widehat{\phi}_j$           & empirical destination probability vector\\
 $T \in \Reals^{L\times L}$   & shared row-stochastic transition matrix\\
 $\pi_j = \theta_j T$         & model-implied destination probability vector\\
 $\alpha_z$                   & Dirichlet concentration for row $z$\\
 $w_{jzz'}$                   & backward attribution probability\\
-$A_{jzz'}$                   & latent allocation count\\
+$\xi_{jzz'}$                 & latent allocation count (computational)\\
 $\Dsp$                       & full dataset\\
 \bottomrule
 \end{tabular}
@@ -307,26 +306,15 @@ $\Dsp$                       & full dataset\\
 \section{Empirical Source and Destination Summaries}
 % ======================================================================
 
-Each clone-level observation $j = (i_j, r_j, c_j)$ comes with two empirical count
-vectors,
-\[
-  x_j,\, y_j \in \Znn^{L},
-  \qquad L = 33,
-\]
-where $x_j$ holds the source tissue--phenotype counts for clonotype $c_j$ in
-patient $i_j$ at the source timepoint of step $r_j$, and $y_j$ holds the
-destination counts for the same clonotype at the destination timepoint.
-
-\subsection{Source and destination totals}
-
-The totals
+Recall from the setup that each observation $j = (i_j, r_j, c_j)$ carries source
+and destination count vectors $x_j, y_j \in \Znn^{L}$ ($L = 33$), with totals
 \[
   \Nsrc_j = \sum_{z\in\Zsp} x_j(z),
   \qquad
-  \Ndst_j = \sum_{z\in\Zsp} y_j(z)
+  \Ndst_j = \sum_{z\in\Zsp} y_j(z) ,
 \]
-are both strictly positive, because $c_j \in \Csp_{i_j r_j}$ guarantees the
-clonotype is observed at both ends of the step.
+both strictly positive because $c_j$ is retained only when seen at both ends of
+the step. The one new quantity we need is the normalized source distribution.
 
 \subsection{Source probability vector}
 
@@ -334,41 +322,20 @@ Normalizing the source counts gives the empirical source probability vector
 $\theta_j \in \simplex{L-1}$, with entries
 \[
   \theta_j(z) = \frac{x_j(z)}{\Nsrc_j},
-  \qquad z = (s,k).
+  \qquad z = (s,k),
 \]
-Thus $\theta_j(z)$ is the fraction of observed source cells from clonotype
-$c_j$ in tissue--phenotype state $z$. It is a genuine probability vector,
-\[
-  \theta_j(z) \geq 0,
-  \qquad
-  \sum_{z\in\Zsp} \theta_j(z) = 1 ,
-\]
-and we treat it as a row vector.
-
-\subsection{Destination probability vector}
-
-The destination counts can likewise be normalized into an empirical
-destination probability vector $\widehat{\phi}_j \in \simplex{L-1}$,
-\[
-  \widehat{\phi}_j(z) = \frac{y_j(z)}{\Ndst_j} .
-\]
-This vector is convenient for descriptive summaries and model checking. The
-model itself, however, uses the destination \emph{counts} $y_j$ together with
-the total $\Ndst_j$: keeping the destination as counts preserves the
-distinction between observations supported by many cells and those supported
-by only a few.
-
-\subsection{Optional source smoothing}
-
-For sparse clonotypes, the source probability vector can be stabilized by
-adding a pseudocount $\delta > 0$ before normalizing:
-\[
-  \theta^{(\delta)}_j(z)
-  =
-  \frac{x_j(z) + \delta}{\sum_{z'\in\Zsp} x_j(z') + L\delta} .
-\]
-Setting $\delta = 0$ recovers the empirical source probability vector
-$\theta_j$.
+the fraction of observed source cells from clonotype $c_j$ in tissue--phenotype
+state $z$. It is a genuine probability vector ($\theta_j(z) \geq 0$,
+$\sum_{z\in\Zsp}\theta_j(z) = 1$) and we treat it as a row
+vector.\footnote{Two auxiliary quantities are not used by the model and are
+noted only for completeness. (i)~The destination counts can be normalized into
+an empirical destination distribution $\widehat{\phi}_j(z) = y_j(z)/\Ndst_j$,
+convenient for descriptive summaries and model checking; the model itself uses
+the destination \emph{counts} $y_j$ with their total $\Ndst_j$, which preserves
+the distinction between observations supported by many cells and by few.
+(ii)~For sparse clonotypes the source vector can be stabilized with a pseudocount
+$\delta > 0$, $\theta^{(\delta)}_j(z) = (x_j(z)+\delta)/(\sum_{z'\in\Zsp} x_j(z') +
+L\delta)$, with $\delta = 0$ recovering $\theta_j$.}
 
 % ======================================================================
 \section{Joint Tissue--Phenotype Transition Matrix}
@@ -559,25 +526,12 @@ By Bayes' rule, and recognizing the normalizing constant as $\pi_j(z')$,
   \frac{\theta_j(z)\, T_{zz'}}{\pi_j(z')} .
 \]
 This attributes destination state $z'$ back to source state $z$, conditional
-on $T$ and the observed source probability vector.
-
-\subsection{Latent allocation counts}
-
-Since the destination data are counts, the attribution probabilities also
-define latent allocation counts. Let $A_{jzz'}$ be the unobserved number of
-destination cells in state $z'$ attributed to latent source state $z$, so that
-\[
-  \sum_{z\in\Zsp} A_{jzz'} = y_j(z') .
-\]
-Conditional on $T$, $\theta_j$, and $y_j(z')$, these counts are multinomial:
-\[
-  \bigl( A_{j1z'}, \ldots, A_{jLz'} \bigr)
-  \;\sim\;
-  \Mult\!\bigl( y_j(z'),\ w_{j1z'}, \ldots, w_{jLz'} \bigr),
-  \qquad L = 33 ,
-\]
-giving a probabilistic decomposition of observed destination counts into
-contributions from latent source tissue--phenotype states.
+on $T$ and the observed source probability vector. Because the destination data
+are counts, these attribution probabilities also induce a multinomial
+decomposition of each observed count $y_j(z')$ into latent
+source-to-destination allocation counts. Those counts are used only for fitting,
+so we introduce them together with the inference algorithm in
+Section~\ref{sec:inference-comp}.
 
 % ======================================================================
 \section{Full Generative Story}
