@@ -403,7 +403,7 @@ $\Ndst_j \pi_j$ is the expected destination count vector.
 \subsection{Role of forward steps}
 
 The same matrix $T$ is used for every patient $i$ and step $r \in \Rsp_i$.
-The pair $(i,q)$ identifies a patient and a pair of study timepoints---telling
+The pair $(i,r)$ identifies a patient and a pair of study timepoints---telling
 us which source and destination count vectors to build---but it does not select
 a different transition matrix. All steps are treated as repeated observations of a
 common one-step forward transition process.
@@ -603,14 +603,14 @@ Figure~\ref{fig:plate}.
     $\theta_{irc}=\mathrm{Normalize}(x_{irc})$ & source distribution (deterministic; folded into the $x\!\to\!\pi$ edge)\\
     $\pi_{irc}=\theta_{irc}T$ & model-implied destination distribution\\
     $y_{irc}$ & observed destination counts at the end of the step\\
-    $T_{z}$ & latent transition row, shared across all patients and steps\\
+    $T_{z\cdot}$ & latent transition row, shared across all patients and steps\\
     $\Ndst_{irc}$ & destination cell total (fixed)\\
     $\alpha_z$ & Dirichlet prior concentration (fixed)\\
     \bottomrule
   \end{tabular}}
 
   \caption{Plate diagram of the generative model (node key above). The transition
-    rows $T_{z}$ are drawn once per source state $z$ (top plate) from a Dirichlet
+    rows $T_{z\cdot}$ are drawn once per source state $z$ (top plate) from a Dirichlet
     prior $\alpha_z$; this block sits \emph{outside} the patient plate, so a
     single $T$ is shared across all patients and steps. The observation side
     nests patient $i$, forward step $r\in\Rsp_i$, and retained clonotype
@@ -629,6 +629,7 @@ Figure~\ref{fig:plate}.
 
 % ======================================================================
 \section{Inference}
+\label{sec:inference-comp}
 % ======================================================================
 
 Inference estimates the posterior over the shared transition matrix $T$. The
@@ -651,85 +652,12 @@ tissue--phenotype states. A single-transition summary is
 the posterior mean probability that source state $(a,u)$ contributes to
 destination state $(b,v)$ over one forward step.
 
-\subsection{Derived tissue-level summaries}
+\subsection{Variational approximation}
 
-Because $T$ lives on tissue--phenotype states, tissue-level summaries follow by
-summing over phenotypes. These are not separate parameters but functions of the
-posterior over $T$; their purpose is to compress the $33\times 33$ matrix into
-interpretable tissue-level movement. For a source tissue $a$, source phenotype
-$u$, and destination tissue $b$,
-\[
-  m_{a,u\to b} = \sum_{v=1}^{K} T_{(a,u),(b,v)}
-\]
-is the probability that source state $(a,u)$ maps into destination tissue $b$,
-marginalizing over destination phenotype. Averaging over a source phenotype
-distribution $\rho_a(u)$ gives a phenotype-averaged tissue summary,
-\[
-  m_{a\to b}
-  =
-  \sum_{u=1}^{K} \rho_a(u) \sum_{v=1}^{K} T_{(a,u),(b,v)} ,
-\]
-where $\rho_a$ may be chosen empirically---for example, the observed phenotype
-distribution among source cells in tissue $a$.
-
-\subsection{Phenotype summaries conditional on destination tissue}
-
-For a fixed source tissue $a$, destination tissue $b$, and source phenotype
-$u$, define
-\[
-  h_{a,u\to b}(v)
-  =
-  \frac{T_{(a,u),(b,v)}}{\sum_{v'=1}^{K} T_{(a,u),(b,v')}} ,
-\]
-the destination phenotype distribution \emph{conditional} on ending in tissue
-$b$. Together, the two summaries separate two questions:
-\[
-  \underbrace{m_{a,u\to b}}_{\text{how much mass reaches tissue } b}
-  \qquad\text{versus}\qquad
-  \underbrace{h_{a,u\to b}(v)}_{\text{which phenotypes appear within tissue } b} .
-\]
-
-\subsection{Posterior predictive checks}
-
-For each observation $j$, posterior draws of $T$ induce posterior draws of
-$\pi_j = \theta_j T$, which can be used to simulate replicated destination
-counts
-\[
-  y_j^{\mathrm{rep}} \;\sim\; \Mult\!\bigl( \Ndst_j,\ \pi_j \bigr) .
-\]
-Comparing $y_j^{\mathrm{rep}}$ to the observed $y_j$ checks whether the inferred
-transition matrix can reproduce observed destination tissue--phenotype count
-patterns.
-
-\subsection{Posterior attribution summaries}
-
-For each observation $j$, the posterior attribution probabilities
-\[
-  w_{jzz'} = \frac{\theta_j(z)\, T_{zz'}}{\pi_j(z')}
-\]
-attribute observed destination states back to source states. They answer
-questions such as: \emph{given destination tumor-exhausted cells, which source
-tissue--phenotype states most likely contributed to them?} Attribution is
-computed from $T$, $\theta_j$, and $\pi_j$, and can be aggregated across
-observations, tissues, phenotypes, or tissue blocks.
-
-% ======================================================================
-\section{Computational Inference}
-\label{sec:inference-comp}
-% ======================================================================
-
-This section reuses the generative model of Section~\ref{sec:generative}
-(summarized in Figure~\ref{fig:plate}) and describes how its posterior target
-$p(T \mid \Dsp)$ is approximated and how the fitted transition matrix is
-obtained. The objects are exactly those in the plate diagram: the shared
-transition matrix $T$ over the joint tissue--phenotype state space
-$\Zsp = \Ssp \times \{1,\ldots,K\}$ ($|\Zsp| = L = 33$), the empirical source
-distributions $\theta_j$, the pushforwards $\pi_j = \theta_j T$, and the
-observed destination counts $y_j$.
-
-Recall the data $\Dsp = \{(x_j, y_j, i_j, r_j, c_j)\}_{j=1}^{J}$. For each
-observation $j$, the source counts $x_j$ are normalized into $\theta_j$, and the
-destination counts are modeled as
+We now describe how the posterior $p(T \mid \Dsp)$ is approximated and how the
+fitted transition matrix is obtained; the objects are exactly those in the plate
+diagram (Figure~\ref{fig:plate}). For each observation $j$, the source counts
+$x_j$ are normalized into $\theta_j$, and the destination counts are modeled as
 \[
   y_j \sim \Mult(\Ndst_j,\, \pi_j),
   \qquad
@@ -876,5 +804,75 @@ The responsibility update estimates which source tissue--phenotype states
 explain the observed destination counts; the transition-row update accumulates
 those expected allocations into a posterior estimate of the shared forward
 transition matrix.
+
+% ======================================================================
+\section{Posterior Summaries}
+% ======================================================================
+
+With the variational posterior fitted and $\widehat{T}$ in hand, the following
+quantities are read off the posterior over $T$. None are new parameters---each
+is a deterministic function of the posterior---and together they translate the
+$33\times 33$ transition matrix into the movement and attribution statements the
+analysis reports.
+
+\subsection{Derived tissue-level summaries}
+
+Because $T$ lives on tissue--phenotype states, tissue-level summaries follow by
+summing over phenotypes. For a source tissue $a$, source phenotype $u$, and
+destination tissue $b$,
+\[
+  m_{a,u\to b} = \sum_{v=1}^{K} T_{(a,u),(b,v)}
+\]
+is the probability that source state $(a,u)$ maps into destination tissue $b$,
+marginalizing over destination phenotype. Averaging over a source phenotype
+distribution $\rho_a(u)$ gives a phenotype-averaged tissue summary,
+\[
+  m_{a\to b}
+  =
+  \sum_{u=1}^{K} \rho_a(u) \sum_{v=1}^{K} T_{(a,u),(b,v)} ,
+\]
+where $\rho_a$ may be chosen empirically---for example, the observed phenotype
+distribution among source cells in tissue $a$.
+
+\subsection{Phenotype summaries conditional on destination tissue}
+
+For a fixed source tissue $a$, destination tissue $b$, and source phenotype
+$u$, define
+\[
+  h_{a,u\to b}(v)
+  =
+  \frac{T_{(a,u),(b,v)}}{\sum_{v'=1}^{K} T_{(a,u),(b,v')}} ,
+\]
+the destination phenotype distribution \emph{conditional} on ending in tissue
+$b$. Together, the two summaries separate two questions:
+\[
+  \underbrace{m_{a,u\to b}}_{\text{how much mass reaches tissue } b}
+  \qquad\text{versus}\qquad
+  \underbrace{h_{a,u\to b}(v)}_{\text{which phenotypes appear within tissue } b} .
+\]
+
+\subsection{Posterior predictive checks}
+
+For each observation $j$, posterior draws of $T$ induce posterior draws of
+$\pi_j = \theta_j T$, which can be used to simulate replicated destination
+counts
+\[
+  y_j^{\mathrm{rep}} \;\sim\; \Mult\!\bigl( \Ndst_j,\ \pi_j \bigr) .
+\]
+Comparing $y_j^{\mathrm{rep}}$ to the observed $y_j$ checks whether the inferred
+transition matrix can reproduce observed destination tissue--phenotype count
+patterns.
+
+\subsection{Posterior attribution summaries}
+
+For each observation $j$, the posterior attribution probabilities
+\[
+  w_{jzz'} = \frac{\theta_j(z)\, T_{zz'}}{\pi_j(z')}
+\]
+attribute observed destination states back to source states. They answer
+questions such as: \emph{given destination tumor-exhausted cells, which source
+tissue--phenotype states most likely contributed to them?} Attribution is
+computed from $T$, $\theta_j$, and $\pi_j$, and can be aggregated across
+observations, tissues, phenotypes, or tissue blocks.
 
 \end{document}

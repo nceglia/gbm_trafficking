@@ -97,7 +97,7 @@ def build_plate(out_dir: Path = OUT) -> None:
     # clean vertical edges.
     # ---------------------------------------------------------------------
     pgm.add_node("alpha", r"$\alpha_z$", 4.00, 6.40, fixed=True)
-    pgm.add_node("Trow", r"$T_{z}$", 4.00, 5.40)
+    pgm.add_node("Trow", r"$T_{z\cdot}$", 4.00, 5.40)
 
     pgm.add_edge("alpha", "Trow")    # vertical
 
