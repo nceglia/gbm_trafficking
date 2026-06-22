@@ -516,7 +516,7 @@ def summary_report(P, result, ss, observations):
 
     print("\nMigration ordering by mean rate over phenotypes "
           "(compare against trafficking rates from "
-          "results/06_branch_empirics/edge_metrics_table.csv):")
+          "results/traffic_branch_empirics/edge_metrics_table.csv):")
     edge_means = []
     for s_from in range(ss.S):
         for s_to in range(ss.S):

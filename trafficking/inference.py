@@ -7,34 +7,108 @@ import pandas as pd
 
 from .data import (extract_transitions, extract_temporal_transitions,
                    prepare_tensors, summary, compute_dest_phenotype_fracs)
-from .model import transition_model, transition_guide
+from .model import (transition_model, transition_guide,
+                    ALPHA_FLOOR)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
+def _reclamp_params(K, P, hierarchical, dest_fracs):
+    """Repair NaN / non-positive entries in the variational concentrations.
+
+    A single bad SVI step can put NaNs or values ≤ 0 into the Dirichlet
+    concentration parameters. Resetting them to a safe positive value
+    (the prior centre) lets the optimizer recover without throwing away
+    the rest of the fit.
+    """
+    if hierarchical and P > 1:
+        if "T_global_conc" in pyro.get_param_store():
+            tgc = pyro.param("T_global_conc").detach()
+            bad = ~torch.isfinite(tgc) | (tgc <= 0)
+            if bad.any():
+                if dest_fracs is not None:
+                    floor = dest_fracs.to(device).clamp(min=0.01)
+                    floor = floor / floor.sum()
+                    row = (floor * 5.0).clamp(min=ALPHA_FLOOR)
+                    repl = row.unsqueeze(0).repeat(K, 1).contiguous()
+                else:
+                    repl = torch.full((K, K), 5.0, device=device)
+                tgc[bad] = repl[bad].to(tgc.dtype)
+                pyro.param("T_global_conc").data.copy_(tgc.clamp(min=ALPHA_FLOOR))
+        if "T_patient_conc" in pyro.get_param_store():
+            tpc = pyro.param("T_patient_conc").detach()
+            bad = ~torch.isfinite(tpc) | (tpc <= 0)
+            if bad.any():
+                tpc[bad] = 5.0
+                pyro.param("T_patient_conc").data.copy_(tpc.clamp(min=ALPHA_FLOOR))
+        if "kappa_loc" in pyro.get_param_store():
+            kl = pyro.param("kappa_loc").detach()
+            if not torch.isfinite(kl) or kl <= 0:
+                pyro.param("kappa_loc").data.fill_(5.0)
+    else:
+        if "T_conc" in pyro.get_param_store():
+            tc = pyro.param("T_conc").detach()
+            bad = ~torch.isfinite(tc) | (tc <= 0)
+            if bad.any():
+                tc[bad] = 5.0
+                pyro.param("T_conc").data.copy_(tc.clamp(min=ALPHA_FLOOR))
+
+
 def run_svi(data, phenotypes, n_steps=3000, lr=0.01, hierarchical=True,
-            verbose=True, dest_fracs=None):
+            verbose=True, dest_fracs=None, clip_norm=1.0):
     """Run stochastic variational inference on extracted transition data.
 
     ``dest_fracs`` (optional, torch tensor of shape (K,)) is threaded into
     the model/guide as the prior centre. ``None`` reproduces the flat
-    Dirichlet(1) behaviour.
+    Dirichlet(1) behaviour. ``clip_norm`` is the per-step gradient L2-norm
+    clip; the default (1.0) is much tighter than ClippedAdam's default of
+    10.0 and is what keeps small Dirichlet concentrations from flipping
+    sign in a single optimizer step.
     """
     theta, dst, n_dst, pat_ids, pat_names = prepare_tensors(data)
     K = len(phenotypes)
     P = len(pat_names)
 
     pyro.clear_param_store()
-    optimizer = ClippedAdam({"lr": lr, "betas": (0.9, 0.999)})
+    optimizer = ClippedAdam(
+        {"lr": lr, "betas": (0.9, 0.999), "clip_norm": clip_norm})
     svi = SVI(transition_model, transition_guide, optimizer, loss=Trace_ELBO())
 
     losses = []
+    nan_count = 0
     for step in range(n_steps):
-        loss = svi.step(theta, dst, n_dst, pat_ids, K, P, hierarchical,
-                        dest_fracs)
+        try:
+            loss = svi.step(theta, dst, n_dst, pat_ids, K, P, hierarchical,
+                            dest_fracs)
+        except (ValueError, RuntimeError) as e:
+            # Most common: a tiny Dirichlet concentration flipped to NaN under
+            # gradient pressure. Drop the bad step and keep going — if it
+            # repeats we abort below.
+            nan_count += 1
+            if verbose and nan_count <= 3:
+                print(f"  Step {step}: SVI step failed ({type(e).__name__}); "
+                      f"re-clamping params and continuing")
+            _reclamp_params(K, P, hierarchical, dest_fracs)
+            if nan_count > 10:
+                raise RuntimeError(
+                    f"SVI diverged: {nan_count} consecutive bad steps. "
+                    f"Last error: {e}")
+            continue
+        if not np.isfinite(loss):
+            nan_count += 1
+            if verbose and nan_count <= 3:
+                print(f"  Step {step}: non-finite ELBO ({loss}); re-clamping")
+            _reclamp_params(K, P, hierarchical, dest_fracs)
+            if nan_count > 10:
+                raise RuntimeError("SVI diverged: non-finite ELBO persists.")
+            continue
+        nan_count = 0
         losses.append(loss)
         if verbose and step % 500 == 0:
             print(f"  Step {step}: ELBO = {loss:.1f}")
+
+    if not losses:
+        raise RuntimeError("SVI produced no finite ELBO values.")
 
     if verbose:
         print(f"  Final ELBO: {losses[-1]:.1f}")
