@@ -1,0 +1,975 @@
+\documentclass[11pt]{article}
+
+% ======================================================================
+%  Page geometry
+% ======================================================================
+\usepackage[a4paper,margin=1.1in]{geometry}
+
+% ======================================================================
+%  Math  (load AMS packages before the math font to avoid \Bbbk clash)
+% ======================================================================
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{mathtools}
+
+% ======================================================================
+%  Fonts & typography  (Palatino-style text + matching math)
+% ======================================================================
+\usepackage[T1]{fontenc}
+\usepackage{newpxtext}
+\let\Bbbk\relax            % newpxmath redefines \Bbbk; avoid the clash
+\usepackage{newpxmath}
+\usepackage{bm}
+\usepackage{microtype}
+
+% ======================================================================
+%  Tables, lists, colour, boxes, links, headings
+% ======================================================================
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{graphicx}
+\graphicspath{{figures/}}
+\usepackage{xcolor}
+\usepackage[most]{tcolorbox}
+\usepackage{titlesec}
+\usepackage[colorlinks=true]{hyperref}
+
+\definecolor{accent}{HTML}{1F4E79}   % deep blue
+\definecolor{accentlt}{HTML}{2E74B5} % lighter blue
+\definecolor{boxbg}{HTML}{F2F6FB}    % pale blue box fill
+
+\hypersetup{
+  linkcolor=accent,
+  citecolor=accent,
+  urlcolor=accentlt,
+}
+
+% --- Coloured section headings ---
+\titleformat{\section}
+  {\normalfont\Large\bfseries\color{accent}}{\thesection}{0.7em}{}
+\titleformat{\subsection}
+  {\normalfont\large\bfseries\color{accentlt}}{\thesubsection}{0.6em}{}
+
+% --- Paragraph style: open, unindented ---
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.55em}
+
+% --- Highlighted "key result" box for the central equations ---
+\newtcolorbox{keybox}[1][]{
+  enhanced, breakable,
+  colback=boxbg, colframe=accent,
+  boxrule=0.6pt, arc=3pt,
+  left=10pt, right=10pt, top=8pt, bottom=8pt,
+  fonttitle=\bfseries, coltitle=white,
+  attach boxed title to top left={yshift=-2mm, xshift=4mm},
+  boxed title style={colback=accent, arc=2pt},
+  #1
+}
+
+% ======================================================================
+%  Notation macros
+% ======================================================================
+\newcommand{\Znn}{\mathbb{Z}_{\geq 0}}            % non-negative integers
+\newcommand{\Reals}{\mathbb{R}}
+\newcommand{\Zsp}{\mathcal{Z}}                    % joint state space
+\newcommand{\Ssp}{\mathcal{S}}                    % anatomical sites
+\newcommand{\Csp}{\mathcal{C}}                    % clonotype set
+\newcommand{\Qsp}{\mathcal{Q}}                    % forward intervals
+\newcommand{\Dsp}{\mathcal{D}}                    % data
+\newcommand{\Asp}{\mathcal{A}}                    % allowed destinations
+\newcommand{\simplex}[1]{\Delta^{#1}}
+\newcommand{\Nsrc}{N^{\mathrm{src}}}
+\newcommand{\Ndst}{N^{\mathrm{dst}}}
+\newcommand{\rsrc}{r^{\mathrm{src}}}
+\newcommand{\rdst}{r^{\mathrm{dst}}}
+\newcommand{\Zsrc}{Z_{\mathrm{src}}}
+\newcommand{\Zdst}{Z_{\mathrm{dst}}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\vq}{\mathfrak{q}}                    % variational distribution
+\DeclareMathOperator{\Cat}{Categorical}
+\DeclareMathOperator{\Mult}{Multinomial}
+\DeclareMathOperator{\Dir}{Dirichlet}
+
+\theoremstyle{definition}
+\newtheorem*{remark}{Remark}
+
+% ======================================================================
+%  Title
+% ======================================================================
+\title{\bfseries\color{accent}\Large A Bayesian Transition Model for Clonal
+T-Cell Dynamics\\[2pt] across Tissue and Phenotype in Glioblastoma}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+{\small\tableofcontents}
+\vspace{1em}
+
+% ======================================================================
+\section{Setup}
+% ======================================================================
+
+We observe annotated T cells from multiple patients, anatomical sites, and
+study timepoints. Each observed cell carries five labels: a patient, a TCR
+clonotype, a study timepoint, an anatomical site, and a discrete T-cell
+phenotype state.
+
+The data are represented as aggregate
+clone-by-timepoint-by-site-by-phenotype counts, from which we construct
+clone-level observations across forward study intervals.
+
+\subsection{Indices}
+
+We use the following indices throughout.
+\begin{itemize}[leftmargin=1.4em, itemsep=2pt]
+  \item Patients: $i = 1,\ldots,I$.
+  \item TCR clonotypes within patient $i$: $c = 1,\ldots,C_i$.
+  \item Shared study timepoints: $r \in \{1,\ldots,R\}$, ordered as
+        $\tau_1 < \tau_2 < \cdots < \tau_R$. The timepoint labels are
+        comparable across patients.
+  \item Anatomical site: $s \in \Ssp$, with
+        $\Ssp = \{\mathrm{PBMC},\, \mathrm{CSF},\, \mathrm{Tumor}\}$.
+  \item Annotated T-cell phenotype state: $k \in \{1,\ldots,K\}$. In the
+        current application $K = 11$, and all phenotypes share a single
+        phenotype space.
+\end{itemize}
+
+\subsection{Observed count tensor}
+
+For each patient $i$, clonotype $c$, timepoint $r$, site $s$, and phenotype
+$k$, let
+\[
+  Y_{icrsk} \in \Znn
+\]
+be the observed number of cells assigned to that combination: how many cells
+from patient $i$, clonotype $c$, and timepoint $r$ were sampled from site $s$
+and assigned phenotype $k$. Collecting the site and phenotype axes,
+\[
+  Y_{icr} \in \Znn^{\,|\Ssp| \times K}
+\]
+is the tissue-by-phenotype count tensor for clonotype $c$ in patient $i$ at
+timepoint $r$.
+
+\subsection{Joint tissue--phenotype state space}
+
+The model operates on the joint tissue--phenotype state space
+\[
+  \Zsp = \Ssp \times \{1,\ldots,K\},
+  \qquad
+  z = (s,k),
+\]
+where $s$ is the tissue and $k$ is the phenotype. Since $|\Ssp| = 3$ and
+$K = 11$, the number of joint states is
+\[
+  L \;=\; |\Zsp| \;=\; |\Ssp|\,K \;=\; 33 .
+\]
+The model therefore tracks clone counts across a $33$-state
+tissue--phenotype space. When describing transitions we write the source state
+as $z = (a,u)$ and the destination state as $z' = (b,v)$, where $a,b \in \Ssp$
+are source and destination tissues and $u,v \in \{1,\ldots,K\}$ are source and
+destination phenotypes.
+
+\subsection{Valid forward intervals}
+
+Forward intervals are defined per patient. For patient $i$, let $\Qsp_i$ be the
+set of valid forward intervals observed for that patient. Each element
+$q \in \Qsp_i$ is a pair of study timepoints with source timepoint $\rsrc_{iq}$
+and destination timepoint $\rdst_{iq}$. For adjacent study intervals,
+$\rdst_{iq} = \rsrc_{iq} + 1$. Here $q$ is not a matrix index; it simply labels a
+forward interval within patient $i$.
+
+Each $q \in \Qsp_i$ is one observed forward interval. Intervals such as
+$T_1 \!\to\! T_2$, $T_2 \!\to\! T_3$, and $T_3 \!\to\! T_4$ are treated as
+repeated observations of the \emph{same} forward transition process: the
+transition matrix is shared across all patients and intervals, and the indices
+$i$ and $q$ merely organize observations rather than selecting a separate
+matrix.
+
+\subsection{Clone-level observations within an interval}
+
+Fix a patient $i$, a valid interval $q \in \Qsp_i$, and a clonotype $c$ observed
+for that patient. The source and destination count vectors over the joint state
+space are
+\[
+  x_{iqc}(s,k) = Y_{i\, c\, \rsrc_{iq}\, s\, k},
+  \qquad
+  y_{iqc}(s,k) = Y_{i\, c\, \rdst_{iq}\, s\, k},
+  \qquad (s,k)\in\Zsp,
+\]
+so that $x_{iqc} \in \Znn^{L}$ collects the source counts at the source
+timepoint and $y_{iqc} \in \Znn^{L}$ collects the destination counts at the
+destination timepoint. Their totals are
+\[
+  \Nsrc_{iqc} = \sum_{z\in\Zsp} x_{iqc}(z),
+  \qquad
+  \Ndst_{iqc} = \sum_{z\in\Zsp} y_{iqc}(z).
+\]
+
+For each patient $i$ and interval $q \in \Qsp_i$ we keep only clonotypes seen at
+both ends:
+\[
+  \Csp_{iq}
+  =
+  \bigl\{\,
+    c \in \{1,\ldots,C_{i}\}
+    \;:\;
+    \Nsrc_{iqc} > 0 \ \text{and}\ \Ndst_{iqc} > 0
+  \,\bigr\}.
+\]
+This makes the data hierarchy explicit: patients contain valid forward
+intervals, and each forward interval has a retained set of clonotypes,
+\[
+  i
+  \;\longrightarrow\;
+  q \in \Qsp_i
+  \;\longrightarrow\;
+  c \in \Csp_{iq}.
+\]
+A \emph{clone-level forward observation} is therefore a triple $(i,q,c)$ with
+$q \in \Qsp_i$ and $c \in \Csp_{iq}$. For compact notation we collapse the
+triple into a single index,
+\[
+  j \;\equiv\; (i,q,c),
+  \qquad
+  x_j = x_{iqc},
+  \qquad
+  y_j = y_{iqc},
+\]
+and each observation contributes the tuple $(x_j, y_j, i_j, q_j, c_j)$. Later
+sections write $j$ for the triple $(i,q,c)$ so the equations stay compact, while
+the plate diagram (Figure~\ref{fig:plate}) shows the full hierarchy.
+
+\subsection{Observed zeros and valid samples}
+
+Each patient's interval set $\Qsp_i$ is built from valid forward intervals that
+carry the VDJ-profiled samples needed to form source and destination count
+vectors.
+Within a valid sample, a zero entry means the clonotype was not observed in
+that tissue--phenotype state. Implementation concerns---missing VDJ samples,
+sample-depth filters, and clone dropout---are handled separately from this
+mathematical setup.
+
+\subsection{Setup summary}
+
+The setup produces the clone-level forward observations
+\[
+  \Dsp_0 = \bigl\{ (x_j, y_j, i_j, q_j, c_j) \bigr\}_{j=1}^{J},
+  \qquad j \equiv (i_j, q_j, c_j),
+\]
+each containing a source count vector, a destination count vector, a patient, a
+forward interval, and a clonotype identity. The count vectors live in the joint
+tissue--phenotype state space $\Zsp = \Ssp \times \{1,\ldots,K\}$, with
+$|\Zsp| = 33$.
+
+\subsection{Notation summary}
+
+Table~\ref{tab:notation} collects the symbols used throughout.
+
+\begin{table}[h]
+\centering
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{Symbol} & \textbf{Meaning}\\
+\midrule
+$i = 1,\ldots,I$              & patient index\\
+$c = 1,\ldots,C_i$           & TCR clonotype within patient $i$\\
+$r \in \{1,\ldots,R\}$       & shared study timepoint, $\tau_1<\cdots<\tau_R$\\
+$s \in \Ssp$                 & anatomical site, $\Ssp=\{\mathrm{PBMC},\mathrm{CSF},\mathrm{Tumor}\}$\\
+$k \in \{1,\ldots,K\}$       & phenotype state ($K=11$)\\
+$z = (s,k) \in \Zsp$         & joint tissue--phenotype state ($L=|\Zsp|=33$)\\
+$Y_{icrsk}$                  & observed count tensor\\
+$\Qsp_i$                     & valid forward intervals for patient $i$\\
+$q \in \Qsp_i$               & forward interval, timepoints $\rsrc_{iq},\rdst_{iq}$\\
+$\Csp_{iq}$                  & clonotypes present at both ends of interval $q$\\
+$j = (i_j,q_j,c_j)$          & clone-level observation, $j=1,\ldots,J$\\
+$x_j,\,y_j \in \Znn^{L}$     & source / destination count vectors\\
+$\Nsrc_j,\,\Ndst_j$          & source / destination totals\\
+$\theta_j \in \simplex{L-1}$ & empirical source probability vector\\
+$\widehat{\phi}_j$           & empirical destination probability vector\\
+$T \in \Reals^{L\times L}$   & shared row-stochastic transition matrix\\
+$\pi_j = \theta_j T$         & model-implied destination probability vector\\
+$M \in \{0,1\}^{L\times L}$  & biological support mask\\
+$\Asp(z)$                    & allowed destination set for source state $z$\\
+$\alpha_z$                   & Dirichlet concentration for row $z$\\
+$w_{jzz'}$                   & backward attribution probability\\
+$A_{jzz'}$                   & latent allocation count\\
+$\Dsp$                       & full dataset\\
+\bottomrule
+\end{tabular}
+\caption{Notation used throughout the model.}
+\label{tab:notation}
+\end{table}
+
+% ======================================================================
+\section{Empirical Source and Destination Summaries}
+% ======================================================================
+
+Each clone-level observation $j = (i_j, q_j, c_j)$ comes with two empirical count
+vectors,
+\[
+  x_j,\, y_j \in \Znn^{L},
+  \qquad L = 33,
+\]
+where $x_j$ holds the source tissue--phenotype counts for clonotype $c_j$ in
+patient $i_j$ at the source timepoint of interval $q_j$, and $y_j$ holds the
+destination counts for the same clonotype at the destination timepoint.
+
+\subsection{Source and destination totals}
+
+The totals
+\[
+  \Nsrc_j = \sum_{z\in\Zsp} x_j(z),
+  \qquad
+  \Ndst_j = \sum_{z\in\Zsp} y_j(z)
+\]
+are both strictly positive, because $c_j \in \Csp_{q_j}$ guarantees the
+clonotype is observed at both ends of the interval.
+
+\subsection{Source probability vector}
+
+Normalizing the source counts gives the empirical source probability vector
+$\theta_j \in \simplex{L-1}$, with entries
+\[
+  \theta_j(z) = \frac{x_j(z)}{\Nsrc_j},
+  \qquad z = (s,k).
+\]
+Thus $\theta_j(z)$ is the fraction of observed source cells from clonotype
+$c_j$ in tissue--phenotype state $z$. It is a genuine probability vector,
+\[
+  \theta_j(z) \geq 0,
+  \qquad
+  \sum_{z\in\Zsp} \theta_j(z) = 1 ,
+\]
+and we treat it as a row vector.
+
+\subsection{Destination probability vector}
+
+The destination counts can likewise be normalized into an empirical
+destination probability vector $\widehat{\phi}_j \in \simplex{L-1}$,
+\[
+  \widehat{\phi}_j(z) = \frac{y_j(z)}{\Ndst_j} .
+\]
+This vector is convenient for descriptive summaries and model checking. The
+model itself, however, uses the destination \emph{counts} $y_j$ together with
+the total $\Ndst_j$: keeping the destination as counts preserves the
+distinction between observations supported by many cells and those supported
+by only a few.
+
+\subsection{Optional source smoothing}
+
+For sparse clonotypes, the source probability vector can be stabilized by
+adding a pseudocount $\delta > 0$ before normalizing:
+\[
+  \theta^{(\delta)}_j(z)
+  =
+  \frac{x_j(z) + \delta}{\sum_{z'\in\Zsp} x_j(z') + L\delta} .
+\]
+Setting $\delta = 0$ recovers the empirical source probability vector
+$\theta_j$.
+
+% ======================================================================
+\section{Joint Tissue--Phenotype Transition Matrix}
+% ======================================================================
+
+The central latent object is a single joint tissue--phenotype transition
+matrix
+\[
+  T \in \Reals^{L\times L},
+  \qquad L = 33,
+\]
+whose rows are source tissue--phenotype states and whose columns are
+destination tissue--phenotype states. For source state $z = (a,u)$ and
+destination state $z' = (b,v)$, the entry
+\[
+  T_{zz'} = T_{(a,u),(b,v)}
+  =
+  \Pr\!\bigl(\,
+    \text{tissue } b,\ \text{phenotype } v
+    \;\bigm|\;
+    \text{tissue } a,\ \text{phenotype } u
+  \,\bigr)
+\]
+is the probability that source state $(a,u)$ contributes to destination state
+$(b,v)$ over one forward interval.
+
+\subsection{Row-stochastic structure}
+
+Each row of $T$ is a probability vector over destination states. Hence
+$T_{zz'} \geq 0$ for all $z,z'$, and every row sums to one:
+\[
+  \sum_{z'\in\Zsp} T_{zz'} = 1
+  \qquad\Longleftrightarrow\qquad
+  \sum_{b\in\Ssp} \sum_{v=1}^{K} T_{(a,u),(b,v)} = 1
+\]
+for every source state $z = (a,u)$.
+
+\subsection{Expected destination probability vector}
+
+For observation $j$ with empirical source probability vector $\theta_j$, the
+model-implied destination probability vector is the pushforward of $\theta_j$
+through $T$:
+
+\begin{keybox}[title={Central transition calculation}]
+\[
+  \pi_j = \theta_j T \in \simplex{L-1},
+  \qquad\text{equivalently}\qquad
+  \pi_j(b,v)
+  =
+  \sum_{a\in\Ssp} \sum_{u=1}^{K}
+    \theta_j(a,u)\, T_{(a,u),(b,v)} .
+\]
+The destination probability for state $(b,v)$ is a weighted sum of transition
+probabilities out of every source state $(a,u)$, weighted by the empirical
+source distribution.
+\end{keybox}
+
+The corresponding model-implied mean destination count vector is
+\[
+  \E\!\left[ y_j \mid T \right] = \Ndst_j\, \pi_j .
+\]
+Here $y_j$ is a count vector, $\pi_j$ is a probability vector, and
+$\Ndst_j \pi_j$ is the expected destination count vector.
+
+\subsection{Role of forward intervals}
+
+The same matrix $T$ is used for every patient $i$ and interval $q \in \Qsp_i$.
+The pair $(i,q)$ identifies a patient and a pair of study timepoints---telling
+us which source and destination count vectors to build---but it does not select
+a different transition matrix. All intervals are treated as repeated observations of a
+common one-step forward transition process.
+
+% ======================================================================
+\section{Bayesian Reading of the Transition Matrix}
+% ======================================================================
+
+The matrix $T$ is a latent conditional probability kernel over the joint
+tissue--phenotype state space, and each row $T_{z\cdot}$ is an unknown
+categorical distribution over destination states.
+
+\subsection{Forward generative reading}
+
+For observation $j$, the source probability vector $\theta_j$ acts as a mixing
+distribution over latent source states. Conceptually, for one unit of
+destination cell mass we first draw a latent source state and then a
+destination state conditional on it:
+\[
+  \Zsrc \sim \Cat(\theta_j),
+  \qquad
+  \Zdst \mid \Zsrc = z,\, T \;\sim\; \Cat(T_{z\cdot}) .
+\]
+Marginalizing over the latent source state reproduces the pushforward:
+\[
+  \Pr(\Zdst = z' \mid \theta_j, T)
+  =
+  \sum_{z\in\Zsp} \theta_j(z)\, T_{zz'}
+  =
+  \pi_j(z'),
+  \qquad\text{so}\qquad
+  \pi_j = \theta_j T .
+\]
+
+\subsection{Likelihood for destination counts}
+
+The observed destination data are counts over the $33$-state space. Given
+$\pi_j$, they are modeled as multinomial draws:
+
+\begin{keybox}[title={Observation likelihood}]
+\[
+  y_j \;\sim\; \Mult\!\bigl( \Ndst_j,\ \pi_j \bigr),
+  \qquad
+  \pi_j = \theta_j T .
+\]
+The latent transition matrix enters the likelihood only through the
+pushforward $\pi_j = \theta_j T$.
+\end{keybox}
+
+\subsection{Prior over transition rows}
+
+Because each row of $T$ is a probability vector, a natural prior is a Dirichlet
+distribution per row:
+\[
+  T_{z\cdot} \;\sim\; \Dir(\alpha_z),
+\]
+where $\alpha_z$ collects the prior concentration parameters for the
+destination distribution of source state $z$.
+
+\subsection{Posterior over transition matrices}
+
+After observing the data
+\[
+  \Dsp = \bigl\{ (x_j, y_j, i_j, q_j, c_j) \bigr\}_{j=1}^{J},
+\]
+inference targets the posterior $p(T \mid \Dsp)$, which captures uncertainty
+about the joint tissue--phenotype transition kernel after all clone-level
+forward observations. Posterior summaries include posterior means
+$\E[T_{zz'} \mid \Dsp]$ and credible intervals for individual transition
+probabilities.
+
+\subsection{Posterior predictive destination probabilities}
+
+Because $T$ is latent, the implied destination probability vector
+$\pi_j = \theta_j T$ is also uncertain. The posterior predictive probability of
+destination state $z'$ is
+\[
+  \Pr(\Zdst = z' \mid \theta_j, \Dsp)
+  =
+  \E\!\left[ \pi_j(z') \mid \Dsp \right]
+  =
+  \E\!\left[
+    \sum_{z\in\Zsp} \theta_j(z)\, T_{zz'}
+    \;\Bigm|\; \Dsp
+  \right].
+\]
+
+\subsection{Backward attribution}
+\label{sec:backward}
+
+The transition matrix is oriented forward,
+$\Pr(\Zdst = z' \mid \Zsrc = z, T) = T_{zz'}$. The reverse question---which
+source state likely contributed to an observed destination state---is a
+posterior attribution. For observation $j$ define
+\[
+  w_{jzz'}
+  =
+  \Pr(\Zsrc = z \mid \Zdst = z',\, \theta_j,\, T) .
+\]
+By Bayes' rule, and recognizing the normalizing constant as $\pi_j(z')$,
+\[
+  w_{jzz'}
+  =
+  \frac{\theta_j(z)\, T_{zz'}}
+       {\sum_{\tilde z\in\Zsp} \theta_j(\tilde z)\, T_{\tilde z z'}}
+  =
+  \frac{\theta_j(z)\, T_{zz'}}{\pi_j(z')} .
+\]
+This attributes destination state $z'$ back to source state $z$, conditional
+on $T$ and the observed source probability vector.
+
+\subsection{Latent allocation counts}
+
+Since the destination data are counts, the attribution probabilities also
+define latent allocation counts. Let $A_{jzz'}$ be the unobserved number of
+destination cells in state $z'$ attributed to latent source state $z$, so that
+\[
+  \sum_{z\in\Zsp} A_{jzz'} = y_j(z') .
+\]
+Conditional on $T$, $\theta_j$, and $y_j(z')$, these counts are multinomial:
+\[
+  \bigl( A_{j1z'}, \ldots, A_{jLz'} \bigr)
+  \;\sim\;
+  \Mult\!\bigl( y_j(z'),\ w_{j1z'}, \ldots, w_{jLz'} \bigr),
+  \qquad L = 33 ,
+\]
+giving a probabilistic decomposition of observed destination counts into
+contributions from latent source tissue--phenotype states.
+
+% ======================================================================
+\section{Transition Support and Biological Restrictions}
+% ======================================================================
+
+The unrestricted transition matrix has $33 \times 32 = 1056$ free
+row-stochastic parameters. To shrink this space and encode biological
+structure, we introduce a hard support mask
+\[
+  M \in \{0,1\}^{L\times L},
+  \qquad L = 33 .
+\]
+For source state $z = (a,u)$ and destination state $z' = (b,v)$, the entry
+$M_{zz'} = M_{(a,u),(b,v)}$ indicates whether that transition is in the
+support of the model:
+\[
+  M_{zz'} = 1 \ \Rightarrow\ \text{transition allowed},
+  \qquad
+  M_{zz'} = 0 \ \Rightarrow\ T_{zz'} = 0 .
+\]
+
+\subsection{Allowed destination set}
+
+For each source state $z$, the allowed destination set is
+\[
+  \Asp(z) = \{\, z' \in \Zsp : M_{zz'} = 1 \,\} .
+\]
+Each row of $T$ is then a probability distribution over its allowed
+destinations:
+\[
+  \sum_{z'\in\Asp(z)} T_{zz'} = 1,
+  \qquad
+  T_{zz'} = 0 \ \text{ for } z' \notin \Asp(z) .
+\]
+
+\subsection{Restricted prior}
+
+With the support mask, the Dirichlet prior is placed only on the allowed
+entries of each row,
+\[
+  T_{z,\Asp(z)} \;\sim\; \Dir\!\bigl( \alpha_{z,\Asp(z)} \bigr),
+\]
+and entries outside the allowed set are fixed to zero.
+
+\subsection{Biological interpretation}
+
+The support mask encodes biological structure in the joint tissue--phenotype
+transition space. A source state $z = (a,u)$ represents cells observed in
+tissue $a$ with phenotype $u$, and the allowed set $\Asp(z)$ represents the
+tissue--phenotype fates included for cells starting in that state.
+
+The mask can restrict phenotype changes, tissue movement, or both. Examples
+include phenotype transitions that are implausible over one forward
+interval---such as large backward jumps along a differentiation or activation
+axis---as well as tissue--phenotype transitions excluded for biological or
+modeling reasons. The mask is applied to the latent transition matrix, not to
+the observed counts: the source and destination count vectors are still built
+from the empirical data.
+
+\begin{remark}
+A soft version replaces the binary mask $M_{zz'} \in \{0,1\}$ with prior
+plausibility weights $M_{zz'} \in [0,1]$, so that implausible transitions
+receive small prior mass rather than zero support.
+\end{remark}
+
+% ======================================================================
+\section{Full Generative Story}
+\label{sec:generative}
+% ======================================================================
+
+The full model is a model for the one-interval redistribution of clone mass
+across tissue--phenotype states. It can be summarized as follows.
+
+\begin{keybox}[title={Generative model}]
+\begin{enumerate}[leftmargin=2em, itemsep=4pt]
+  \item \textbf{State space.} Define
+        $\Zsp = \Ssp \times \{1,\ldots,K\}$ with $|\Zsp| = 33$. Each state
+        $z = (s,k)$ pairs an anatomical tissue with an annotated T-cell
+        phenotype.
+
+  \item \textbf{Allowed fates.} For each source state $z$, let
+        $\Asp(z) = \{ z' \in \Zsp : M_{zz'} = 1 \}$ be the tissue--phenotype
+        fates available to cells starting in $z$.
+
+  \item \textbf{Transition rows.} For each source state $z$, draw the
+        restricted row
+        \[
+          T_{z,\Asp(z)} \sim \Dir\!\bigl( \alpha_{z,\Asp(z)} \bigr),
+          \qquad
+          T_{zz'} = 0 \ \text{ for } z' \notin \Asp(z) .
+        \]
+        Row $T_{z\cdot}$ describes how clone mass starting in state $z$ is
+        redistributed across allowed destinations after one forward interval.
+
+  \item \textbf{Source distribution.} For each patient $i$, interval
+        $q\in\Qsp_i$, and retained clonotype $c\in\Csp_{iq}$, form the
+        observation $j = (i,q,c)$ and compute the empirical source probability
+        vector $\theta_j$ from $x_j$. This is where the clone mass sits at the
+        source timepoint.
+
+  \item \textbf{Pushforward.} Map the source distribution forward,
+        $\pi_j = \theta_j T$ --- where the model expects the clone mass to appear
+        at the destination timepoint.
+
+  \item \textbf{Observation.} Draw the destination counts
+        \[
+          y_j \;\sim\; \Mult\!\bigl( \Ndst_j,\ \pi_j \bigr) .
+        \]
+\end{enumerate}
+\end{keybox}
+
+In words: each clone begins an interval with an observed distribution across
+tissue--phenotype states; the transition matrix maps that source distribution
+forward into a destination probability vector; and the observed destination
+counts are sampled from that vector, with the destination total $\Ndst_j$
+controlling how much count information the observation contributes.
+
+Putting the pieces together, the generative model is, compactly,
+\[
+  T_{z,\Asp(z)} \sim \Dir\!\bigl(\alpha_{z,\Asp(z)}\bigr),
+  \qquad
+  \pi_j = \theta_j T,
+  \qquad
+  y_j \sim \Mult\!\bigl(\Ndst_j,\, \pi_j\bigr),
+\]
+with the corresponding dependency structure shown in
+Figure~\ref{fig:plate}.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.82\linewidth]{plate_joint_transition.pdf}
+  \caption{Plate diagram of the generative model. The transition rows
+    $T_{z,\Asp(z)}$ are drawn once per source state $z$ (top plate, indexed by
+    $z\in\Zsp$) from a Dirichlet prior whose support is set by the mask $M$ and
+    whose concentration is $\alpha_z$. This transition block sits \emph{outside}
+    the patient plate: a single matrix $T$ is shared across all patients and
+    intervals. The observation side is drawn with explicit nesting---patient
+    $i$, forward interval $q\in\Qsp_i$, retained clonotype $c\in\Csp_{iq}$---so a
+    clone-level observation is the triple $(i,q,c)$. Within the innermost plate
+    each observation contributes the empirical source distribution
+    $\theta_{iqc}$, deterministically normalized from the observed source counts
+    $x_{iqc}$; the pushforward $\pi_{iqc} = \theta_{iqc} T$ then drives a
+    multinomial draw of the observed destination counts $y_{iqc}$ with total
+    $\Ndst_{iqc}$. Double circles ($x_{iqc}$, $y_{iqc}$) mark observed
+    quantities and solid dots ($M$, $\alpha_z$, $\Ndst_{iqc}$) mark fixed
+    inputs. The latent allocation counts used for fitting are a computational
+    augmentation and are introduced separately in
+    Section~\ref{sec:inference-comp}.}
+  \label{fig:plate}
+\end{figure}
+
+% ======================================================================
+\section{Inference}
+% ======================================================================
+
+Inference estimates the posterior over the shared transition matrix $T$. The
+observed data are the clone-level forward observations
+\[
+  \Dsp = \bigl\{ (x_j, y_j, i_j, q_j, c_j) \bigr\}_{j=1}^{J} .
+\]
+The source probability vectors $\theta_j$ and destination totals $\Ndst_j$ are
+derived from the observed count vectors, while the support mask $M$ and prior
+parameters $\alpha$ are fixed model inputs.
+
+\subsection{Learned quantity}
+
+The main learned object is the posterior $p(T \mid \Dsp)$, whose summaries
+describe the inferred one-interval redistribution of clone mass across
+tissue--phenotype states. A single-transition summary is
+\[
+  \E\!\left[ T_{(a,u),(b,v)} \mid \Dsp \right],
+\]
+the posterior mean probability that source state $(a,u)$ contributes to
+destination state $(b,v)$ over one forward interval.
+
+\subsection{Derived tissue-level summaries}
+
+Because $T$ lives on tissue--phenotype states, tissue-level summaries follow by
+summing over phenotypes. These are not separate parameters but functions of the
+posterior over $T$; their purpose is to compress the $33\times 33$ matrix into
+interpretable tissue-level movement. For a source tissue $a$, source phenotype
+$u$, and destination tissue $b$,
+\[
+  m_{a,u\to b} = \sum_{v=1}^{K} T_{(a,u),(b,v)}
+\]
+is the probability that source state $(a,u)$ maps into destination tissue $b$,
+marginalizing over destination phenotype. Averaging over a source phenotype
+distribution $\rho_a(u)$ gives a phenotype-averaged tissue summary,
+\[
+  m_{a\to b}
+  =
+  \sum_{u=1}^{K} \rho_a(u) \sum_{v=1}^{K} T_{(a,u),(b,v)} ,
+\]
+where $\rho_a$ may be chosen empirically---for example, the observed phenotype
+distribution among source cells in tissue $a$.
+
+\subsection{Phenotype summaries conditional on destination tissue}
+
+For a fixed source tissue $a$, destination tissue $b$, and source phenotype
+$u$, define
+\[
+  h_{a,u\to b}(v)
+  =
+  \frac{T_{(a,u),(b,v)}}{\sum_{v'=1}^{K} T_{(a,u),(b,v')}} ,
+\]
+the destination phenotype distribution \emph{conditional} on ending in tissue
+$b$. Together, the two summaries separate two questions:
+\[
+  \underbrace{m_{a,u\to b}}_{\text{how much mass reaches tissue } b}
+  \qquad\text{versus}\qquad
+  \underbrace{h_{a,u\to b}(v)}_{\text{which phenotypes appear within tissue } b} .
+\]
+
+\subsection{Posterior predictive checks}
+
+For each observation $j$, posterior draws of $T$ induce posterior draws of
+$\pi_j = \theta_j T$, which can be used to simulate replicated destination
+counts
+\[
+  y_j^{\mathrm{rep}} \;\sim\; \Mult\!\bigl( \Ndst_j,\ \pi_j \bigr) .
+\]
+Comparing $y_j^{\mathrm{rep}}$ to the observed $y_j$ checks whether the inferred
+transition matrix can reproduce observed destination tissue--phenotype count
+patterns.
+
+\subsection{Posterior attribution summaries}
+
+For each observation $j$, the posterior attribution probabilities
+\[
+  w_{jzz'} = \frac{\theta_j(z)\, T_{zz'}}{\pi_j(z')}
+\]
+attribute observed destination states back to source states. They answer
+questions such as: \emph{given destination tumor-exhausted cells, which source
+tissue--phenotype states most likely contributed to them?} Attribution is
+computed from $T$, $\theta_j$, and $\pi_j$, and can be aggregated across
+observations, tissues, phenotypes, or tissue blocks.
+
+% ======================================================================
+\section{Computational Inference}
+\label{sec:inference-comp}
+% ======================================================================
+
+This section reuses the generative model of Section~\ref{sec:generative}
+(summarized in Figure~\ref{fig:plate}) and describes how its posterior target
+$p(T \mid \Dsp)$ is approximated and how the fitted transition matrix is
+obtained. The objects are exactly those in the plate diagram: the shared
+transition matrix $T$ over the joint tissue--phenotype state space
+$\Zsp = \Ssp \times \{1,\ldots,K\}$ ($|\Zsp| = L = 33$), the empirical source
+distributions $\theta_j$, the pushforwards $\pi_j = \theta_j T$, and the
+observed destination counts $y_j$.
+
+Recall the data $\Dsp = \{(x_j, y_j, i_j, q_j, c_j)\}_{j=1}^{J}$. For each
+observation $j$, the source counts $x_j$ are normalized into $\theta_j$, and the
+destination counts are modeled as
+\[
+  y_j \sim \Mult(\Ndst_j,\, \pi_j),
+  \qquad
+  \pi_j = \theta_j T,
+  \qquad
+  \pi_j(z') = \sum_{z\in\Zsp} \theta_j(z)\, T_{zz'} .
+\]
+The difficulty is that an observed destination count in state $z'$ could have
+been contributed by \emph{any} source state $z$, and these
+source-to-destination allocations are unobserved. To make the posterior
+tractable, variational inference \emph{augments} the generative model of
+Figure~\ref{fig:plate} with latent allocation counts---variables that do not
+appear in the generative story itself---and then fits a factorized
+approximation by coordinate ascent.
+
+\subsection{Latent allocation counts}
+
+Let $\xi_{jzz'}$ be the unobserved number of destination cells in state $z'$ for
+observation $j$ attributed to source state $z$. By construction they decompose
+each observed destination count,
+\[
+  \sum_{z\in\Zsp} \xi_{jzz'} = y_j(z') .
+\]
+These are computational latent variables that split the observed destination
+vector into unobserved source-to-destination contributions. Given $T$ and
+$\theta_j$, the exact posterior attribution probability of source state $z$ for
+destination state $z'$ is the backward attribution quantity from
+Section~\ref{sec:backward},
+\[
+  w_{jzz'}
+  =
+  \frac{\theta_j(z)\, T_{zz'}}
+       {\sum_{\tilde z\in\Zsp} \theta_j(\tilde z)\, T_{\tilde z z'}} .
+\]
+Variational inference replaces these with an approximate responsibility derived
+from the variational distribution.
+
+\subsection{Variational family}
+
+To avoid overloading the interval index $q \in \Qsp_i$, we write the variational
+distribution as $\vq(T,\xi)$ and adopt a mean-field factorization
+\[
+  \vq(T,\xi) = \vq(T)\,\vq(\xi) .
+\]
+The transition matrix receives independent Dirichlet factors over the allowed
+entries of each row,
+\[
+  \vq(T)
+  =
+  \prod_{z\in\Zsp}
+    \Dir\!\bigl( T_{z,\Asp(z)};\, \lambda_{z,\Asp(z)} \bigr),
+  \qquad
+  \Asp(z) = \{\, z'\in\Zsp : M_{zz'} = 1 \,\},
+\]
+and the allocation variables receive multinomial factors,
+\[
+  \vq(\xi)
+  =
+  \prod_{j=1}^{J} \prod_{z'\in\Zsp}
+    \Mult\!\bigl( \xi_{j\cdot z'};\, y_j(z'),\, r_{j\cdot z'} \bigr),
+\]
+where $r_{jzz'}$ is the variational responsibility assigning destination state
+$z'$ in observation $j$ to source state $z$.
+
+\subsection{Coordinate updates}
+
+The algorithm alternates between updating the allocation responsibilities
+$r_{jzz'}$ and the Dirichlet parameters $\lambda_{zz'}$.
+
+\subsubsection{Allocation update}
+
+For each observation $j$, source state $z$, and destination state $z'$,
+\[
+  r_{jzz'} \propto \theta_j(z)\,
+  \exp\!\bigl( \E_{\vq}[\log T_{zz'}] \bigr),
+  \qquad
+  r_{jzz'} = 0 \ \text{ if } z' \notin \Asp(z),
+\]
+normalized over source states so that $\sum_{z\in\Zsp} r_{jzz'} = 1$ for each
+$j$ and $z'$. Under the Dirichlet factor, the required expectation is
+\[
+  \E_{\vq}[\log T_{zz'}]
+  =
+  \psi(\lambda_{zz'})
+  -
+  \psi\!\Bigl( \sum_{\bar z\in\Asp(z)} \lambda_{z\bar z} \Bigr),
+\]
+where $\psi$ is the digamma function. Biologically, this step probabilistically
+assigns observed destination tissue--phenotype counts back to the source
+tissue--phenotype states that could have produced them.
+
+\subsubsection{Transition-row update}
+
+For each source state $z$ and allowed destination $z' \in \Asp(z)$,
+\[
+  \lambda_{zz'}
+  =
+  \alpha_{zz'} + \sum_{j=1}^{J} y_j(z')\, r_{jzz'} ,
+\]
+so the variational posterior parameter is the prior concentration plus the
+expected number of transitions allocated from source state $z$ to destination
+state $z'$. Entries outside the allowed set stay fixed at zero:
+$T_{zz'} = 0$ for $z' \notin \Asp(z)$.
+
+\subsection{Optimization objective}
+
+The coordinate updates maximize the evidence lower bound (ELBO)
+\[
+  \mathcal{L}(\vq)
+  =
+  \E_{\vq}\!\left[ \log p(T,\xi,\Dsp) \right]
+  -
+  \E_{\vq}\!\left[ \log \vq(T,\xi) \right],
+\]
+and the algorithm iterates between the allocation update and the
+transition-row update until $\mathcal{L}(\vq)$ stabilizes.
+
+\subsection{Estimated transition matrix}
+
+After convergence, the fitted transition matrix is summarized by the
+variational posterior mean $\widehat{T}_{zz'} = \E_{\vq}[T_{zz'}]$. For allowed
+transitions this is the normalized Dirichlet parameter:
+\[
+  \widehat{T}_{zz'}
+  =
+  \frac{\lambda_{zz'}}{\sum_{\bar z\in\Asp(z)} \lambda_{z\bar z}},
+  \qquad
+  \widehat{T}_{zz'} = 0 \ \text{ for } z' \notin \Asp(z) .
+\]
+The matrix $\widehat{T}$ is the estimated one-interval transition probability
+matrix over the $33$-state tissue--phenotype space, and it is the fitted
+quantity used for posterior summaries, posterior predictive checks, posterior
+attribution summaries, and subsequent rate decomposition.
+
+\subsection{Algorithm summary}
+
+\begin{keybox}[title={Variational algorithm (CAVI)}]
+\begin{enumerate}[leftmargin=2em, itemsep=4pt]
+  \item \textbf{Initialize} the variational Dirichlet parameters $\lambda$.
+  \item \textbf{Repeat until the ELBO $\mathcal{L}(\vq)$ converges:}
+    \begin{itemize}[leftmargin=1.4em, itemsep=2pt, topsep=2pt]
+      \item update the allocation responsibilities
+            $r_{jzz'} \propto \theta_j(z)\,\exp\!\bigl(\E_{\vq}[\log T_{zz'}]\bigr)$;
+      \item update the transition-row parameters
+            $\lambda_{zz'} = \alpha_{zz'} + \sum_{j} y_j(z')\, r_{jzz'}$.
+    \end{itemize}
+  \item \textbf{Return} the posterior mean $\widehat{T} = \E_{\vq}[T]$.
+\end{enumerate}
+\end{keybox}
+
+The responsibility update estimates which source tissue--phenotype states
+explain the observed destination counts; the transition-row update accumulates
+those expected allocations into a posterior estimate of the shared forward
+transition matrix.
+
+\end{document}
