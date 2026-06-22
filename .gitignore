@@ -26,3 +26,19 @@ pipeline/spatial_cell_typing*.vec
 
 # Gene vector outputs (regenerable from genevector runs)
 pipeline/scripts/*.vec
+
+# Methods-doc figures are committed assets; the unanchored figures/ rule above
+# would otherwise hide docs/figures/ (the plate diagrams embedded by the .tex).
+!docs/figures/
+
+# Run logs
+logs/
+*.log
+
+# LaTeX build artifacts
+*.aux
+*.out
+*.toc
+*.fls
+*.fdb_latexmk
+*.synctex.gz
