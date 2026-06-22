@@ -8,7 +8,7 @@ then computes the cross-tissue contrast representing CSF emptying
 
 Reads:
   data/objects/GBM_TCR_POS_TCELLS_singlets.h5ad  (Scrublet-filtered)
-Writes to results/09_temporal/:
+Writes to results/traffic_temporal_trajectories/:
   pseudobulk.h5ad
   genes_<tissue>_<lineage>.csv
   pathways_<tissue>_<lineage>.csv

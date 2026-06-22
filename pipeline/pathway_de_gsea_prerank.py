@@ -30,7 +30,7 @@ from modules.pseudobulk import pseudobulk_counts_by_clone_tissue
 # %%
 # ---- Config ----
 DATA_PATH = paths.H5AD_TCELLS
-OUTPUT_DIR = REPO_ROOT / "results" / "04_pseudobulk_de_gsea"
+OUTPUT_DIR = REPO_ROOT / "results" / "pathway_de_gsea"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 LINEAGES = ("CD8", "CD4")

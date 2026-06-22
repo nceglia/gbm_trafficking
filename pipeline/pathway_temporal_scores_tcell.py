@@ -28,8 +28,8 @@ from modules.clone_helpers import infer_lineage_from_phenotype
 # %%
 # ---- Config ----
 DATA_PATH = paths.H5AD_TCELLS
-GSEA_DIR = REPO_ROOT / "results" / "04_pseudobulk_de_gsea"
-OUTPUT_DIR = REPO_ROOT / "results" / "10_temporal_scores"
+GSEA_DIR = REPO_ROOT / "results" / "pathway_de_gsea"
+OUTPUT_DIR = REPO_ROOT / "results" / "pathway_temporal_scores"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 MODULES_DIR = REPO_ROOT / "pipeline" / "modules"

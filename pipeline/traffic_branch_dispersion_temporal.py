@@ -10,15 +10,15 @@ Three analyses:
      n_stayer < 10) are greyed out.
 
   2. Overlay of per-tissue block retention (from
-     results/06d_empirical_Q_per_timepoint/) and JSD(mover, stayer)
+     results/traffic_migration_rates_per_tp/) and JSD(mover, stayer)
      per transition pair. Drop in retention concurrent with drop in
      JSD = "everyone leaves indiscriminately at this transition".
 
   3. Per-tissue scatter of phenotype mover-Δ (time-averaged) vs
      mean optimizer migration rate (sum across destinations,
-     from results/06c_empirical_Q/migration_rates.csv). Spearman r.
+     from results/traffic_migration_rates/migration_rates.csv). Spearman r.
 
-Outputs to results/branch_dispersion_temporal/.
+Outputs to results/traffic_branch_dispersion_temporal/.
 """
 import sys
 import warnings
@@ -58,11 +58,11 @@ DPI = 200
 from modules import paths  # noqa: E402
 
 DATA_PATH = paths.H5AD_TCELLS
-RETENTION_PATH = (REPO_ROOT / "results" / "06d_empirical_Q_per_timepoint"
+RETENTION_PATH = (REPO_ROOT / "results" / "traffic_migration_rates_per_tp"
                   / "block_retention_per_timepoint.csv")
-MIGRATION_PATH = (REPO_ROOT / "results" / "06c_empirical_Q"
+MIGRATION_PATH = (REPO_ROOT / "results" / "traffic_migration_rates"
                   / "migration_rates.csv")
-OUT_DIR = REPO_ROOT / "results" / "branch_dispersion_temporal"
+OUT_DIR = REPO_ROOT / "results" / "traffic_branch_dispersion_temporal"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 TISSUES = list(TISSUE_ORDER)
@@ -312,7 +312,7 @@ print("  wrote mover_minus_stayer_per_timepoint.{png,pdf}")
 print("\nFigure 2: block retention + mover/stayer JSD overlay...")
 if not RETENTION_PATH.exists():
     print(f"  WARNING: {RETENTION_PATH} not found — Figure 2 will skip "
-          "the retention curve. (Run 06d_empirical_Q_per_timepoint.py.)")
+          "the retention curve. (Run traffic_migration_rates_per_tp.py.)")
     retention_df = None
 else:
     retention_df = pd.read_csv(RETENTION_PATH)

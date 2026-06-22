@@ -7,7 +7,7 @@ distances per phenotype × tissue-pair, patient-matched and aggregate.
 Reads:
   data/objects/GBM_TCR_POS_TCELLS_singlets.h5ad  (paths.H5AD_TCELLS)
 
-Writes to results/transcriptome_similarity/:
+Writes to results/traffic_transcriptome_cosine/:
   cosine_distance_summary.csv        (consumed by Figure 2 panels B/C)
   tissue_cosine_heatmap.png
   tissue_cosine_boxplots.png

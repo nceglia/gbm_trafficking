@@ -1,8 +1,8 @@
 # %%
 """Publication-quality figures for the empirical-Q analysis.
 
-Reads CSV artifacts produced by ``pipeline/06c_empirical_Q.py`` and emits
-four figures in ``results/06c_empirical_Q/figures/``:
+Reads CSV artifacts produced by ``pipeline/traffic_migration_rates.py`` and emits
+four figures in ``results/traffic_migration_rates/figures/``:
 
   1. ``migration_flow_network.{png,pdf}`` — triangle flow graph between
      PBMC / CSF / TP, mean migration rates as arrow widths/labels.
@@ -41,7 +41,7 @@ from modules.style import (  # noqa: E402
 
 # %%
 # ---- Config ----
-SRC_DIR = REPO_ROOT / "results" / "06c_empirical_Q"
+SRC_DIR = REPO_ROOT / "results" / "traffic_migration_rates"
 OUT_DIR = SRC_DIR / "figures"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 

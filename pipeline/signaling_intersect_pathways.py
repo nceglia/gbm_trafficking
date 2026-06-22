@@ -9,13 +9,13 @@ raw output CSV to disk in append mode rather than concatenating in
 memory.
 
 Reads:
-  results/12_liana_signaling/liana_per_timepoint.csv
-  results/11_cross_lineage_correlations/pathway_correlations.csv
-  results/10_temporal_scores/pathway_definitions.csv
+  results/signaling_liana_pathways/liana_per_timepoint.csv
+  results/pathway_cross_lineage_corr/pathway_correlations.csv
+  results/pathway_temporal_scores/pathway_definitions.csv
 
 Writes:
-  results/12_liana_signaling/signaling_edges_raw.csv
-  results/12_liana_signaling/signaling_edges_summary.csv
+  results/signaling_liana_pathways/signaling_edges_raw.csv
+  results/signaling_liana_pathways/signaling_edges_summary.csv
 """
 import subprocess
 import sys
@@ -31,11 +31,11 @@ warnings.filterwarnings("ignore")
 REPO_ROOT = Path(__file__).resolve().parents[1]
 RES = REPO_ROOT / "results"
 
-LIANA_CSV = RES / "12_liana_signaling" / "liana_per_timepoint.csv"
-PATHWAY_CORRS_CSV = RES / "11_cross_lineage_correlations" / "pathway_correlations.csv"
-PATHWAY_DEFS_CSV = RES / "10_temporal_scores" / "pathway_definitions.csv"
+LIANA_CSV = RES / "signaling_liana_pathways" / "liana_per_timepoint.csv"
+PATHWAY_CORRS_CSV = RES / "pathway_cross_lineage_corr" / "pathway_correlations.csv"
+PATHWAY_DEFS_CSV = RES / "pathway_temporal_scores" / "pathway_definitions.csv"
 
-OUTPUT_DIR = RES / "12_liana_signaling"
+OUTPUT_DIR = RES / "signaling_liana_pathways"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 RAW_PATH = OUTPUT_DIR / "signaling_edges_raw.csv"
 SUMMARY_PATH = OUTPUT_DIR / "signaling_edges_summary.csv"

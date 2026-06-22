@@ -13,7 +13,11 @@ Same-tissue edges (PBMC→PBMC, CSF→CSF, TP→TP) capture within-tissue
 phenotype switches at consecutive timepoints; cross-tissue edges capture
 the inter-compartment trajectory.
 
-Outputs go to ``results/06g_bayesian_sankey/``.
+Empirical sankeys/heatmaps and Bayesian-vs-empirical diffs live in their
+own pipeline step (``pipeline/traffic_empirical_sankey.py`` →
+``results/traffic_empirical_sankey/``).
+
+Outputs go to ``results/traffic_bayesian_sankey/``.
 """
 import sys
 import time
@@ -42,17 +46,17 @@ from modules.style import (  # noqa: E402
 
 from trafficking.inference import run_inference  # noqa: E402
 from trafficking.data import _clean_tcr  # noqa: E402
+from trafficking.plate import render_transition_plate  # noqa: E402
 
 
 # %%
 # ---- Config ----
 from modules import paths  # noqa: E402
 
-DATA_PATH = paths.H5AD_TCELLS
-OUT_DIR = REPO_ROOT / "results" / "06g_bayesian_sankey"
-OUT_DIR.mkdir(parents=True, exist_ok=True)
+DATA_PATH = paths.H5AD_TCELLS  # singlets (post-Scrublet)
+OUT_DIR = paths.BAYESIAN_SANKEY_DIR
 SANKEY_DIR = OUT_DIR / "sankey_individual"
-SANKEY_DIR.mkdir(parents=True, exist_ok=True)
+paths.ensure(OUT_DIR, SANKEY_DIR)
 
 TISSUES = ("PBMC", "CSF", "TP")
 EDGES = [
@@ -65,6 +69,19 @@ N_STEPS = 2000
 LR = 0.01
 N_SAMPLES = 1000
 HIERARCHICAL = True
+
+# Plate diagram of the exact Bayesian model implemented in `trafficking/model.py`.
+# This is quick and writes once per run.
+try:
+    render_transition_plate(
+        hierarchical=HIERARCHICAL,
+        include_dest_fracs=True,
+        out=OUT_DIR / "plate_transition_model",
+        formats=("png", "pdf"),
+    )
+    print(f"Wrote plate diagram: {OUT_DIR / 'plate_transition_model.png'}")
+except Exception as e:
+    print(f"WARNING: could not render plate diagram: {e}")
 
 LINK_THRESHOLD = 0.02  # Sankey link cutoff
 HEATMAP_VMAX = 0.5
@@ -803,391 +820,6 @@ pd.DataFrame(global_depleted, columns=enrich_cols).to_csv(
     OUT_DIR / "top_depleted.csv", index=False)
 print(f"\nWrote top_enriched.csv ({len(global_enriched)} rows), "
       f"top_depleted.csv ({len(global_depleted)} rows)")
-
-
-# %%
-# ==================================================================
-# Step 6A: extract empirical P sub-blocks (row-normalised) per (lineage, edge)
-# ==================================================================
-# Ground truth for comparison: the empirical 3K×3K transition matrix from
-# pipeline/06c_empirical_Q.py. For each directed edge (t1, t2) we lift the
-# K×K block whose rows are {t1}__{phenotype} and columns are
-# {t2}__{phenotype}, then row-normalise it so it's directly comparable to
-# the Bayesian T_global (which is row-stochastic).
-from scipy.stats import pearsonr, spearmanr  # noqa: E402
-
-print("\n=== Step 6A: empirical P sub-block extraction ===")
-P_EMP_PATH = REPO_ROOT / "results" / "06c_empirical_Q" / "P_empirical.csv"
-if P_EMP_PATH.exists():
-    HAS_EMPIRICAL = True
-    P_emp_df = pd.read_csv(P_EMP_PATH, index_col=0)
-    print(f"  loaded {P_EMP_PATH.name}: shape {P_emp_df.shape}")
-else:
-    HAS_EMPIRICAL = False
-    print(f"  WARNING: {P_EMP_PATH} not found — empirical comparison skipped.")
-
-
-def _lineage_phenotypes(lineage):
-    """Sorted short-phenotype list for a lineage (matches model output)."""
-    shorts = []
-    for full in TCELL_PHENOTYPE_ORDER:
-        if not full.startswith(lineage):
-            continue
-        shorts.append(full
-                      .replace("CD8_Activated_", "")
-                      .replace("CD8_Quiescent_", "")
-                      .replace("CD4_", ""))
-    return sorted(shorts)
-
-
-def _extract_empirical_subblock(P_emp_df, t1, t2, short_phenos):
-    """Row-normalised K×K sub-block of P_emp for (t1 → t2). Returns matrix
-    and a (K,) boolean array marking which source rows had any mass."""
-    full_phenos = [_short_to_full(p) for p in short_phenos]
-    row_labels = [f"{t1}__{p}" for p in full_phenos]
-    col_labels = [f"{t2}__{p}" for p in full_phenos]
-    K = len(short_phenos)
-    T_emp = np.zeros((K, K))
-    valid = np.zeros(K, dtype=bool)
-    for i, rl in enumerate(row_labels):
-        if rl not in P_emp_df.index:
-            continue
-        row = np.zeros(K)
-        for j, cl in enumerate(col_labels):
-            if cl in P_emp_df.columns:
-                row[j] = float(P_emp_df.at[rl, cl])
-        s = row.sum()
-        if s > 0:
-            T_emp[i] = row / s
-            valid[i] = True
-    return T_emp, valid
-
-
-empirical_results = {}
-if HAS_EMPIRICAL:
-    for lin in LINEAGES:
-        for (t1, t2) in EDGES:
-            if (lin, t1, t2) in bayes_results:
-                short_phenos = bayes_results[(lin, t1, t2)]["phenotypes"]
-            else:
-                short_phenos = _lineage_phenotypes(lin)
-            T_emp, valid = _extract_empirical_subblock(
-                P_emp_df, t1, t2, short_phenos)
-            src_weights_emp = _compute_src_weights(
-                adata, t1, lin, short_phenos)
-            empirical_results[(lin, t1, t2)] = {
-                "T_empirical": T_emp,
-                "phenotypes": short_phenos,
-                "valid_rows": valid,
-                "src_weights": src_weights_emp,
-            }
-            tag = f"{lin}_{t1}_to_{t2}"
-            pd.DataFrame(T_emp, index=short_phenos, columns=short_phenos) \
-              .rename_axis(index="source", columns="destination") \
-              .to_csv(OUT_DIR / f"T_empirical_{tag}.csv")
-
-
-# %%
-# ---- Step 6 (compare): Bayesian T vs empirical sub-block ----
-emp_summary_rows = []
-if HAS_EMPIRICAL:
-    print("\n  Bayesian vs empirical — flattened-matrix correlation:")
-    print(f"  {'edge':<22s} {'pearson':>8s} {'spearman':>9s} "
-          f"{'frob':>8s} {'max|d|':>8s}  top-diff")
-    for (lin, t1, t2), bres in bayes_results.items():
-        eres = empirical_results.get((lin, t1, t2))
-        if eres is None:
-            continue
-        T_b = bres["T_mean"]
-        T_e = eres["T_empirical"]
-        if T_b.shape != T_e.shape:
-            print(f"  shape mismatch {lin} {t1}->{t2}: "
-                  f"{T_b.shape} vs {T_e.shape} — skip")
-            continue
-
-        b_flat = T_b.flatten()
-        e_flat = T_e.flatten()
-        if np.std(b_flat) == 0 or np.std(e_flat) == 0:
-            r_p = p_p = r_s = p_s = float("nan")
-        else:
-            r_p, p_p = pearsonr(b_flat, e_flat)
-            r_s, p_s = spearmanr(b_flat, e_flat)
-        frob = float(np.linalg.norm(T_b - T_e))
-        diff = T_b - T_e
-        max_abs_diff = float(np.abs(diff).max())
-        mi, mj = np.unravel_index(np.argmax(np.abs(diff)), diff.shape)
-        phenos = eres["phenotypes"]
-        max_entry = f"{phenos[int(mi)]}->{phenos[int(mj)]}"
-        sign = "+" if diff[mi, mj] >= 0 else "-"
-
-        tag = f"{lin}_{t1}_to_{t2}"
-        pd.DataFrame(diff, index=phenos, columns=phenos) \
-          .rename_axis(index="source", columns="destination") \
-          .to_csv(OUT_DIR / f"diff_{tag}.csv")
-
-        emp_summary_rows.append({
-            "lineage": lin, "t1": t1, "t2": t2,
-            "pearson_r": float(r_p), "pearson_p": float(p_p),
-            "spearman_r": float(r_s), "spearman_p": float(p_s),
-            "frobenius_distance": frob,
-            "max_abs_diff": max_abs_diff,
-            "max_diff_entry": max_entry,
-            "max_diff_sign": sign,
-            "max_diff_value": float(diff[mi, mj]),
-        })
-        print(f"  {lin+' '+t1+'->'+t2:<22s} {r_p:>8.3f} {r_s:>9.3f} "
-              f"{frob:>8.3f} {max_abs_diff:>8.3f}  "
-              f"{sign}{max_abs_diff:.3f} @ {max_entry}")
-
-    pd.DataFrame(emp_summary_rows).to_csv(
-        OUT_DIR / "empirical_vs_bayesian_summary.csv", index=False)
-    print(f"\n  wrote empirical_vs_bayesian_summary.csv "
-          f"({len(emp_summary_rows)} rows)")
-
-
-# %%
-# ---- Step 6B: empirical Sankey figures (one composed grid per lineage) ----
-sankey_emp_png_paths = {}
-if HAS_EMPIRICAL and HAS_PLOTLY:
-    print("\nBuilding empirical Sankey diagrams...")
-    for (lin, t1, t2), eres in empirical_results.items():
-        T_emp = eres["T_empirical"]
-        if T_emp.sum() == 0:
-            continue
-        tag = f"{lin}_{t1}_to_{t2}"
-        fig = build_sankey_fig(T_emp, eres["phenotypes"], t1, t2,
-                               src_weights=eres.get("src_weights"))
-        html_path = SANKEY_DIR / f"sankey_empirical_{tag}.html"
-        fig.write_html(str(html_path),
-                       include_plotlyjs="cdn", full_html=True)
-        if HAS_KALEIDO:
-            png_path = SANKEY_DIR / f"sankey_empirical_{tag}.png"
-            try:
-                fig.write_image(str(png_path), width=520, height=420, scale=2)
-                sankey_emp_png_paths[(lin, t1, t2)] = png_path
-            except Exception as e:
-                print(f"  [{tag}] PNG export failed: {e}")
-    print(f"  wrote {len(sankey_emp_png_paths)} empirical Sankey PNGs to "
-          f"{SANKEY_DIR}")
-
-if HAS_EMPIRICAL and HAS_PLOTLY and HAS_KALEIDO and sankey_emp_png_paths:
-    from PIL import Image
-    print("\nComposing empirical Sankey grids...")
-    for lin in LINEAGES:
-        fig, axes = plt.subplots(3, 3, figsize=(18, 16))
-        for (t1, t2) in EDGES:
-            r, c = TISSUES.index(t1), TISSUES.index(t2)
-            ax = axes[r, c]
-            ax.set_xticks([]); ax.set_yticks([])
-            for s in ("top", "right", "bottom", "left"):
-                ax.spines[s].set_visible(False)
-            png = sankey_emp_png_paths.get((lin, t1, t2))
-            if png is None or not png.exists():
-                ax.text(0.5, 0.5, "no data", ha="center", va="center",
-                         fontsize=14, color="dimgray",
-                         transform=ax.transAxes)
-                if t1 == t2:
-                    ax.add_patch(Rectangle(
-                        (0, 0), 1, 1, transform=ax.transAxes,
-                        facecolor=TISSUE_COLORS.get(t1, "gray"),
-                        alpha=0.05, zorder=0))
-                continue
-            img = Image.open(png)
-            ax.imshow(img)
-            if t1 == t2:
-                ax.add_patch(Rectangle(
-                    (0, 0), 1, 1, transform=ax.transAxes,
-                    facecolor=TISSUE_COLORS.get(t1, "gray"),
-                    alpha=0.05, zorder=-1))
-        _set_row_col_labels(fig, axes, panel_size=None,
-                             title=f"{lin} phenotype transitions — "
-                                   f"Empirical P sub-blocks")
-        fig.tight_layout(rect=(0.02, 0, 1, 0.96))
-        fig.savefig(OUT_DIR / f"sankey_empirical_{lin}.png",
-                     dpi=DPI, bbox_inches="tight")
-        fig.savefig(OUT_DIR / f"sankey_empirical_{lin}.pdf",
-                     bbox_inches="tight")
-        plt.close(fig)
-        print(f"  wrote sankey_empirical_{lin}.png/.pdf")
-
-
-# %%
-# ---- Step 6C: empirical heatmap grid per lineage ----
-if HAS_EMPIRICAL:
-    print("\nGenerating empirical heatmap grids...")
-    for lin in LINEAGES:
-        fig, axes = plt.subplots(3, 3, figsize=(15, 14))
-        valid_im = None
-        for (t1, t2) in EDGES:
-            r, c = TISSUES.index(t1), TISSUES.index(t2)
-            ax = axes[r, c]
-            ax.set_xticks([]); ax.set_yticks([])
-            for s in ("top", "right", "bottom", "left"):
-                ax.spines[s].set_visible(False)
-            if t1 == t2:
-                ax.add_patch(Rectangle(
-                    (0, 0), 1, 1, transform=ax.transAxes,
-                    facecolor=TISSUE_COLORS.get(t1, "gray"),
-                    alpha=0.05, zorder=-1))
-            eres = empirical_results.get((lin, t1, t2))
-            if eres is None or eres["T_empirical"].sum() == 0:
-                ax.text(0.5, 0.5, "no data", ha="center", va="center",
-                         fontsize=12, color="dimgray",
-                         transform=ax.transAxes)
-                ax.set_title(f"{t1} → {t2}", fontsize=10, fontweight="bold",
-                              color=TISSUE_COLORS.get(t2, "black"), pad=4)
-                continue
-            T_e = eres["T_empirical"]
-            phenos = eres["phenotypes"]
-            K = len(phenos)
-            im = ax.imshow(T_e, cmap="YlOrRd", vmin=0.0,
-                            vmax=HEATMAP_VMAX, aspect="equal")
-            valid_im = im
-            ax.set_xticks(range(K))
-            ax.set_xticklabels([_pheno_label(p) for p in phenos],
-                                rotation=60, ha="right", fontsize=6)
-            for tick, p in zip(ax.get_xticklabels(), phenos):
-                tick.set_color(_pheno_color(p))
-            ax.set_yticks(range(K))
-            ax.set_yticklabels([_pheno_label(p) for p in phenos], fontsize=6)
-            for tick, p in zip(ax.get_yticklabels(), phenos):
-                tick.set_color(_pheno_color(p))
-                tick.set_fontweight("bold")
-            ax.set_title(f"{t1} → {t2}", fontsize=10, fontweight="bold",
-                          color=TISSUE_COLORS.get(t2, "black"), pad=4)
-            for i in range(K):
-                for j in range(K):
-                    v = float(T_e[i, j])
-                    if v < HEATMAP_ANNOT_THRESH:
-                        continue
-                    rgba = im.cmap(im.norm(v))
-                    lum = 0.299 * rgba[0] + 0.587 * rgba[1] + 0.114 * rgba[2]
-                    tc = "white" if lum < 0.5 else "black"
-                    weight = "bold" if i == j else "normal"
-                    ax.text(j, i, f"{v:.2f}", ha="center", va="center",
-                             fontsize=5, color=tc, fontweight=weight)
-            ax.tick_params(length=0)
-            _add_src_marginal_bar(ax, eres.get("src_weights"), phenos)
-
-        for r_idx, src_tis in enumerate(TISSUES):
-            axes[r_idx, 0].set_ylabel(f"Source: {src_tis}", fontsize=11,
-                                        fontweight="bold",
-                                        color=TISSUE_COLORS.get(src_tis,
-                                                                "black"),
-                                        labelpad=14)
-        for c_idx, dst_tis in enumerate(TISSUES):
-            axes[0, c_idx].text(0.5, 1.18, f"Dest: {dst_tis}",
-                                  transform=axes[0, c_idx].transAxes,
-                                  ha="center", va="bottom",
-                                  fontsize=11, fontweight="bold",
-                                  color=TISSUE_COLORS.get(dst_tis, "black"))
-        fig.suptitle(f"{lin} phenotype transitions — Empirical P sub-blocks",
-                      fontsize=14, fontweight="bold")
-        if valid_im is not None:
-            cbar = fig.colorbar(valid_im, ax=axes.ravel().tolist(),
-                                 fraction=0.025, pad=0.02)
-            cbar.set_label("P(source → destination), row-normalised",
-                            fontsize=10)
-        fig.savefig(OUT_DIR / f"heatmap_empirical_{lin}.png",
-                     dpi=DPI, bbox_inches="tight")
-        fig.savefig(OUT_DIR / f"heatmap_empirical_{lin}.pdf",
-                     bbox_inches="tight")
-        plt.close(fig)
-        print(f"  wrote heatmap_empirical_{lin}.png/.pdf")
-
-
-# %%
-# ---- Step 6D: difference heatmap (Bayesian − Empirical) per lineage ----
-if HAS_EMPIRICAL:
-    print("\nGenerating Bayesian − Empirical difference heatmaps...")
-    DIFF_VMIN, DIFF_VMAX = -0.3, 0.3
-    DIFF_ANNOT_THRESH = 0.05
-    for lin in LINEAGES:
-        fig, axes = plt.subplots(3, 3, figsize=(15, 14))
-        valid_im = None
-        for (t1, t2) in EDGES:
-            r, c = TISSUES.index(t1), TISSUES.index(t2)
-            ax = axes[r, c]
-            ax.set_xticks([]); ax.set_yticks([])
-            for s in ("top", "right", "bottom", "left"):
-                ax.spines[s].set_visible(False)
-            if t1 == t2:
-                ax.add_patch(Rectangle(
-                    (0, 0), 1, 1, transform=ax.transAxes,
-                    facecolor=TISSUE_COLORS.get(t1, "gray"),
-                    alpha=0.05, zorder=-1))
-            bres = bayes_results.get((lin, t1, t2))
-            eres = empirical_results.get((lin, t1, t2))
-            if (bres is None or eres is None
-                    or eres["T_empirical"].sum() == 0):
-                ax.text(0.5, 0.5, "no data", ha="center", va="center",
-                         fontsize=12, color="dimgray",
-                         transform=ax.transAxes)
-                ax.set_title(f"{t1} → {t2}", fontsize=10, fontweight="bold",
-                              color=TISSUE_COLORS.get(t2, "black"), pad=4)
-                continue
-            T_b = bres["T_mean"]
-            T_e = eres["T_empirical"]
-            if T_b.shape != T_e.shape:
-                ax.text(0.5, 0.5, "shape mismatch", ha="center", va="center",
-                         fontsize=10, color="dimgray",
-                         transform=ax.transAxes)
-                continue
-            diff = T_b - T_e
-            phenos = eres["phenotypes"]
-            K = len(phenos)
-            im = ax.imshow(diff, cmap="RdBu_r", vmin=DIFF_VMIN, vmax=DIFF_VMAX,
-                            aspect="equal")
-            valid_im = im
-            ax.set_xticks(range(K))
-            ax.set_xticklabels([_pheno_label(p) for p in phenos],
-                                rotation=60, ha="right", fontsize=6)
-            for tick, p in zip(ax.get_xticklabels(), phenos):
-                tick.set_color(_pheno_color(p))
-            ax.set_yticks(range(K))
-            ax.set_yticklabels([_pheno_label(p) for p in phenos], fontsize=6)
-            for tick, p in zip(ax.get_yticklabels(), phenos):
-                tick.set_color(_pheno_color(p))
-                tick.set_fontweight("bold")
-            ax.set_title(f"{t1} → {t2}", fontsize=10, fontweight="bold",
-                          color=TISSUE_COLORS.get(t2, "black"), pad=4)
-            for i in range(K):
-                for j in range(K):
-                    v = float(diff[i, j])
-                    if abs(v) < DIFF_ANNOT_THRESH:
-                        continue
-                    tc = "white" if abs(v) > 0.2 else "black"
-                    fw = "bold" if abs(v) > 0.15 else "normal"
-                    ax.text(j, i, f"{v:+.2f}", ha="center", va="center",
-                             fontsize=5, color=tc, fontweight=fw)
-            ax.tick_params(length=0)
-            _add_src_marginal_bar(ax, bres.get("src_weights"), phenos)
-
-        for r_idx, src_tis in enumerate(TISSUES):
-            axes[r_idx, 0].set_ylabel(f"Source: {src_tis}", fontsize=11,
-                                        fontweight="bold",
-                                        color=TISSUE_COLORS.get(src_tis,
-                                                                "black"),
-                                        labelpad=14)
-        for c_idx, dst_tis in enumerate(TISSUES):
-            axes[0, c_idx].text(0.5, 1.18, f"Dest: {dst_tis}",
-                                  transform=axes[0, c_idx].transAxes,
-                                  ha="center", va="bottom",
-                                  fontsize=11, fontweight="bold",
-                                  color=TISSUE_COLORS.get(dst_tis, "black"))
-        fig.suptitle(
-            f"{lin} Bayesian minus Empirical (red = Bayesian higher)",
-            fontsize=14, fontweight="bold")
-        if valid_im is not None:
-            cbar = fig.colorbar(valid_im, ax=axes.ravel().tolist(),
-                                 fraction=0.025, pad=0.02)
-            cbar.set_label("T_Bayesian − T_empirical", fontsize=10)
-        fig.savefig(OUT_DIR / f"diff_bayesian_empirical_{lin}.png",
-                     dpi=DPI, bbox_inches="tight")
-        fig.savefig(OUT_DIR / f"diff_bayesian_empirical_{lin}.pdf",
-                     bbox_inches="tight")
-        plt.close(fig)
-        print(f"  wrote diff_bayesian_empirical_{lin}.png/.pdf")
 
 
 print(f"\nDone. All outputs in: {OUT_DIR}")

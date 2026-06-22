@@ -11,12 +11,12 @@ See [`AUDIT.md`](AUDIT.md) for lineage and TCR constraints.
 ## Tiers
 
 - **qc**: `qc_scrublet_doublets`
-- **pathway_tcell**: `pathway_coenrichment_graph`, `pathway_de_gsea_prerank`, `pathway_proximity_network`, `pathway_temporal_scores_tcell`, `pathway_tissue_ternary`
+- **pathway_tcell**: `pathway_coenrichment_graph`, `pathway_de_gsea_prerank`, `pathway_entry_signature`, `pathway_klf6_analysis`, `pathway_migration_signature_ot`, `pathway_motility_traffic`, `pathway_proximity_network`, `pathway_temporal_scores_tcell`, `pathway_tissue_ternary`
 - **pathway_myeloid**: `pathway_de_gsea_myeloid`, `pathway_temporal_scores_myeloid`, `traffic_tissue_separability_myeloid`, `traffic_transcriptome_cosine_myeloid`
 - **pathway_cross**: `pathway_cross_lineage_corr`, `pathway_cross_lineage_corr_fine`
-- **traffic_tcr**: `traffic_archetype_graphs`, `traffic_archetypes`, `traffic_bayesian_comparison`, `traffic_bayesian_sankey`, `traffic_branch_dispersion`, `traffic_branch_dispersion_jsd`, `traffic_branch_dispersion_switching`, `traffic_branch_dispersion_temporal`, `traffic_branch_empirics`, `traffic_clonal_persistence`, `traffic_clonality`, `traffic_migration_rates`, `traffic_migration_rates_figures`, `traffic_migration_rates_per_tp`, `traffic_phenotype_degs`, `traffic_pseudotime_phenotypes_cd4`, `traffic_pseudotime_phenotypes_cd8`, `traffic_temporal_trajectories`, `traffic_tissue_separability`, `traffic_transcriptome_cosine`
+- **traffic_tcr**: `traffic_archetype_graphs`, `traffic_archetypes`, `traffic_bayesian_comparison`, `traffic_bayesian_sankey`, `traffic_branch_dispersion`, `traffic_branch_dispersion_jsd`, `traffic_branch_dispersion_switching`, `traffic_branch_dispersion_temporal`, `traffic_branch_empirics`, `traffic_clonal_persistence`, `traffic_clonality`, `traffic_drainage_rewiring`, `traffic_empirical_sankey`, `traffic_migration_rates`, `traffic_migration_rates_figures`, `traffic_migration_rates_per_tp`, `traffic_phenotype_degs`, `traffic_pseudotime_phenotypes_cd4`, `traffic_pseudotime_phenotypes_cd8`, `traffic_temporal_trajectories`, `traffic_tissue_separability`, `traffic_transcriptome_cosine`
 - **signaling**: `signaling_branch_intersection`, `signaling_intersect_pathways`, `signaling_liana_pathways`
-- **figures**: `figure_main2_trafficking`
+- **figures**: `figure_cd8_drainage_integrated`, `figure_main2_trafficking`
 - **explorers**: `explorer_clone_network`, `explorer_full_report`, `explorer_signaling`, `explorer_temporal`, `viewer_landing`
 
 ## Graph
@@ -27,12 +27,17 @@ flowchart TD
     explorer_full_report["explorer full report"]:::explorer
     explorer_signaling["explorer signaling"]:::explorer
     explorer_temporal["explorer temporal"]:::explorer
+    figure_cd8_drainage_integrated["figure cd8 drainage integrated"]:::figure
     figure_main2_trafficking["figure main2 trafficking"]:::figure
     pathway_coenrichment_graph["pathway coenrichment graph"]:::pathway
     pathway_cross_lineage_corr["pathway cross lineage corr"]:::pathway
     pathway_cross_lineage_corr_fine["pathway cross lineage corr fine"]:::pathway
     pathway_de_gsea_myeloid["pathway de gsea myeloid"]:::pathway
     pathway_de_gsea_prerank["pathway de gsea prerank"]:::pathway
+    pathway_entry_signature["pathway entry signature"]:::pathway
+    pathway_klf6_analysis["pathway klf6 analysis"]:::pathway
+    pathway_migration_signature_ot["pathway migration signature ot"]:::pathway
+    pathway_motility_traffic["pathway motility traffic"]:::pathway
     pathway_proximity_network["pathway proximity network"]:::pathway
     pathway_temporal_scores_myeloid["pathway temporal scores myeloid"]:::pathway
     pathway_temporal_scores_tcell["pathway temporal scores tcell"]:::pathway
@@ -52,6 +57,8 @@ flowchart TD
     traffic_branch_empirics["traffic branch empirics"]:::traffic
     traffic_clonal_persistence["traffic clonal persistence"]:::traffic
     traffic_clonality["traffic clonality"]:::traffic
+    traffic_drainage_rewiring["traffic drainage rewiring"]:::traffic
+    traffic_empirical_sankey["traffic empirical sankey"]:::traffic
     traffic_migration_rates["traffic migration rates"]:::traffic
     traffic_migration_rates_figures["traffic migration rates figures"]:::traffic
     traffic_migration_rates_per_tp["traffic migration rates per tp"]:::traffic
@@ -70,6 +77,9 @@ flowchart TD
     pathway_cross_lineage_corr --> explorer_signaling
     pathway_temporal_scores_tcell --> explorer_temporal
     pathway_temporal_scores_myeloid --> explorer_temporal
+    traffic_archetype_graphs --> figure_cd8_drainage_integrated
+    traffic_drainage_rewiring --> figure_cd8_drainage_integrated
+    traffic_bayesian_sankey --> figure_cd8_drainage_integrated
     qc_scrublet_doublets --> figure_main2_trafficking
     traffic_migration_rates --> figure_main2_trafficking
     traffic_migration_rates_per_tp --> figure_main2_trafficking
@@ -80,6 +90,11 @@ flowchart TD
     pathway_temporal_scores_tcell --> pathway_cross_lineage_corr_fine
     pathway_temporal_scores_myeloid --> pathway_cross_lineage_corr_fine
     qc_scrublet_doublets --> pathway_de_gsea_prerank
+    qc_scrublet_doublets --> pathway_entry_signature
+    qc_scrublet_doublets --> pathway_klf6_analysis
+    traffic_drainage_rewiring --> pathway_migration_signature_ot
+    qc_scrublet_doublets --> pathway_motility_traffic
+    traffic_branch_empirics --> pathway_motility_traffic
     pathway_de_gsea_prerank --> pathway_proximity_network
     pathway_temporal_scores_tcell --> pathway_temporal_scores_myeloid
     qc_scrublet_doublets --> pathway_temporal_scores_tcell
@@ -93,7 +108,6 @@ flowchart TD
     qc_scrublet_doublets --> traffic_bayesian_comparison
     traffic_migration_rates --> traffic_bayesian_comparison
     qc_scrublet_doublets --> traffic_bayesian_sankey
-    traffic_migration_rates --> traffic_bayesian_sankey
     qc_scrublet_doublets --> traffic_branch_dispersion
     traffic_branch_empirics --> traffic_branch_dispersion_jsd
     traffic_branch_empirics --> traffic_branch_dispersion_switching
@@ -103,6 +117,10 @@ flowchart TD
     pathway_temporal_scores_myeloid --> traffic_branch_empirics
     qc_scrublet_doublets --> traffic_clonal_persistence
     qc_scrublet_doublets --> traffic_clonality
+    traffic_archetype_graphs --> traffic_drainage_rewiring
+    qc_scrublet_doublets --> traffic_empirical_sankey
+    traffic_migration_rates --> traffic_empirical_sankey
+    traffic_bayesian_sankey --> traffic_empirical_sankey
     qc_scrublet_doublets --> traffic_migration_rates
     traffic_migration_rates --> traffic_migration_rates_figures
     qc_scrublet_doublets --> traffic_migration_rates_per_tp
@@ -131,8 +149,11 @@ flowchart TD
 
 **Wave 1**
 - `pathway_de_gsea_prerank` — lineage: tcell
+- `pathway_entry_signature` — lineage: tcell (TCR)
+- `pathway_klf6_analysis` — lineage: tcell (TCR)
 - `pathway_temporal_scores_tcell` — lineage: tcell
 - `traffic_archetype_graphs` — lineage: na (TCR)
+- `traffic_bayesian_sankey` — lineage: na (TCR)
 - `traffic_branch_dispersion` — lineage: na (TCR)
 - `traffic_clonal_persistence` — lineage: na (TCR)
 - `traffic_clonality` — lineage: na (TCR)
@@ -152,19 +173,23 @@ flowchart TD
 - `pathway_tissue_ternary` — lineage: tcell
 - `traffic_archetypes` — lineage: na (TCR)
 - `traffic_bayesian_comparison` — lineage: na (TCR)
-- `traffic_bayesian_sankey` — lineage: na (TCR)
 - `traffic_branch_dispersion_temporal` — lineage: na (TCR)
+- `traffic_drainage_rewiring` — lineage: tcell (TCR)
+- `traffic_empirical_sankey` — lineage: na (TCR)
 - `traffic_migration_rates_figures` — lineage: na (TCR)
 - `traffic_phenotype_degs` — lineage: tcell
 
 **Wave 3**
 - `explorer_temporal` — lineage: tcell
+- `figure_cd8_drainage_integrated` — lineage: tcell (TCR)
 - `pathway_cross_lineage_corr` — lineage: cross
 - `pathway_cross_lineage_corr_fine` — lineage: cross
+- `pathway_migration_signature_ot` — lineage: tcell (TCR)
 - `traffic_branch_empirics` — lineage: tcell (TCR)
 
 **Wave 4**
 - `explorer_clone_network` — lineage: both
+- `pathway_motility_traffic` — lineage: tcell (TCR)
 - `signaling_liana_pathways` — lineage: both
 - `traffic_branch_dispersion_jsd` — lineage: na (TCR)
 - `traffic_branch_dispersion_switching` — lineage: na (TCR)
@@ -184,42 +209,49 @@ flowchart TD
 | `explorer_full_report` | `viewers/build/report.py` | explorers | both | `deploy/bundle/report/index.html` |
 | `explorer_signaling` | `viewers/build/signaling.py` | explorers | both | `deploy/bundle/signaling.html` |
 | `explorer_temporal` | `viewers/build/temporal.py` | explorers | tcell | `deploy/bundle/temporal.html` |
-| `figure_main2_trafficking` | `figure_main2_trafficking.py` | figures | tcell | `results/07_figure2/figure2.png` |
-| `pathway_coenrichment_graph` | `pathway_coenrichment_graph.py` | pathway_tcell | tcell | `results/04_pseudobulk_de_gsea/pathway_coenrichment_GO_Biological_Process_2023.png` |
-| `pathway_cross_lineage_corr` | `pathway_cross_lineage_corr.py` | pathway_cross | cross | `results/11_cross_lineage_correlations/pathway_correlations.csv` |
-| `pathway_cross_lineage_corr_fine` | `pathway_cross_lineage_corr_fine.py` | pathway_cross | cross | `results/11_cross_lineage_correlations/phenotype_correlations.csv` |
-| `pathway_de_gsea_myeloid` | `pathway_de_gsea_myeloid.py` | pathway_myeloid | myeloid | `results/04_pseudobulk_de_gsea_myeloid/sample_pseudobulk_gsea_summary.csv` |
-| `pathway_de_gsea_prerank` | `pathway_de_gsea_prerank.py` | pathway_tcell | tcell | `results/04_pseudobulk_de_gsea/clone_pseudobulk_gsea_dotheatmap_GO_Biological_Process_2023.png` |
-| `pathway_proximity_network` | `pathway_proximity_network.py` | pathway_tcell | tcell | `results/04_pseudobulk_de_gsea/networks/network_gobp_CD8.png` |
-| `pathway_temporal_scores_myeloid` | `pathway_temporal_scores_myeloid.py` | pathway_myeloid | myeloid | `results/10_temporal_scores/temporal_composition_myeloid.csv` |
-| `pathway_temporal_scores_tcell` | `pathway_temporal_scores_tcell.py` | pathway_tcell | tcell | `results/10_temporal_scores/pathway_definitions.csv` |
-| `pathway_tissue_ternary` | `pathway_tissue_ternary.py` | pathway_tcell | tcell | `results/04_pseudobulk_de_gsea/pathway_ternary_GO_Biological_Process_2023_zscore.png` |
+| `figure_cd8_drainage_integrated` | `figure_cd8_drainage_integrated.py` | figures | tcell | `results/figure_cd8_drainage_integrated/events_meta.csv` |
+| `figure_main2_trafficking` | `figure_main2_trafficking.py` | figures | tcell | `results/figure_main2_trafficking/figure2.png` |
+| `pathway_coenrichment_graph` | `pathway_coenrichment_graph.py` | pathway_tcell | tcell | `results/pathway_de_gsea/pathway_coenrichment_GO_Biological_Process_2023.png` |
+| `pathway_cross_lineage_corr` | `pathway_cross_lineage_corr.py` | pathway_cross | cross | `results/pathway_cross_lineage_corr/pathway_correlations.csv` |
+| `pathway_cross_lineage_corr_fine` | `pathway_cross_lineage_corr_fine.py` | pathway_cross | cross | `results/pathway_cross_lineage_corr/phenotype_correlations.csv` |
+| `pathway_de_gsea_myeloid` | `pathway_de_gsea_myeloid.py` | pathway_myeloid | myeloid | `results/pathway_de_gsea_myeloid/sample_pseudobulk_gsea_summary.csv` |
+| `pathway_de_gsea_prerank` | `pathway_de_gsea_prerank.py` | pathway_tcell | tcell | `results/pathway_de_gsea/clone_pseudobulk_gsea_dotheatmap_GO_Biological_Process_2023.png` |
+| `pathway_entry_signature` | `pathway_entry_signature.py` | pathway_tcell | tcell | `results/pathway_entry_signature/tp_class_labels.csv` |
+| `pathway_klf6_analysis` | `pathway_klf6_analysis.py` | pathway_tcell | tcell | `results/pathway_klf6_analysis/klf6_per_cell.csv` |
+| `pathway_migration_signature_ot` | `pathway_migration_signature_ot.py` | pathway_tcell | tcell | `results/pathway_migration_signature_ot/rewire_long_all_transitions.csv` |
+| `pathway_motility_traffic` | `pathway_motility_traffic.py` | pathway_tcell | tcell | `results/pathway_motility_traffic/motility_scores_per_edge.csv` |
+| `pathway_proximity_network` | `pathway_proximity_network.py` | pathway_tcell | tcell | `results/pathway_de_gsea/networks/network_gobp_CD8.png` |
+| `pathway_temporal_scores_myeloid` | `pathway_temporal_scores_myeloid.py` | pathway_myeloid | myeloid | `results/pathway_temporal_scores/temporal_composition_myeloid.csv` |
+| `pathway_temporal_scores_tcell` | `pathway_temporal_scores_tcell.py` | pathway_tcell | tcell | `results/pathway_temporal_scores/pathway_definitions.csv` |
+| `pathway_tissue_ternary` | `pathway_tissue_ternary.py` | pathway_tcell | tcell | `results/pathway_de_gsea/pathway_ternary_GO_Biological_Process_2023_zscore.png` |
 | `qc_scrublet_doublets` | `qc_scrublet_doublets.py` | qc | tcell | `data/objects/GBM_TCR_POS_TCELLS_singlets.h5ad` |
-| `signaling_branch_intersection` | `signaling_branch_intersection.py` | signaling | tcell | `results/06b_branch_signaling/branches.csv` |
-| `signaling_intersect_pathways` | `signaling_intersect_pathways.py` | signaling | both | `results/12_liana_signaling/signaling_edges_summary.csv` |
-| `signaling_liana_pathways` | `signaling_liana_pathways.py` | signaling | both | `results/12_liana_signaling/signaling_edges.csv` |
+| `signaling_branch_intersection` | `signaling_branch_intersection.py` | signaling | tcell | `results/signaling_branch_intersection/branches.csv` |
+| `signaling_intersect_pathways` | `signaling_intersect_pathways.py` | signaling | both | `results/signaling_liana_pathways/signaling_edges_summary.csv` |
+| `signaling_liana_pathways` | `signaling_liana_pathways.py` | signaling | both | `results/signaling_liana_pathways/signaling_edges.csv` |
 | `traffic_archetype_graphs` | `traffic_archetype_graphs.py` | traffic_tcr | na | `results/traffic_archetype_graphs/clone_archetypes.csv` |
 | `traffic_archetypes` | `traffic_archetypes.py` | traffic_tcr | na | `results/traffic_archetypes/clone_archetypes.csv` |
-| `traffic_bayesian_comparison` | `traffic_bayesian_comparison.py` | traffic_tcr | na | `results/06f_bayesian_comparison/bayesian_summary.csv` |
-| `traffic_bayesian_sankey` | `traffic_bayesian_sankey.py` | traffic_tcr | na | `results/06g_bayesian_sankey/empirical_vs_bayesian_summary.csv` |
-| `traffic_branch_dispersion` | `traffic_branch_dispersion.py` | traffic_tcr | na | `results/branch_dispersion/stayer_vs_mover_table.csv` |
-| `traffic_branch_dispersion_jsd` | `traffic_branch_dispersion_jsd.py` | traffic_tcr | na | `results/branch_dispersion_jsd/dispersion_summary.csv` |
-| `traffic_branch_dispersion_switching` | `traffic_branch_dispersion_switching.py` | traffic_tcr | na | `results/branch_dispersion_switching/switching_summary.csv` |
-| `traffic_branch_dispersion_temporal` | `traffic_branch_dispersion_temporal.py` | traffic_tcr | na | `results/branch_dispersion_temporal/render_check.txt` |
-| `traffic_branch_empirics` | `traffic_branch_empirics.py` | traffic_tcr | tcell | `results/06_branch_empirics/branch_empirics_main.png` |
-| `traffic_clonal_persistence` | `traffic_clonal_persistence.py` | traffic_tcr | na | `results/07_clonal_trafficking/cd8_clone_network.png` |
-| `traffic_clonality` | `traffic_clonality.py` | traffic_tcr | na | `results/clonality/clonality_summary.png` |
-| `traffic_migration_rates` | `traffic_migration_rates.py` | traffic_tcr | na | `results/06c_empirical_Q/P_empirical.csv` |
-| `traffic_migration_rates_figures` | `traffic_migration_rates_figures.py` | traffic_tcr | na | `results/06c_empirical_Q/figures/migration_heatmap.png` |
-| `traffic_migration_rates_per_tp` | `traffic_migration_rates_per_tp.py` | traffic_tcr | na | `results/06d_empirical_Q_per_timepoint/block_retention_per_timepoint.csv` |
-| `traffic_phenotype_degs` | `traffic_phenotype_degs.py` | traffic_tcr | tcell | `results/14_phenotype_degs/summary.csv` |
-| `traffic_pseudotime_phenotypes_cd4` | `traffic_pseudotime_phenotypes.py` | traffic_tcr | tcell | `results/13_pseudotime_phenotypes/CD4/fig3_pseudotime_profiles_CD4.png` |
-| `traffic_pseudotime_phenotypes_cd8` | `traffic_pseudotime_phenotypes.py` | traffic_tcr | tcell | `results/13_pseudotime_phenotypes/CD8/fig3_pseudotime_profiles_CD8.png` |
-| `traffic_temporal_trajectories` | `traffic_temporal_trajectories.py` | traffic_tcr | na | `results/09_temporal/pathway_scores_per_pseudobulk.csv` |
-| `traffic_tissue_separability` | `traffic_tissue_separability.py` | traffic_tcr | tcell | `results/03_tissue_separability/augur_results_cache.pkl` |
-| `traffic_tissue_separability_myeloid` | `traffic_tissue_separability.py` | pathway_myeloid | myeloid | `results/03_tissue_separability_myeloid/augur_results_cache.pkl` |
-| `traffic_transcriptome_cosine` | `traffic_transcriptome_cosine.py` | traffic_tcr | tcell | `results/transcriptome_similarity/cosine_distance_summary.csv` |
-| `traffic_transcriptome_cosine_myeloid` | `traffic_transcriptome_cosine.py` | pathway_myeloid | myeloid | `results/transcriptome_similarity_myeloid/cosine_distance_summary.csv` |
+| `traffic_bayesian_comparison` | `traffic_bayesian_comparison.py` | traffic_tcr | na | `results/traffic_bayesian_comparison/bayesian_summary.csv` |
+| `traffic_bayesian_sankey` | `traffic_bayesian_sankey.py` | traffic_tcr | na | `results/traffic_bayesian_sankey/fit_summary.csv` |
+| `traffic_branch_dispersion` | `traffic_branch_dispersion.py` | traffic_tcr | na | `results/traffic_branch_dispersion/stayer_vs_mover_table.csv` |
+| `traffic_branch_dispersion_jsd` | `traffic_branch_dispersion_jsd.py` | traffic_tcr | na | `results/traffic_branch_dispersion_jsd/dispersion_summary.csv` |
+| `traffic_branch_dispersion_switching` | `traffic_branch_dispersion_switching.py` | traffic_tcr | na | `results/traffic_branch_dispersion_switching/switching_summary.csv` |
+| `traffic_branch_dispersion_temporal` | `traffic_branch_dispersion_temporal.py` | traffic_tcr | na | `results/traffic_branch_dispersion_temporal/render_check.txt` |
+| `traffic_branch_empirics` | `traffic_branch_empirics.py` | traffic_tcr | tcell | `results/traffic_branch_empirics/branch_empirics_main.png` |
+| `traffic_clonal_persistence` | `traffic_clonal_persistence.py` | traffic_tcr | na | `results/traffic_clonal_persistence/cd8_clone_network.png` |
+| `traffic_clonality` | `traffic_clonality.py` | traffic_tcr | na | `results/traffic_clonality/clonality_summary.png` |
+| `traffic_drainage_rewiring` | `traffic_drainage_rewiring.py` | traffic_tcr | tcell | `results/traffic_drainage_rewiring/run_summary.csv` |
+| `traffic_empirical_sankey` | `traffic_empirical_sankey.py` | traffic_tcr | na | `results/traffic_empirical_sankey/heatmap_empirical_CD8.png` |
+| `traffic_migration_rates` | `traffic_migration_rates.py` | traffic_tcr | na | `results/traffic_migration_rates/P_empirical.csv` |
+| `traffic_migration_rates_figures` | `traffic_migration_rates_figures.py` | traffic_tcr | na | `results/traffic_migration_rates/figures/migration_heatmap.png` |
+| `traffic_migration_rates_per_tp` | `traffic_migration_rates_per_tp.py` | traffic_tcr | na | `results/traffic_migration_rates_per_tp/block_retention_per_timepoint.csv` |
+| `traffic_phenotype_degs` | `traffic_phenotype_degs.py` | traffic_tcr | tcell | `results/traffic_phenotype_degs/summary.csv` |
+| `traffic_pseudotime_phenotypes_cd4` | `traffic_pseudotime_phenotypes.py` | traffic_tcr | tcell | `results/traffic_pseudotime_phenotypes/CD4/fig3_pseudotime_profiles_CD4.png` |
+| `traffic_pseudotime_phenotypes_cd8` | `traffic_pseudotime_phenotypes.py` | traffic_tcr | tcell | `results/traffic_pseudotime_phenotypes/CD8/fig3_pseudotime_profiles_CD8.png` |
+| `traffic_temporal_trajectories` | `traffic_temporal_trajectories.py` | traffic_tcr | na | `results/traffic_temporal_trajectories/pathway_scores_per_pseudobulk.csv` |
+| `traffic_tissue_separability` | `traffic_tissue_separability.py` | traffic_tcr | tcell | `results/traffic_tissue_separability/augur_results_cache.pkl` |
+| `traffic_tissue_separability_myeloid` | `traffic_tissue_separability.py` | pathway_myeloid | myeloid | `results/traffic_tissue_separability_myeloid/augur_results_cache.pkl` |
+| `traffic_transcriptome_cosine` | `traffic_transcriptome_cosine.py` | traffic_tcr | tcell | `results/traffic_transcriptome_cosine/cosine_distance_summary.csv` |
+| `traffic_transcriptome_cosine_myeloid` | `traffic_transcriptome_cosine.py` | pathway_myeloid | myeloid | `results/traffic_transcriptome_cosine_myeloid/cosine_distance_summary.csv` |
 | `viewer_landing` | `viewers/build/landing.py` | explorers | both | `deploy/bundle/index.html` |
 
 ## Data prep (manual, not in Snakemake `all`)

@@ -20,14 +20,14 @@ New category definitions (Panel D, F):
 Reads:
   data/objects/GBM_TCR_POS_TCELLS_singlets.h5ad  (paths.H5AD_TCELLS)
   data/embeddings/X_umap.pkl
-  results/transcriptome_similarity/
+  results/traffic_transcriptome_cosine/
       cosine_distance_summary.csv                      (Panels B, C)
-  results/06c_empirical_Q/migration_rates.csv          (Panel G)
-  results/06c_empirical_Q/P_empirical.csv              (Panel G)
-  results/06d_empirical_Q_per_timepoint/
+  results/traffic_migration_rates/migration_rates.csv          (Panel G)
+  results/traffic_migration_rates/P_empirical.csv              (Panel G)
+  results/traffic_migration_rates_per_tp/
       block_retention_per_timepoint.csv                (Panel H)
 
-Writes to results/07_figure2/.
+Writes to results/figure_main2_trafficking/.
 """
 import pickle
 import sys
@@ -40,7 +40,9 @@ import numpy as np
 import pandas as pd
 import scanpy as sc
 import statsmodels.api as sm
-from matplotlib.patches import Circle, FancyArrowPatch, Rectangle
+from matplotlib.colors import to_rgb
+from matplotlib.patches import (Arc, Circle, FancyArrowPatch, Patch,
+                                 Polygon, Rectangle)
 from scipy.stats import gaussian_kde, mannwhitneyu
 from statsmodels.stats.multitest import multipletests
 
@@ -65,14 +67,14 @@ from modules import paths  # noqa: E402
 
 DATA_PATH = paths.H5AD_TCELLS
 UMAP_PATH = REPO_ROOT / "data" / "embeddings" / "X_umap.pkl"
-MIG_CSV = (REPO_ROOT / "results" / "06c_empirical_Q"
+MIG_CSV = (REPO_ROOT / "results" / "traffic_migration_rates"
            / "migration_rates.csv")
-P_EMP_CSV = REPO_ROOT / "results" / "06c_empirical_Q" / "P_empirical.csv"
-RETENTION_TS_CSV = (REPO_ROOT / "results" / "06d_empirical_Q_per_timepoint"
+P_EMP_CSV = REPO_ROOT / "results" / "traffic_migration_rates" / "P_empirical.csv"
+RETENTION_TS_CSV = (REPO_ROOT / "results" / "traffic_migration_rates_per_tp"
                     / "block_retention_per_timepoint.csv")
-COSINE_CSV = (REPO_ROOT / "results" / "transcriptome_similarity"
+COSINE_CSV = (REPO_ROOT / "results" / "traffic_transcriptome_cosine"
               / "cosine_distance_summary.csv")
-OUT_DIR = REPO_ROOT / "results" / "07_figure2"
+OUT_DIR = REPO_ROOT / "results" / "figure_main2_trafficking"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 TISSUES = list(TISSUE_ORDER)
@@ -99,7 +101,26 @@ TOP_N_PATHWAYS_I = 25
 MIN_CELLS_PSEUDOBULK_I = 5
 
 # Per-tissue sequential colormaps for the density panels.
-DENSITY_CMAPS = {"PBMC": "YlOrBr", "CSF": "OrRd", "TP": "YlGn"}
+# Custom white → tissue_color → tissue_color (darker) gradients so each
+# UMAP density matches its tissue's identity color.
+def _make_tissue_cmap(name, tissue_color):
+    """Build a 3-stop colormap: white → tissue color → darker tissue
+    shade, so the densest regions read as the saturated tissue color
+    without losing visibility at the high end."""
+    from matplotlib.colors import LinearSegmentedColormap, to_rgb
+    base = np.array(to_rgb(tissue_color))
+    # Darker endpoint: shift each channel ~35% toward black.
+    dark = tuple((base * 0.55).tolist())
+    return LinearSegmentedColormap.from_list(
+        name, [(1.0, 1.0, 1.0), tuple(base.tolist()), dark],
+        N=256,
+    )
+
+DENSITY_CMAPS = {
+    "PBMC": _make_tissue_cmap("PBMC_density", "#b2182b"),
+    "CSF":  _make_tissue_cmap("CSF_density",  "#2166ac"),
+    "TP":   _make_tissue_cmap("TP_density",   "#929292"),
+}
 
 try:
     from adjustText import adjust_text as _adjust_text_fn
@@ -239,14 +260,42 @@ if "umap_density_tissue" not in adata.obs:
 
 
 def _draw_panel_A(axes):
+    """UMAP density panels.
+
+    Two long-standing issues fixed here:
+
+    1. Data clipping. With `aspect='equal'` + the default
+       `adjustable='box'`, matplotlib shrinks the axes patch within
+       the slot but the rasterized scatter's clip box does not
+       reliably follow — points render in the figure margin around
+       the shrunken patch. Switching to `adjustable='datalim'` keeps
+       the axes box at full slot size and adapts the visible data
+       range to maintain the requested aspect; data is then properly
+       contained.
+
+    2. Filling the slot. Use the full UMAP data range (with a 2%
+       pad) rather than the [1, 99] percentile so no cloud points
+       are clipped off at the edges.
+    """
     dens_all = adata.obs["umap_density_tissue"].to_numpy(dtype=float)
-    x_lo, x_hi = np.percentile(umap[:, 0], [1, 99])
-    y_lo, y_hi = np.percentile(umap[:, 1], [1, 99])
+    x_min, x_max = float(umap[:, 0].min()), float(umap[:, 0].max())
+    y_min, y_max = float(umap[:, 1].min()), float(umap[:, 1].max())
+    x_pad = (x_max - x_min) * 0.02
+    y_pad = (y_max - y_min) * 0.02
+    x_lo, x_hi = x_min - x_pad, x_max + x_pad
+    y_lo, y_hi = y_min - y_pad, y_max + y_pad
+
     for ax, tis in zip(axes, TISSUES):
+        # Set limits + aspect FIRST, then draw — establishes the
+        # correct clip region before scatter is added.
+        ax.set_xlim(x_lo, x_hi)
+        ax.set_ylim(y_lo, y_hi)
+        ax.set_aspect("equal", adjustable="datalim")
+
         mask = (adata.obs["tissue"].astype(str) == tis).to_numpy()
         ax.scatter(umap[~mask, 0], umap[~mask, 1],
-                    s=1.0, c="#e8e8e8", alpha=0.40,
-                    edgecolors="none", rasterized=True)
+                   s=1.0, c="#e8e8e8", alpha=0.40,
+                   edgecolors="none", rasterized=True, clip_on=True)
         d_vals = dens_all[mask]
         if d_vals.size:
             vmax = float(np.nanpercentile(d_vals, 99))
@@ -255,25 +304,16 @@ def _draw_panel_A(axes):
             vmax = 1.0
         cmap = plt.get_cmap(DENSITY_CMAPS.get(tis, "Greys"))
         ax.scatter(umap[mask, 0], umap[mask, 1],
-                    c=d_vals, cmap=cmap, vmin=0.0, vmax=vmax,
-                    s=3.0, edgecolors="none", alpha=0.95,
-                    rasterized=True)
+                   c=d_vals, cmap=cmap, vmin=0.0, vmax=vmax,
+                   s=3.0, edgecolors="none", alpha=0.95,
+                   rasterized=True, clip_on=True)
         ax.set_xticks([]); ax.set_yticks([])
         for s in ("top", "right", "bottom", "left"):
             ax.spines[s].set_visible(False)
         ax.set_xlabel(""); ax.set_ylabel("")
-        ax.set_aspect("equal")
-        # Inline title inside axes top-left to avoid wasting vertical
-        # whitespace above the UMAP cloud.
-        ax.text(0.5, 0.98,
-                 f"{tis} (n={TISSUE_COUNTS[tis]:,})",
-                 transform=ax.transAxes,
-                 ha="center", va="top",
-                 fontsize=10, fontweight="bold",
-                 color=TISSUE_COLORS.get(tis, "black"))
-        ax.set_xlim(x_lo, x_hi)
-        ax.set_ylim(y_lo, y_hi)
-        ax.margins(0)
+        ax.set_title(f"{tis}  $\\mathit{{n = {TISSUE_COUNTS[tis]:,}}}$",
+                     fontsize=11, fontweight="bold", pad=4,
+                     color=TISSUE_COLORS.get(tis, "black"))
 
 
 # %%
@@ -284,7 +324,7 @@ print("\nPanels B/C: tissue similarity from cosine distances...")
 cosine_df = pd.read_csv(COSINE_CSV)
 
 
-def panel_tissue_triangle(ax, cosine_df):
+def panel_tissue_triangle(ax, cosine_df, show_legend=True):
     from matplotlib.patches import Patch
 
     matched = cosine_df[cosine_df["type"] == "matched"].copy()
@@ -375,19 +415,22 @@ def panel_tissue_triangle(ax, cosine_df):
                     fontsize=9, fontweight="bold",
                     color=TISSUE_COLORS[tis])
 
-    handles = [
-        Patch(facecolor=LINEAGE_COLORS["CD8"], edgecolor="none", label="CD8"),
-        Patch(facecolor=LINEAGE_COLORS["CD4"], edgecolor="none", label="CD4"),
-    ]
-    leg = ax.legend(handles=handles, loc="upper left",
-                    bbox_to_anchor=(0.0, 1.0),
-                    fontsize=7, frameon=False,
-                    handlelength=1.0, handleheight=1.0,
-                    handletextpad=0.4)
-    leg.set_zorder(6)
+    if show_legend:
+        handles = [
+            Patch(facecolor=LINEAGE_COLORS["CD8"], edgecolor="none",
+                  label="CD8"),
+            Patch(facecolor=LINEAGE_COLORS["CD4"], edgecolor="none",
+                  label="CD4"),
+        ]
+        leg = ax.legend(handles=handles, loc="upper left",
+                        bbox_to_anchor=(0.0, 1.0),
+                        fontsize=7, frameon=False,
+                        handlelength=1.0, handleheight=1.0,
+                        handletextpad=0.4)
+        leg.set_zorder(6)
 
 
-def panel_phenotype_divergence(ax, cosine_df):
+def panel_phenotype_divergence(ax, cosine_df, show_legend=True):
     from matplotlib.patches import Patch
 
     matched = cosine_df[cosine_df["type"] == "matched"]
@@ -458,18 +501,241 @@ def panel_phenotype_divergence(ax, cosine_df):
             ha="left", va="bottom", fontsize=9, fontweight="bold",
             color=TISSUE_COLORS["PBMC"])
 
-    handles = [
-        Patch(facecolor=LINEAGE_COLORS["CD8"], edgecolor="none",
-              label="CD8"),
-        Patch(facecolor=LINEAGE_COLORS["CD4"], edgecolor="none",
-              label="CD4"),
-    ]
-    leg = ax.legend(handles=handles, loc="upper right",
-                    fontsize=7, frameon=False,
-                    handlelength=1.0, handleheight=1.0,
-                    handletextpad=0.4)
-    leg.set_zorder(6)
+    if show_legend:
+        handles = [
+            Patch(facecolor=LINEAGE_COLORS["CD8"], edgecolor="none",
+                  label="CD8"),
+            Patch(facecolor=LINEAGE_COLORS["CD4"], edgecolor="none",
+                  label="CD4"),
+        ]
+        leg = ax.legend(handles=handles, loc="upper right",
+                        fontsize=7, frameon=False,
+                        handlelength=1.0, handleheight=1.0,
+                        handletextpad=0.4)
+        leg.set_zorder(6)
     _style_axis(ax)
+
+
+# %%
+# =========================================================
+# Panel C — Tropism composite + convergence scatter
+# =========================================================
+print("\nPanel C: tropism + convergence...")
+
+AUGUR_PER_PATIENT_CSV = (
+    REPO_ROOT / "results" / "traffic_tissue_separability"
+    / "augur_per_patient.csv")
+PATHWAY_SCORES_CSV = (
+    REPO_ROOT / "results" / "pathway_temporal_scores"
+    / "temporal_pathway_scores_tcell.csv")
+PATHWAY_COSINE_CSV = (
+    REPO_ROOT / "results" / "pathway_temporal_scores"
+    / "pathway_cosine_distance_summary.csv")
+
+
+def _compute_pathway_cosine_distances():
+    """Compute or load per-(phenotype, tissue_pair, patient) pathway
+    cosine distance from temporal_pathway_scores_tcell.csv."""
+    if PATHWAY_COSINE_CSV.exists():
+        return pd.read_csv(PATHWAY_COSINE_CSV)
+    print("  computing pathway cosine distances...")
+    pw = pd.read_csv(PATHWAY_SCORES_CSV)
+    pw_agg = (pw.groupby(
+        ["patient", "tissue", "phenotype", "pathway"], observed=True
+    )["mean_score"].mean().reset_index())
+    pw_vec = pw_agg.pivot_table(
+        index=["patient", "tissue", "phenotype"],
+        columns="pathway", values="mean_score", aggfunc="mean")
+    rows = []
+    pairs = [("PBMC", "CSF"), ("PBMC", "TP"), ("CSF", "TP")]
+    for (a, b) in pairs:
+        sub_a = pw_vec.xs(a, level="tissue")
+        sub_b = pw_vec.xs(b, level="tissue")
+        shared = sub_a.index.intersection(sub_b.index)
+        for key in shared:
+            patient, phen = key
+            va, vb = sub_a.loc[key].values, sub_b.loc[key].values
+            m = ~(np.isnan(va) | np.isnan(vb))
+            if m.sum() < 5:
+                d = np.nan
+            else:
+                va, vb = va[m], vb[m]
+                na, nb = np.linalg.norm(va), np.linalg.norm(vb)
+                d = (float(1.0 - np.dot(va, vb) / (na * nb))
+                     if na > 0 and nb > 0 else np.nan)
+            rows.append({"phenotype": phen,
+                         "tissue_pair": f"{a}_{b}",
+                         "patient": patient,
+                         "pathway_cosine_dist": d})
+    out = pd.DataFrame(rows)
+    out.to_csv(PATHWAY_COSINE_CSV, index=False)
+    return out
+
+
+def _compute_tropism_and_convergence():
+    """Returns (tropism_df, convergence_df) keyed by phenotype.
+
+    tropism_df cols: delta_cos, delta_aug, z_cos, z_aug, S1, agree
+    convergence_df cols: gene_mean, gene_sem, pw_mean, pw_sem
+    """
+    gene = cosine_df[cosine_df["type"] == "matched"].copy()
+    gene["tissue_pair"] = gene["tissue_pair"].str.replace("_vs_", "_")
+    aug = pd.read_csv(AUGUR_PER_PATIENT_CSV)
+    pw = _compute_pathway_cosine_distances()
+
+    def _paired_delta(df, value_col, pair_col, phenos,
+                      pair_a="PBMC_TP", pair_b="CSF_TP"):
+        rows = []
+        for p in phenos:
+            sub = df[df["phenotype"] == p]
+            a_df = sub[sub[pair_col] == pair_a]
+            b_df = sub[sub[pair_col] == pair_b]
+            merged = a_df.merge(b_df, on="patient",
+                                 suffixes=("_a", "_b"))
+            if merged.empty:
+                rows.append({"phenotype": p, "delta": np.nan})
+                continue
+            rows.append({
+                "phenotype": p,
+                "delta": float((merged[f"{value_col}_a"]
+                                - merged[f"{value_col}_b"]).mean()),
+            })
+        return pd.DataFrame(rows).set_index("phenotype")
+
+    phens = [p for p in PHENOTYPES
+             if p in gene["phenotype"].unique()
+             and p in aug["phenotype"].unique()]
+    d_cos = _paired_delta(gene, "cosine_dist", "tissue_pair", phens)
+    d_aug = _paired_delta(aug, "AUC", "pair", phens)
+    trop = pd.DataFrame({"delta_cos": d_cos["delta"],
+                          "delta_aug": d_aug["delta"]}).dropna()
+
+    def _z(x):
+        x = pd.Series(x, dtype=float)
+        m, s = x.mean(), x.std()
+        return (x - m) / s if s > 0 else x * 0
+
+    trop["z_cos"] = _z(trop["delta_cos"]).values
+    trop["z_aug"] = _z(trop["delta_aug"]).values
+    trop["S1"] = (trop["z_cos"] + trop["z_aug"]) / 2
+    trop["agree"] = (np.sign(trop["z_cos"])
+                     == np.sign(trop["z_aug"])).values
+
+    # Convergence: CSF↔TP gene cosine vs pathway cosine, per phenotype.
+    g_csf_tp = gene[gene["tissue_pair"] == "CSF_TP"]
+    g_stats = g_csf_tp.groupby("phenotype").agg(
+        gene_mean=("cosine_dist", "mean"),
+        gene_sem=("cosine_dist",
+                   lambda x: (x.std(ddof=1) / np.sqrt(len(x))
+                              if len(x) > 1 else 0.0)),
+    )
+    pw_csf_tp = pw[pw["tissue_pair"] == "CSF_TP"]
+    p_stats = pw_csf_tp.groupby("phenotype").agg(
+        pw_mean=("pathway_cosine_dist", "mean"),
+        pw_sem=("pathway_cosine_dist",
+                 lambda x: (x.std(ddof=1) / np.sqrt(len(x))
+                            if len(x) > 1 else 0.0)),
+    )
+    conv = g_stats.join(p_stats, how="inner").dropna()
+    return trop, conv
+
+
+TROPISM_DF, CONVERGENCE_DF = _compute_tropism_and_convergence()
+print(f"  tropism phenotypes: {len(TROPISM_DF)}")
+print(f"  convergence phenotypes: {len(CONVERGENCE_DF)}")
+
+
+def _lin_of_phen(p):
+    return "CD8" if "CD8" in p else "CD4"
+
+
+def _draw_tropism_bar(ax):
+    """Combined tropism score per phenotype (cosine + Augur z-scored Δ
+    averaged). Positive = CSF-tropic; negative = PBMC-tropic. Bars are
+    full-opacity when both metrics agree on direction, faded when they
+    disagree."""
+    sorted_phens = TROPISM_DF.sort_values("S1",
+                                          ascending=False).index.tolist()
+    n = len(sorted_phens)
+    xmax = float(np.nanmax(np.abs(TROPISM_DF["S1"]))) * 1.30
+    for yi, p in enumerate(sorted_phens):
+        row = TROPISM_DF.loc[p]
+        ph_col = TCELL_PHENOTYPE_COLORS.get(p, "#888")
+        alpha = 1.0 if row["agree"] else 0.40
+        ax.barh(yi, row["S1"], color=ph_col, edgecolor="none",
+                height=0.78, alpha=alpha, zorder=3)
+        marker = "●" if row["agree"] else "○"
+        ax.text(xmax * 1.02, yi, marker, ha="left", va="center",
+                fontsize=11, color="#444",
+                fontweight="bold" if row["agree"] else "normal")
+    ax.axvline(0, color="#222", lw=1.0, zorder=2)
+    ax.set_yticks(range(n))
+    ax.set_yticklabels([TCELL_PHENOTYPE_LABELS.get(p, p)
+                         for p in sorted_phens], fontsize=8.5)
+    for tick, p in zip(ax.get_yticklabels(), sorted_phens):
+        tick.set_color(LINEAGE_COLORS[_lin_of_phen(p)])
+        tick.set_fontweight("bold")
+    ax.invert_yaxis()
+    ax.set_xlim(-xmax, xmax * 1.18)
+    ax.set_xlabel("Combined tropism (z-score avg)", fontsize=8.5)
+    for s in ("top", "right"):
+        ax.spines[s].set_visible(False)
+    ax.text(-xmax * 0.96, -0.55, "← PBMC-tropic",
+            ha="left", va="bottom", fontsize=8,
+            color=TISSUE_COLORS["PBMC"], fontweight="bold")
+    ax.text(xmax * 0.96, -0.55, "CSF-tropic →",
+            ha="right", va="bottom", fontsize=8,
+            color=TISSUE_COLORS["CSF"], fontweight="bold")
+    ax.tick_params(axis="x", labelsize=8)
+
+
+def _draw_convergence_scatter(ax):
+    """Gene cosine × pathway cosine for CSF↔TP, per phenotype.
+    Phenotype-colored dots with SEM error bars and labels. No background
+    tinting; quadrants implied by median-split dashed reference lines."""
+    if CONVERGENCE_DF.empty:
+        return
+    x_hi = float(CONVERGENCE_DF["gene_mean"].max()) * 1.22
+    y_hi = float(CONVERGENCE_DF["pw_mean"].max()) * 1.22
+    xmed = float(CONVERGENCE_DF["gene_mean"].median())
+    ymed = float(CONVERGENCE_DF["pw_mean"].median())
+    ax.axvline(xmed, color="#bbb", lw=0.7, linestyle="--", zorder=1)
+    ax.axhline(ymed, color="#bbb", lw=0.7, linestyle="--", zorder=1)
+    for p in CONVERGENCE_DF.index:
+        row = CONVERGENCE_DF.loc[p]
+        ph_col = TCELL_PHENOTYPE_COLORS.get(p, "#888")
+        ax.errorbar(row["gene_mean"], row["pw_mean"],
+                    xerr=row["gene_sem"], yerr=row["pw_sem"],
+                    fmt="o", color=ph_col, markersize=9,
+                    markeredgecolor="white", markeredgewidth=0.7,
+                    ecolor=ph_col, elinewidth=0.9, capsize=0,
+                    zorder=4)
+        ax.annotate(TCELL_PHENOTYPE_LABELS.get(p, p),
+                    xy=(row["gene_mean"], row["pw_mean"]),
+                    xytext=(6, 5), textcoords="offset points",
+                    fontsize=7.5, color=ph_col, fontweight="bold",
+                    zorder=5)
+    # Quadrant text labels in the corners (no tinting)
+    ax.text(x_hi * 0.98, ymed * 0.20, "convergent",
+            ha="right", va="bottom", fontsize=8,
+            color="#1d6f4c", fontweight="bold", style="italic")
+    ax.text(x_hi * 0.02, ymed * 0.20, "same population",
+            ha="left", va="bottom", fontsize=8,
+            color="#555", style="italic")
+    ax.text(x_hi * 0.98, y_hi * 0.97, "distinct populations",
+            ha="right", va="top", fontsize=8,
+            color="#7d1018", fontweight="bold", style="italic")
+    ax.text(x_hi * 0.02, y_hi * 0.97, "pathway shift",
+            ha="left", va="top", fontsize=8,
+            color="#9a6e00", style="italic")
+    ax.set_xlim(0.0, x_hi); ax.set_ylim(0.0, y_hi)
+    ax.set_xlabel("Gene cosine  CSF↔TP", fontsize=8.5,
+                  fontweight="bold")
+    ax.set_ylabel("Pathway cosine  CSF↔TP", fontsize=8.5,
+                  fontweight="bold")
+    for s in ("top", "right"):
+        ax.spines[s].set_visible(False)
+    ax.tick_params(labelsize=8)
 
 
 # %%
@@ -909,6 +1175,17 @@ SQRT3_2 = np.sqrt(3) / 2
 TRI_TOP   = np.array([0.5, SQRT3_2])  # PBMC
 TRI_LEFT  = np.array([0.0, 0.0])      # CSF
 TRI_RIGHT = np.array([1.0, 0.0])      # TP
+TERNARY_CORNERS = {"PBMC": TRI_TOP, "CSF": TRI_LEFT, "TP": TRI_RIGHT}
+TERNARY_CENTROID = np.mean(list(TERNARY_CORNERS.values()), axis=0)
+
+# Edges: (start, end, opposite). "opposite" = tissue with frac==0 on
+# this edge. Positions binned by frac_END (so position runs from start
+# to end corner along the edge).
+TERNARY_EDGES = [
+    ("CSF",  "TP",   "PBMC"),  # bottom edge
+    ("PBMC", "TP",   "CSF"),   # right edge
+    ("CSF",  "PBMC", "TP"),    # left edge
+]
 
 
 def _bary_to_xy(a, b, c):
@@ -919,23 +1196,69 @@ def _bary_to_xy(a, b, c):
     return x, y
 
 
-def _draw_ternary_single(ax):
-    """Single ternary axes containing all clones with ≥2 bins. Points
-    colored by lineage (CD8 / CD4). Background = filled gray KDE with
-    4 progressively-opaque levels."""
-    sub = multi_bin
-    # Tight bounds — corners + a thin label rim.
-    ax.set_xlim(-0.06, 1.06); ax.set_ylim(-0.08, SQRT3_2 + 0.06)
+def _edge_geom(start, end):
+    """Returns (start_xy, end_xy, unit_tangent, outward_unit_normal,
+    length) for a triangle edge."""
+    s = TERNARY_CORNERS[start]
+    e = TERNARY_CORNERS[end]
+    vec = e - s
+    L = float(np.linalg.norm(vec))
+    u = vec / L
+    n = np.array([-u[1], u[0]])
+    if np.dot(n, (s + e) / 2 - TERNARY_CENTROID) < 0:
+        n = -n
+    return s, e, u, n, L
+
+
+def _reflective_kde(x, grid, bw):
+    """1D Gaussian KDE on [0, 1] data with reflection at both boundaries
+    to avoid edge underestimation."""
+    if len(x) < 3:
+        return np.zeros_like(grid)
+    x_ref = np.concatenate([x, -x, 2.0 - x])
+    kde = gaussian_kde(x_ref, bw_method=bw)
+    return kde(grid) * 3.0
+
+
+def _draw_ternary_single(ax, show_legend=True, show_title=True):
+    """Radial Panel E:
+      - Triangle interior: KDE + jittered scatter of clones present in
+        ALL 3 tissues. Jitter radius scales with cluster count
+        (persistence vectors are discrete k/n_bins ratios so 277 triple-
+        tissue clones occupy only ~42 unique positions).
+      - Each edge: 1D reflective Gaussian KDE of clones present in
+        EXACTLY those 2 tissues (third == 0), stacked CD8 (inner) + CD4
+        (outer) as filled ribbons rising perpendicular to the edge.
+        A tissue-color gradient strip runs along the edge between the
+        triangle and the KDE.
+      - Each corner: filled tissue-color pill with "only X" count.
+    """
+    # Per-edge KDE parameters.
+    KDE_BW = 0.055
+    N_GRID = 240
+    BAND_H = 0.022
+    BAND_GAP = 0.007
+    MAX_BAR = 0.26
+    HIST_REACH = BAND_H + BAND_GAP + MAX_BAR
+    CORNER_OFFSET = HIST_REACH * 0.55 + 0.07
+    PAD_X = 0.62
+    PAD_TOP = 0.42
+    PAD_BOT = 0.62
+
+    ax.set_xlim(-PAD_X, 1 + PAD_X)
+    ax.set_ylim(-PAD_BOT, SQRT3_2 + PAD_TOP)
     ax.set_aspect("equal")
     ax.set_facecolor("white")
     ax.set_xticks([]); ax.set_yticks([])
     for s in ("top", "right", "bottom", "left"):
         ax.spines[s].set_visible(False)
 
-    tri = plt.Polygon([TRI_TOP, TRI_LEFT, TRI_RIGHT],
-                       fill=False, edgecolor="#444", linewidth=1.0,
-                       zorder=3)
+    # ---- Triangle skeleton ----
+    tri = Polygon([TRI_TOP, TRI_LEFT, TRI_RIGHT],
+                  fill=False, edgecolor="#2a2a2a", linewidth=1.3,
+                  joinstyle="round", zorder=5)
     ax.add_patch(tri)
+    # Subtle interior gridlines.
     for frac in (0.25, 0.5, 0.75):
         for axis in range(3):
             p1 = np.zeros(3); p2 = np.zeros(3)
@@ -945,86 +1268,211 @@ def _draw_ternary_single(ax):
             p2[others[1]] = 1 - frac
             x1, y1 = _bary_to_xy(*p1)
             x2, y2 = _bary_to_xy(*p2)
-            ax.plot([x1, x2], [y1, y2], color="#e8e8e8",
-                    lw=0.5, zorder=1)
-    if sub.empty:
-        return
+            ax.plot([x1, x2], [y1, y2], color="#eeeeee",
+                    lw=0.6, zorder=2)
 
-    a = sub["frac_PBMC"].to_numpy().astype(float).copy()
-    b = sub["frac_CSF"].to_numpy().astype(float).copy()
-    c = sub["frac_TP"].to_numpy().astype(float).copy()
-    # Visualization-only jitter: clones with CSF persistence == 0 sit
-    # exactly on the PBMC↔TP edge and stack as a solid line. Nudge a
-    # small random amount into the CSF direction, then renormalize.
-    zero_csf = (b == 0)
-    n_zero = int(zero_csf.sum())
-    if n_zero > 0:
-        rng_jit = np.random.default_rng(42)
-        b[zero_csf] = rng_jit.uniform(0.0, 0.03, n_zero)
-        total = a + b + c
-        a = a / total
-        b = b / total
-        c = c / total
-    xs, ys = _bary_to_xy(a, b, c)
-
-    # Filled gray KDE — 4 levels with progressively higher alpha so
-    # the densest core reads darkest (stacked layers compound).
-    if len(xs) >= 8 and (xs.std() > 1e-6 or ys.std() > 1e-6):
+    # ---- Interior (triple-tissue) KDE + jittered scatter ----
+    triple = multi_bin[(multi_bin["frac_PBMC"] > 0)
+                       & (multi_bin["frac_CSF"] > 0)
+                       & (multi_bin["frac_TP"] > 0)]
+    if len(triple) >= 8:
+        xs_t, ys_t = _bary_to_xy(triple["frac_PBMC"].to_numpy(),
+                                  triple["frac_CSF"].to_numpy(),
+                                  triple["frac_TP"].to_numpy())
         try:
-            kde = gaussian_kde(np.vstack([xs, ys]))
-            gx = np.linspace(0.0, 1.0, 160)
-            gy = np.linspace(0.0, SQRT3_2, 160)
+            kde = gaussian_kde(np.vstack([xs_t, ys_t]), bw_method=0.22)
+            gx = np.linspace(0.0, 1.0, 220)
+            gy = np.linspace(0.0, SQRT3_2, 220)
             GX, GY = np.meshgrid(gx, gy)
-            A_grid = GY / SQRT3_2
-            C_grid = GX - 0.5 * A_grid
-            B_grid = 1 - A_grid - C_grid
-            mask = (A_grid >= 0) & (B_grid >= 0) & (C_grid >= 0)
+            A = GY / SQRT3_2
+            C = GX - 0.5 * A
+            B = 1 - A - C
+            mask = (A > 0.005) & (B > 0.005) & (C > 0.005)
             Z = kde(np.vstack([GX.ravel(), GY.ravel()])).reshape(GX.shape)
             Z = np.where(mask, Z, np.nan)
             zmax = float(np.nanmax(Z))
-            # Inner-most quartile is the densest core.
-            level_qs = [0.50, 0.70, 0.85, 0.95]
-            alphas = [0.05, 0.15, 0.30, 0.50]
-            for q, a_ in zip(level_qs, alphas):
+            for q, a_ in [(0.65, 0.05), (0.82, 0.10), (0.93, 0.18)]:
                 thresh = float(np.nanquantile(Z, q))
-                ax.contourf(GX, GY, Z,
-                            levels=[thresh, zmax + 1e-9],
-                            colors=["#666"], alpha=a_, zorder=2)
+                ax.contourf(GX, GY, Z, levels=[thresh, zmax + 1e-9],
+                            colors=["#4a4a4a"], alpha=a_, zorder=3)
         except Exception:
             pass
 
-    # Lineage-colored scatter (use dominant_lineage per clone).
-    colors = sub["dominant_lineage"].map(
-        lambda l: LINEAGE_COLORS.get(l, "#888")
-    ).to_numpy()
-    ax.scatter(xs, ys, s=18, c=colors, alpha=1.0,
-                edgecolors="none", rasterized=True, zorder=4)
+        # Cluster-size-scaled jitter so dense discrete grid points
+        # spread out into a visible disk.
+        cluster_n = (triple.groupby(
+            ["frac_PBMC", "frac_CSF", "frac_TP"])["clone_id"
+            if "clone_id" in triple.columns else triple.columns[0]
+            ].transform("count").to_numpy())
+        rng_jit = np.random.default_rng(7)
+        JIT_R_BASE = 0.012
+        JIT_R_PER = 0.0055
+        r_max = JIT_R_BASE + JIT_R_PER * np.sqrt(cluster_n)
+        theta = rng_jit.uniform(0, 2 * np.pi, len(triple))
+        radius = rng_jit.uniform(0, 1, len(triple)) ** 0.5 * r_max
+        xs_t_j = xs_t + radius * np.cos(theta)
+        ys_t_j = ys_t + radius * np.sin(theta)
+        colors_t = triple["dominant_lineage"].map(
+            lambda l: LINEAGE_COLORS.get(l, "#888")).to_numpy()
+        ax.scatter(xs_t_j, ys_t_j, s=12, c=colors_t, alpha=0.85,
+                   edgecolors="white", linewidths=0.35,
+                   rasterized=True, zorder=6)
 
-    # Corner tissue labels.
-    ax.text(TRI_TOP[0], TRI_TOP[1] + 0.020, "PBMC",
-             ha="center", va="bottom", fontsize=9, fontweight="bold",
-             color=TISSUE_COLORS["PBMC"])
-    ax.text(TRI_LEFT[0] - 0.005, TRI_LEFT[1] - 0.015, "CSF",
-             ha="right", va="top", fontsize=9, fontweight="bold",
-             color=TISSUE_COLORS["CSF"])
-    ax.text(TRI_RIGHT[0] + 0.005, TRI_RIGHT[1] - 0.015, "TP",
-             ha="left", va="top", fontsize=9, fontweight="bold",
-             color=TISSUE_COLORS["TP"])
+    # ---- Per-edge KDE ribbons (CD8 inner / CD4 outer) ----
+    grid = np.linspace(0.0, 1.0, N_GRID)
+    edge_data = []
+    for start_c, end_c, opp in TERNARY_EDGES:
+        on_edge = multi_bin[
+            (multi_bin[f"frac_{opp}"] == 0)
+            & (multi_bin[f"frac_{start_c}"] > 0)
+            & (multi_bin[f"frac_{end_c}"] > 0)]
+        x_cd8 = on_edge.loc[on_edge["dominant_lineage"] == "CD8",
+                            f"frac_{end_c}"].to_numpy()
+        x_cd4 = on_edge.loc[on_edge["dominant_lineage"] == "CD4",
+                            f"frac_{end_c}"].to_numpy()
+        d_cd8 = _reflective_kde(x_cd8, grid, KDE_BW) * len(x_cd8)
+        d_cd4 = _reflective_kde(x_cd4, grid, KDE_BW) * len(x_cd4)
+        peak = float(np.max(d_cd8 + d_cd4)) if len(on_edge) else 1.0
+        if peak <= 0:
+            peak = 1.0
+        edge_data.append({"start": start_c, "end": end_c, "opp": opp,
+                          "d_cd8": d_cd8, "d_cd4": d_cd4,
+                          "n": len(on_edge),
+                          "n_cd8": len(x_cd8), "n_cd4": len(x_cd4),
+                          "peak": peak})
 
-    # Lineage legend overlaid in upper-left (the empty wedge of the
-    # bounding box, outside the triangle).
-    from matplotlib.patches import Patch
-    handles = [Patch(facecolor=LINEAGE_COLORS["CD8"],
-                      edgecolor="none", label="CD8"),
-               Patch(facecolor=LINEAGE_COLORS["CD4"],
-                      edgecolor="none", label="CD4")]
-    leg = ax.legend(handles=handles, title="Lineage",
-                     loc="upper left",
-                     bbox_to_anchor=(0.0, 0.95),
-                     fontsize=8, title_fontsize=9,
-                     frameon=False, handlelength=1.0,
-                     handleheight=1.0, handletextpad=0.4)
-    leg.set_zorder(7)
+    for ed in edge_data:
+        s, e, u, n_vec, _ = _edge_geom(ed["start"], ed["end"])
+
+        # Gradient band along the edge.
+        c_a = np.array(to_rgb(TISSUE_COLORS[ed["start"]]))
+        c_b = np.array(to_rgb(TISSUE_COLORS[ed["end"]]))
+        N_SAMP = 100
+        for i in range(N_SAMP):
+            t1 = i / N_SAMP
+            t2 = (i + 1) / N_SAMP
+            t_mid = (t1 + t2) / 2
+            c_mid = c_a * (1 - t_mid) + c_b * t_mid
+            p1 = s + t1 * (e - s)
+            p2 = s + t2 * (e - s)
+            p3 = p2 + n_vec * BAND_H
+            p4 = p1 + n_vec * BAND_H
+            ax.add_patch(Polygon([p1, p2, p3, p4], facecolor=c_mid,
+                                 edgecolor="none", alpha=0.92, zorder=4))
+        rim_a = s + n_vec * BAND_H
+        rim_b = e + n_vec * BAND_H
+        ax.plot([rim_a[0], rim_b[0]], [rim_a[1], rim_b[1]],
+                color="#444", lw=0.5, zorder=4.1)
+
+        # KDE ribbons.
+        bar_inner = BAND_H + BAND_GAP
+        peak = ed["peak"]
+        elev_cd8 = (ed["d_cd8"] / peak) * MAX_BAR
+        elev_cd4 = (ed["d_cd4"] / peak) * MAX_BAR
+        edge_pts = np.array([s + t * (e - s) for t in grid])
+        base_pts = edge_pts + n_vec[None, :] * bar_inner
+        cd8_top = base_pts + n_vec[None, :] * elev_cd8[:, None]
+        cd4_top = cd8_top + n_vec[None, :] * elev_cd4[:, None]
+        if ed["n_cd8"] > 0:
+            ring_cd8 = np.vstack([base_pts, cd8_top[::-1]])
+            ax.add_patch(Polygon(ring_cd8,
+                                 facecolor=LINEAGE_COLORS["CD8"],
+                                 edgecolor="none", alpha=0.88, zorder=5))
+        if ed["n_cd4"] > 0:
+            ring_cd4 = np.vstack([cd8_top, cd4_top[::-1]])
+            ax.add_patch(Polygon(ring_cd4,
+                                 facecolor=LINEAGE_COLORS["CD4"],
+                                 edgecolor="none", alpha=0.88, zorder=5))
+        # CD8/CD4 boundary line (where both contribute).
+        if ed["n_cd8"] > 0 and ed["n_cd4"] > 0:
+            meaningful = (elev_cd8 > 0.002) & (elev_cd4 > 0.002)
+            if meaningful.any():
+                ax.plot(cd8_top[meaningful, 0], cd8_top[meaningful, 1],
+                        color="white", lw=0.6, alpha=0.85, zorder=5.15)
+        # Outer rim line.
+        ax.plot(cd4_top[:, 0], cd4_top[:, 1], color="#333", lw=0.7,
+                zorder=5.2)
+
+        # Edge tick marks at 0, 0.5, 1.
+        for tf in (0.0, 0.5, 1.0):
+            tp_in = s + tf * (e - s) + n_vec * (bar_inner + MAX_BAR + 0.006)
+            tp_out = s + tf * (e - s) + n_vec * (bar_inner + MAX_BAR + 0.022)
+            ax.plot([tp_in[0], tp_out[0]], [tp_in[1], tp_out[1]],
+                    color="#888", lw=0.8, zorder=5.5)
+
+        # Single-line edge label (merged title + count) — avoids
+        # overlap that two-line labels suffer from when the axes is
+        # shrunk in a composite.
+        angle = np.degrees(np.arctan2(u[1], u[0]))
+        if angle > 90:
+            angle -= 180
+        elif angle < -90:
+            angle += 180
+        label_xy = (s + e) / 2 + n_vec * (bar_inner + MAX_BAR + 0.090)
+        ax.text(label_xy[0], label_xy[1],
+                f"$\\bf{{{ed['start']}}}$ ↔ $\\bf{{{ed['end']}}}$   "
+                f"$\\mathit{{(no\\ {ed['opp']})}}$   "
+                f"·   n = {ed['n']:,}",
+                ha="center", va="center", fontsize=10,
+                color="#1a1a1a", rotation=angle,
+                rotation_mode="anchor", zorder=6)
+
+    # ---- Corner badges (only-X) ----
+    corner_counts = {
+        "PBMC": int((multi_bin["frac_PBMC"] == 1).sum()),
+        "CSF":  int((multi_bin["frac_CSF"] == 1).sum()),
+        "TP":   int((multi_bin["frac_TP"] == 1).sum()),
+    }
+    for corner_name, pos in TERNARY_CORNERS.items():
+        out_vec = pos - TERNARY_CENTROID
+        out_vec = out_vec / np.linalg.norm(out_vec)
+        badge_xy = pos + out_vec * CORNER_OFFSET
+        n_only = corner_counts[corner_name]
+        ax.plot([pos[0] + out_vec[0] * 0.008,
+                 badge_xy[0] - out_vec[0] * 0.075],
+                [pos[1] + out_vec[1] * 0.008,
+                 badge_xy[1] - out_vec[1] * 0.075],
+                color=TISSUE_COLORS[corner_name], lw=1.0, alpha=0.45,
+                zorder=7, solid_capstyle="round")
+        ax.scatter([pos[0]], [pos[1]], s=40,
+                   c=TISSUE_COLORS[corner_name],
+                   edgecolors="white", linewidths=1.1, zorder=7.5)
+        ax.text(badge_xy[0], badge_xy[1],
+                f"only $\\bf{{{corner_name}}}$\n$\\bf{{n = {n_only:,}}}$",
+                ha="center", va="center", fontsize=9,
+                color="white", linespacing=1.25,
+                bbox=dict(boxstyle="round,pad=0.38",
+                          facecolor=TISSUE_COLORS[corner_name],
+                          edgecolor="white", linewidth=1.3),
+                zorder=8)
+
+    # ---- Centroid label ----
+    n_triple = int(len(triple))
+    ax.text(TERNARY_CENTROID[0], TERNARY_CENTROID[1] - 0.21,
+            f"all 3 tissues\n$\\bf{{n = {n_triple:,}}}$",
+            ha="center", va="center",
+            fontsize=9, color="#333", linespacing=1.3, zorder=6.5,
+            multialignment="center",
+            bbox=dict(boxstyle="round,pad=0.25",
+                      facecolor="white", edgecolor="none", alpha=0.75))
+
+    if show_legend:
+        # Compact horizontal legend, anchored ABOVE-CENTER at the
+        # very bottom of the panel so it hangs downward into the
+        # clear strip below the CSF↔TP edge label.
+        handles = [Patch(facecolor=LINEAGE_COLORS["CD8"],
+                         edgecolor="white", linewidth=0.5, label="CD8"),
+                   Patch(facecolor=LINEAGE_COLORS["CD4"],
+                         edgecolor="white", linewidth=0.5, label="CD4")]
+        leg = ax.legend(handles=handles, title="Dominant lineage",
+                        loc="upper center",
+                        bbox_to_anchor=(0.5, -PAD_BOT + 0.22),
+                        bbox_transform=ax.transData,
+                        ncol=2, fontsize=8.5, title_fontsize=9,
+                        frameon=False, handlelength=1.1,
+                        handleheight=1.0, handletextpad=0.45,
+                        columnspacing=1.4)
+        leg.set_zorder(9)
 
 
 # %%
@@ -1189,11 +1637,17 @@ for (tis, pat), grp in flux_df.groupby(["tissue", "patient"],
 
 
 def _draw_panel_E(axE):
-    """Horizontal boxplot per tissue (filled with tissue color) with a
-    swarm-style scatter overlaid on top. Pairwise Mann-Whitney
-    brackets to the right of the boxes."""
-    from matplotlib.colors import to_rgba
-
+    """Raincloud-style within-tissue phenotypic flux:
+      - Half-violin (KDE) above each tissue row, solid tissue color.
+      - Slim box plot just below the row centerline (median, IQR,
+        whiskers) — outline-only, no fill.
+      - Subsampled jittered scatter below the box (cap at 80 per
+        tissue so PBMC/CSF aren't visually dominated by the 700+
+        TP transitions).
+      - Pairwise Mann-Whitney brackets sit in a margin strip to the
+        right of the data range (x > 2.0) so they never touch any
+        violin/box/scatter.
+    """
     data_by_tissue = []
     for tis in TISSUES:
         vals = flux_df.loc[flux_df["tissue"] == tis,
@@ -1201,68 +1655,109 @@ def _draw_panel_E(axE):
         data_by_tissue.append(np.clip(vals, 0.0, 2.0))
 
     positions = np.arange(len(TISSUES))
+    X = np.linspace(0.0, 2.0, 240)
+    rng = np.random.default_rng(0)
 
-    # Boxplot first — soft tissue-colored fill, solid tissue edges.
-    bp = axE.boxplot(
-        data_by_tissue, positions=positions, vert=False,
-        widths=0.55, patch_artist=True, showfliers=False,
-        zorder=2,
-    )
-    for i, tis in enumerate(TISSUES):
-        col = TISSUE_COLORS.get(tis, "black")
-        bp["boxes"][i].set_facecolor(to_rgba(col, 0.35))
-        bp["boxes"][i].set_edgecolor(col)
-        bp["boxes"][i].set_linewidth(1.0)
-        for w in bp["whiskers"][2 * i:2 * i + 2]:
-            w.set_color(col); w.set_linewidth(0.9)
-        for cap in bp["caps"][2 * i:2 * i + 2]:
-            cap.set_color(col); cap.set_linewidth(0.9)
-        bp["medians"][i].set_color(col)
-        bp["medians"][i].set_linewidth(1.4)
-
-    # Swarm overlaid on top of the boxes.
-    rng_swarm = np.random.default_rng(0)
     for ti, (tis, vals) in enumerate(zip(TISSUES, data_by_tissue)):
-        if len(vals) == 0:
+        if len(vals) < 3:
             continue
-        ys = ti + rng_swarm.uniform(-0.22, 0.22, size=len(vals))
-        axE.scatter(vals, ys, s=4,
-                     color=TISSUE_COLORS.get(tis, "gray"),
-                     alpha=0.55, edgecolors="none",
-                     rasterized=True, zorder=4)
+        col = TISSUE_COLORS.get(tis, "gray")
 
-    # Pairwise significance brackets — to the right of the boxes.
-    bracket_specs = [
-        (0, 1, 2.10, FLUX_SIG.get(("PBMC", "CSF"), "ns")),
-        (1, 2, 2.10, FLUX_SIG.get(("CSF",  "TP"),  "ns")),
-        (0, 2, 2.42, FLUX_SIG.get(("PBMC", "TP"),  "ns")),
+        # ---- Half violin (above row centerline) ----
+        kde = gaussian_kde(vals, bw_method=0.30)
+        dens = kde(X)
+        dens = dens / dens.max() * 0.38
+        poly_x = np.concatenate([X, X[::-1]])
+        poly_y = np.concatenate([np.full_like(X, ti),
+                                  (ti - dens)[::-1]])
+        # Solid fill, no edge.
+        axE.fill(poly_x, poly_y, facecolor=col,
+                 edgecolor="none", zorder=2)
+
+        # ---- Slim box plot below the centerline ----
+        q1, med, q3 = np.percentile(vals, [25, 50, 75])
+        iqr = q3 - q1
+        whisk_lo = max(vals.min(), q1 - 1.5 * iqr)
+        whisk_hi = min(vals.max(), q3 + 1.5 * iqr)
+        box_y0 = ti + 0.06
+        box_y1 = ti + 0.20
+        ym = (box_y0 + box_y1) / 2
+        # whisker line (single horizontal through whisk_lo → whisk_hi)
+        axE.plot([whisk_lo, whisk_hi], [ym, ym],
+                 color=col, lw=1.1, solid_capstyle="round", zorder=3)
+        # whisker tick caps
+        axE.plot([whisk_lo, whisk_lo], [box_y0 + 0.025, box_y1 - 0.025],
+                 color=col, lw=1.1, zorder=3)
+        axE.plot([whisk_hi, whisk_hi], [box_y0 + 0.025, box_y1 - 0.025],
+                 color=col, lw=1.1, zorder=3)
+        # box outline (white interior, tissue-color outline)
+        axE.add_patch(plt.Rectangle((q1, box_y0), q3 - q1,
+                                     box_y1 - box_y0,
+                                     facecolor="white",
+                                     edgecolor=col, linewidth=1.3,
+                                     zorder=4))
+        # median tick
+        axE.plot([med, med], [box_y0, box_y1],
+                 color=col, lw=2.0, solid_capstyle="round", zorder=5)
+
+        # ---- Jittered scatter strip below the box (subsampled) ----
+        n_show = min(len(vals), 80)
+        if n_show < len(vals):
+            v_show = rng.choice(vals, size=n_show, replace=False)
+        else:
+            v_show = vals
+        ys = ti + 0.32 + rng.uniform(-0.07, 0.07, size=len(v_show))
+        axE.scatter(v_show, ys, s=5, color=col,
+                    edgecolors="none", rasterized=True, zorder=4)
+
+        # Tissue n annotation (right of the scatter strip)
+        axE.text(2.02, ti + 0.32, f"n={len(vals):,}",
+                 ha="left", va="center", fontsize=7.5,
+                 color=col, fontweight="bold", zorder=5)
+
+    # ---- Pairwise Mann-Whitney brackets (outside data range) ----
+    # Bracket region sits at x > 2.0 so it never intersects any
+    # violin/box/scatter.
+    BR_X_INNER = 2.18
+    BR_X_OUTER = 2.50
+    BR_TICK = 0.04
+    brackets = [
+        (0, 1, BR_X_INNER, FLUX_SIG.get(("PBMC", "CSF"), "ns")),
+        (1, 2, BR_X_INNER, FLUX_SIG.get(("CSF",  "TP"),  "ns")),
+        (0, 2, BR_X_OUTER, FLUX_SIG.get(("PBMC", "TP"),  "ns")),
     ]
-    tick_dx = 0.05
-    for y1, y2, x, sig in bracket_specs:
-        axE.plot([x - tick_dx, x, x, x - tick_dx],
-                  [y1, y1, y2, y2],
-                  color="black", lw=0.8, clip_on=False, zorder=5)
-        fs = 10 if sig != "ns" else 8
+    for y1, y2, x, sig in brackets:
+        axE.plot([x - BR_TICK, x, x, x - BR_TICK],
+                 [y1, y1, y2, y2],
+                 color="#333", lw=0.9, clip_on=False, zorder=5,
+                 solid_capstyle="round")
+        fs = 12 if sig != "ns" else 9
         axE.text(x + 0.04, (y1 + y2) / 2, sig,
-                  ha="left", va="center",
-                  fontsize=fs, fontweight="bold" if sig != "ns" else "normal",
-                  clip_on=False, zorder=5)
+                 ha="left", va="center",
+                 fontsize=fs, color="#222",
+                 fontweight="bold" if sig != "ns" else "normal",
+                 clip_on=False, zorder=5)
 
-    axE.set_xlim(0, 2.65)
-    axE.set_ylim(-0.6, len(TISSUES) - 0.4)
+    # ---- Axes styling ----
+    axE.set_xlim(0, 2.85)
+    axE.set_ylim(-0.55, len(TISSUES) - 0.05)
     axE.set_yticks(positions)
     axE.set_yticklabels(TISSUES, fontsize=10)
     for tick, t in zip(axE.get_yticklabels(), TISSUES):
         tick.set_color(TISSUE_COLORS.get(t, "black"))
         tick.set_fontweight("bold")
     axE.set_xlabel("L1 distance", fontsize=9)
-    axE.set_title("Within-tissue\nPhenotypic Flux",
-                   fontsize=10, pad=4, linespacing=1.15)
+    axE.set_title("Within-tissue phenotypic flux",
+                  fontsize=10.5, pad=6, fontweight="bold")
     axE.invert_yaxis()
-    _style_axis(axE)
+    # Minimal borders: drop top/right (matches _style_axis), and also
+    # drop the LEFT spine since tick labels carry the tissue identity.
+    for s in ("top", "right", "left"):
+        axE.spines[s].set_visible(False)
+    axE.tick_params(axis="y", length=0)
     axE.tick_params(axis="x", labelsize=8)
-    # Keep the visible x-axis spine to the data range; brackets sit
-    # outside it.
+    # Bottom spine bounded to the data range; brackets float in the
+    # margin to its right.
     axE.spines["bottom"].set_bounds(0, 2.0)
     axE.set_xticks([0.0, 0.5, 1.0, 1.5, 2.0])
 
@@ -1303,27 +1798,94 @@ def _draw_flow_network(ax):
     mean_rate_arr = np.array(list(mean_rate.values()))
     rate_max = (float(np.abs(mean_rate_arr).max())
                 if mean_rate_arr.size else 1.0)
-    # Tight bounds — just enough to fit nodes (r=0.30) plus a thin
-    # rim for the bowed arrows + rate labels.
-    ax.set_xlim(-1.25, 1.25); ax.set_ylim(-1.15, 1.10)
-    ax.set_aspect("equal"); ax.axis("off")
+    # Bounds widened to accommodate self-loops + outward retention
+    # labels. Use adjustable="datalim" so the axes patch stays at the
+    # full slot size (same fix as the UMAPs in Panel A) — otherwise
+    # the patch shrinks for aspect=equal and the outermost loop arcs
+    # / labels get clipped.
+    ax.set_xlim(-1.75, 1.75); ax.set_ylim(-1.85, 1.45)
+    ax.set_aspect("equal", adjustable="datalim")
+    ax.axis("off")
+
+    # Outward direction per node (away from triangle centroid).
+    NODE_CENTROID = np.mean(list(NODE_POS.values()), axis=0)
 
     node_text_objs = []
     for tis, (x, y) in NODE_POS.items():
         ax.add_patch(Circle((x, y), NODE_RADIUS,
                              facecolor=TISSUE_COLORS[tis],
                              edgecolor="black", linewidth=1.4, zorder=3))
-        ret = block_ret.get(tis, float("nan"))
-        if not np.isnan(ret):
-            label = (f"$\\bf{{{tis}}}$\n"
-                     f"$\\mathit{{{ret * 100:.0f}\\%}}$")
-        else:
-            label = f"$\\bf{{{tis}}}$"
-        t = ax.text(x, y, label, ha="center", va="center",
-                     fontsize=11, color="black",
-                     multialignment="center", linespacing=1.25,
-                     zorder=4)
+        # Only the tissue name lives inside the node now — retention
+        # is shown by the self-loop label.
+        t = ax.text(x, y, f"$\\bf{{{tis}}}$",
+                     ha="center", va="center",
+                     fontsize=12, color="black", zorder=4)
         node_text_objs.append(t)
+
+        # ---- Self-loop arc representing retention ----
+        ret = block_ret.get(tis, float("nan"))
+        if np.isnan(ret):
+            continue
+        # Outward direction: from triangle centroid to this node.
+        out_vec = np.array([x, y]) - NODE_CENTROID
+        out_vec = out_vec / np.linalg.norm(out_vec)
+        out_angle_deg = np.degrees(np.arctan2(out_vec[1], out_vec[0]))
+        # Self-loop is a small circle whose center sits just outside
+        # the node, tangent to it. We draw it as a matplotlib Arc
+        # patch (most of the circle) plus a small arrowhead at the end.
+        LOOP_R = 0.22  # radius of the loop circle
+        # Distance from node center to loop center: node_radius + loop_r
+        # (so they kiss tangentially)
+        gap = 0.02  # small gap so the loop doesn't quite touch the node
+        loop_cx = x + (NODE_RADIUS + LOOP_R + gap) * out_vec[0]
+        loop_cy = y + (NODE_RADIUS + LOOP_R + gap) * out_vec[1]
+        # Linewidth scaled to retention.
+        loop_lw = LW_MIN + (LW_MAX - LW_MIN) * (
+            ret / max(rate_max, 1e-9))
+        # The arc spans from one tangent-point side back to the other
+        # (with a small gap on the node side for the arrowhead). Angles
+        # are measured at the LOOP center, where the node sits in the
+        # direction (out_angle + 180°).
+        opp_deg = out_angle_deg + 180.0
+        # Sweep around the loop, leaving a small gap near the node side
+        # so the arrowhead can be added cleanly.
+        sweep_gap = 35.0  # degrees of gap on the node side
+        theta1 = opp_deg + sweep_gap / 2     # arc start
+        theta2 = opp_deg + 360 - sweep_gap / 2  # arc end (almost full loop)
+        arc = Arc((loop_cx, loop_cy), 2 * LOOP_R, 2 * LOOP_R,
+                  angle=0, theta1=theta1, theta2=theta2,
+                  color=TISSUE_COLORS[tis], lw=float(loop_lw),
+                  zorder=2)
+        arc.set_clip_on(False)
+        ax.add_patch(arc)
+        # Arrowhead at the END of the sweep (theta2), pointing inward
+        # along the tangent direction.
+        end_rad = np.deg2rad(theta2)
+        end_x = loop_cx + LOOP_R * np.cos(end_rad)
+        end_y = loop_cy + LOOP_R * np.sin(end_rad)
+        # Tangent at end: perpendicular to radius, in direction of
+        # sweep (counter-clockwise → tangent is +90° from radius).
+        tan_x = -np.sin(end_rad)
+        tan_y = np.cos(end_rad)
+        # Make a short FancyArrowPatch tip just for the arrowhead.
+        head_back = (end_x - tan_x * 0.05, end_y - tan_y * 0.05)
+        head_tip = (end_x, end_y)
+        ax.add_patch(FancyArrowPatch(
+            posA=head_back, posB=head_tip,
+            arrowstyle="-|>", mutation_scale=14,
+            color=TISSUE_COLORS[tis], linewidth=float(loop_lw),
+            zorder=2.5, clip_on=False,
+        ))
+        # Retention % label outside the loop apex (away from node).
+        label_dist = NODE_RADIUS + 2 * LOOP_R + 0.16
+        lx = x + label_dist * out_vec[0]
+        ly = y + label_dist * out_vec[1]
+        ax.text(lx, ly, f"$\\bf{{{ret * 100:.0f}\\%}}$",
+                ha="center", va="center",
+                fontsize=11, color=TISSUE_COLORS[tis],
+                bbox=dict(boxstyle="round,pad=0.20",
+                          facecolor="white", edgecolor="none"),
+                zorder=5, clip_on=False)
 
     rate_texts = []
     rate_anchors_x, rate_anchors_y = [], []
@@ -1335,7 +1897,9 @@ def _draw_flow_network(ax):
         ux, uy = dx / L, dy / L
         sx, sy = x1 + ux * NODE_RADIUS, y1 + uy * NODE_RADIUS
         ex, ey = x2 - ux * NODE_RADIUS, y2 - uy * NODE_RADIUS
-        color = TISSUE_COLORS[b]
+        # Color migratory arrows by SOURCE tissue (where the clone
+        # came from), not destination.
+        color = TISSUE_COLORS[a]
         lw = LW_MIN + (LW_MAX - LW_MIN) * (
             abs(rate) / max(rate_max, 1e-9))
         arr = FancyArrowPatch(
@@ -1602,7 +2166,235 @@ for _ti, _tis in enumerate(TISSUES):
         print(f"      {_p:<55} cv={_v:.3f}")
 
 
-def _draw_panel_I(fig, strip_ax, axes_h, cax):
+# ---- Hot-pathway (Panel I redesign A) ------------------------------------
+# Curated inflammatory / T-cell activation pathways used to surface the
+# "TP stays hot, CSF cools, PBMC stable" story.
+HOT_PATHWAYS_I = [
+    "TNF-alpha Signaling via NF-kB",
+    "NF-kappa B signaling pathway",
+    "Interferon Gamma Response",
+    "Interferon Alpha Response",
+    "IL-6/JAK/STAT3 Signaling",
+    "IL-2/STAT5 Signaling",
+    "Inflammatory Response",
+    "Allograft Rejection",
+]
+HOT_PATHWAY_LABELS_I = {
+    "TNF-alpha Signaling via NF-kB":   "TNF-α / NF-κB",
+    "NF-kappa B signaling pathway":    "NF-κB pathway",
+    "Interferon Gamma Response":       "IFN-γ response",
+    "Interferon Alpha Response":       "IFN-α response",
+    "IL-6/JAK/STAT3 Signaling":        "IL-6 / STAT3",
+    "IL-2/STAT5 Signaling":            "IL-2 / STAT5",
+    "Inflammatory Response":           "Inflammation",
+    "Allograft Rejection":             "Allograft Rejection",
+}
+
+hot_present_I = [p for p in HOT_PATHWAYS_I if p in pidx_I]
+print(f"  hot pathways present: {len(hot_present_I)} / "
+      f"{len(HOT_PATHWAYS_I)}")
+hot_idx_I = [pidx_I[p] for p in hot_present_I]
+agg_hot_I = agg_I[hot_idx_I]  # (n_hot, n_tissues, n_tp)
+disp_hot_I = np.full_like(agg_hot_I, np.nan)
+for _ri in range(len(hot_present_I)):
+    _row = agg_hot_I[_ri]
+    _flat = _row.ravel()
+    _mu = np.nanmean(_flat)
+    _sd = np.nanstd(_flat)
+    if _sd > 0:
+        disp_hot_I[_ri] = (_row - _mu) / _sd
+    else:
+        disp_hot_I[_ri] = 0.0
+VMAX_HOT_I = float(np.nanpercentile(np.abs(disp_hot_I), 99))
+# Tissue temperature trajectory — mean z across hot pathways.
+traj_hot_I = np.nanmean(disp_hot_I, axis=0)  # (n_tissues, n_tp)
+TP_INT_I = [int(t) for t in TP_ORDER_I]
+slopes_hot_I = {}
+for _ti, _tis in enumerate(TISSUES):
+    _y = traj_hot_I[_ti]
+    _mask = np.isfinite(_y)
+    if _mask.sum() < 2:
+        slopes_hot_I[_tis] = np.nan
+        continue
+    _x = np.array(TP_INT_I)[_mask]
+    slopes_hot_I[_tis] = float(np.polyfit(_x, _y[_mask], 1)[0])
+print("  hot-pathway trajectories (mean z per tissue/timepoint):")
+for _ti, _tis in enumerate(TISSUES):
+    _vals = [f"{v:+.2f}" if np.isfinite(v) else "nan"
+             for v in traj_hot_I[_ti]]
+    print(f"    {_tis}: {_vals}  slope={slopes_hot_I[_tis]:+.3f}/T")
+
+
+def _draw_panel_I(fig, axes_h, cax, ax_traj):
+    """Hot-pathway panel:
+      Left half  — 3-tissue heatmap (8 hot pathways × N timepoints).
+      Right half — single trajectory line plot (mean z-score across
+                   the 8 hot pathways, one line per tissue) with
+                   per-tissue slope annotations.
+    """
+    cmap_div = plt.get_cmap("RdBu_r").copy()
+    cmap_div.set_bad("#eeeeee")
+    last_im = None
+    for ti, (ax_h, tis) in enumerate(zip(axes_h, TISSUES)):
+        M = np.ma.masked_invalid(disp_hot_I[:, ti, :])
+        im = ax_h.imshow(M, aspect="auto", cmap=cmap_div,
+                         vmin=-VMAX_HOT_I, vmax=VMAX_HOT_I,
+                         interpolation="nearest")
+        last_im = im
+        ax_h.set_xticks(range(N_T_I))
+        ax_h.set_xticklabels([f"T{t}" for t in TP_ORDER_I], fontsize=8)
+        if ti == 0:
+            ax_h.set_yticks(range(len(hot_present_I)))
+            ax_h.set_yticklabels(
+                [HOT_PATHWAY_LABELS_I.get(p, p) for p in hot_present_I],
+                fontsize=8.5)
+        else:
+            ax_h.set_yticks([])
+        ax_h.set_title(tis, fontsize=11, fontweight="bold",
+                       color=TISSUE_COLORS[tis], pad=4)
+        for s in ("top", "right", "bottom", "left"):
+            ax_h.spines[s].set_visible(False)
+        ax_h.tick_params(length=0)
+        ax_h.set_xlabel("Timepoint", fontsize=9)
+    cb = fig.colorbar(last_im, cax=cax)
+    cb.set_label("Row z-score", fontsize=8)
+    cb.ax.tick_params(labelsize=7)
+
+    # Trajectory plot (right half)
+    for ti, tis in enumerate(TISSUES):
+        col = TISSUE_COLORS[tis]
+        y = traj_hot_I[ti]
+        x = np.array(TP_INT_I)
+        ax_traj.plot(x, y, "-o", color=col, lw=2.4, markersize=7,
+                     markeredgecolor="white", markeredgewidth=0.8,
+                     zorder=3)
+        # Find last finite point for slope annotation
+        valid = np.where(np.isfinite(y))[0]
+        if valid.size == 0:
+            continue
+        x_end = x[valid[-1]]; y_end = y[valid[-1]]
+        slope_str = (f"{slopes_hot_I[tis]:+.2f}/T"
+                     if np.isfinite(slopes_hot_I[tis]) else "—")
+        ax_traj.annotate(f" {tis}: {slope_str}",
+                         xy=(x_end, y_end),
+                         xytext=(5, 0), textcoords="offset points",
+                         fontsize=9, color=col, fontweight="bold",
+                         va="center")
+    ax_traj.axhline(0, color="#888", lw=0.7, linestyle="--", zorder=1)
+    ax_traj.set_xticks(TP_INT_I)
+    ax_traj.set_xticklabels([f"T{t}" for t in TP_ORDER_I], fontsize=8)
+    ax_traj.set_xlabel("Timepoint", fontsize=9)
+    ax_traj.set_ylabel("Mean z across hot pathways", fontsize=9)
+    ax_traj.set_xlim(TP_INT_I[0] - 0.3, TP_INT_I[-1] + 1.8)
+    for s in ("top", "right"):
+        ax_traj.spines[s].set_visible(False)
+    ax_traj.tick_params(labelsize=8)
+    ax_traj.set_title("Temperature trajectory",
+                      fontsize=11, fontweight="bold", pad=4)
+
+
+def _draw_panel_I_supplemental_thermometer(fig, axes_t):
+    """Per-tissue thermometers (one axes per tissue) — supplemental
+    view of Panel I emphasizing the single "tissue temperature" arrow
+    from first → last timepoint, with pathway dots labeled around the
+    bar."""
+    from matplotlib.colors import LinearSegmentedColormap
+    N_GRAD = 256
+    grad = np.linspace(1, -1, N_GRAD).reshape(-1, 1)
+    cmap_thermo = plt.get_cmap("RdBu_r")
+
+    y_lo = float(np.nanmin(disp_hot_I)) - 0.3
+    y_hi = float(np.nanmax(disp_hot_I)) + 0.3
+    THX = 0.42
+    THERMO_W = 0.18
+
+    pathway_means = pd.DataFrame(
+        disp_hot_I.mean(axis=2),
+        index=hot_present_I,
+        columns=TISSUES,
+    )
+    for ti, (ax, tis) in enumerate(zip(axes_t, TISSUES)):
+        ax.set_xlim(0, 1.0)
+        ax.set_ylim(y_lo, y_hi)
+        ax.imshow(grad, extent=[THX, THX + THERMO_W, y_lo, y_hi],
+                  aspect="auto", cmap=cmap_thermo, vmin=-1, vmax=1,
+                  alpha=0.92, zorder=1)
+        ax.add_patch(plt.Rectangle(
+            (THX, y_lo), THERMO_W, y_hi - y_lo,
+            fill=False, edgecolor="#333", linewidth=1.0, zorder=2))
+        # Pathway dots on the bar with leader-line labels to the right.
+        means_in_tis = pathway_means[tis]
+        sorted_p = means_in_tis.sort_values().index.tolist()
+        n_p = len(sorted_p)
+        spread_top = y_hi - 0.4
+        spread_bot = y_lo + 0.4
+        label_ys = (np.linspace(spread_bot, spread_top, n_p)
+                    if n_p > 1 else [means_in_tis.iloc[0]])
+        for label_y, pp in zip(label_ys, sorted_p):
+            true_y = float(means_in_tis.loc[pp])
+            ax.scatter([THX + THERMO_W / 2], [true_y], s=55,
+                       color=cmap_thermo(
+                           np.clip((true_y + 2.5) / 5.0, 0.0, 1.0)),
+                       edgecolor="white", linewidth=1.0, zorder=4)
+            label_x = THX + THERMO_W + 0.10
+            ax.plot([THX + THERMO_W + 0.005, label_x - 0.005],
+                    [true_y, label_y],
+                    color="#999", lw=0.5, zorder=3,
+                    solid_capstyle="round")
+            ax.text(label_x, label_y,
+                    HOT_PATHWAY_LABELS_I.get(pp, pp),
+                    fontsize=7.5, color="#222", va="center",
+                    ha="left", zorder=5)
+        # Trajectory arrow on the LEFT side of the bar.
+        col = traj_hot_I[ti]
+        valid = np.where(np.isfinite(col))[0]
+        if valid.size >= 2:
+            y_t1 = float(col[valid[0]])
+            y_tend = float(col[valid[-1]])
+            arrow_x = THX - 0.05
+            ax.scatter([arrow_x], [y_t1], s=90, marker="o",
+                       color="white", edgecolor="#222", linewidth=1.4,
+                       zorder=6)
+            ax.text(arrow_x - 0.02, y_t1, f"T{TP_ORDER_I[valid[0]]}",
+                    fontsize=8.5, color="#222", fontweight="bold",
+                    va="center", ha="right")
+            ax.annotate("", xy=(arrow_x, y_tend),
+                        xytext=(arrow_x, y_t1),
+                        arrowprops=dict(arrowstyle="-|>", lw=3.0,
+                                        color="#222",
+                                        mutation_scale=18),
+                        zorder=6)
+            ax.scatter([arrow_x], [y_tend], s=110, marker="o",
+                       color="#222", edgecolor="white", linewidth=1.4,
+                       zorder=7)
+            ax.text(arrow_x - 0.02, y_tend,
+                    f"T{TP_ORDER_I[valid[-1]]}",
+                    fontsize=8.5, color="#222", fontweight="bold",
+                    va="center", ha="right")
+        slope = slopes_hot_I[tis]
+        state = ("getting hotter" if slope > 0.05
+                 else "getting colder" if slope < -0.05
+                 else "neutral")
+        ax.set_title(f"{tis}\n{state}  (slope {slope:+.2f}/T)",
+                     fontsize=11, fontweight="bold",
+                     color=TISSUE_COLORS[tis], pad=8,
+                     linespacing=1.3)
+        ax.set_xticks([])
+        if ti == 0:
+            ax.set_ylabel("Pathway z-score  ←cold | hot→",
+                          fontsize=10)
+        else:
+            ax.set_yticks([])
+        for s in ("top", "right", "bottom"):
+            ax.spines[s].set_visible(False)
+        if ti > 0:
+            ax.spines["left"].set_visible(False)
+
+
+def _draw_panel_I_legacy_top25(fig, strip_ax, axes_h, cax):
+    """Legacy Panel I — top-25 pathway heatmap with family color strip.
+    Retained for reference / supplemental rendering. Not called by the
+    composite figure or the standalone panel save."""
     n_paths, n_tis, n_tp = disp_I.shape
     fam_colors = [PATHWAY_FAMILY_COLORS.get(
         family_map_I.get(p, ""), "#bbbbbb")
@@ -1677,10 +2469,15 @@ fig, ax = plt.subplots(figsize=(4.5, 4.5))
 panel_tissue_triangle(ax, cosine_df)
 _save_panel(fig, "B")
 
-# C — per-phenotype divergence bars.
-fig, ax = plt.subplots(figsize=(8, 5))
-panel_phenotype_divergence(ax, cosine_df)
-fig.tight_layout()
+# C — tropism composite + convergence scatter (matches composite).
+fig = plt.figure(figsize=(11, 5))
+gs = gridspec.GridSpec(1, 2, figure=fig, width_ratios=[1.0, 1.3],
+                       wspace=0.32, left=0.07, right=0.97,
+                       top=0.92, bottom=0.12)
+_ax_trop = fig.add_subplot(gs[0, 0])
+_ax_conv = fig.add_subplot(gs[0, 1])
+_draw_tropism_bar(_ax_trop)
+_draw_convergence_scatter(_ax_conv)
 _save_panel(fig, "C")
 
 # D — resident vs migratory enrichment (3 sub-panels).
@@ -1692,8 +2489,8 @@ for i, _tis in enumerate(TISSUES):
     _draw_resmig_enrichment(ax, _tis, show_yticklabels=(i == 0))
 _save_panel(fig, "D")
 
-# E — ternary persistence.
-fig, ax = plt.subplots(figsize=(6, 5.5))
+# E — ternary persistence (radial KDE design).
+fig, ax = plt.subplots(figsize=(9, 8.4))
 _draw_ternary_single(ax)
 _save_panel(fig, "E")
 
@@ -1715,20 +2512,42 @@ _draw_panel_G(ax)
 fig.tight_layout()
 _save_panel(fig, "H")
 
-# I — pathway temporal stability (family strip + 3 heatmaps + cbar).
-fig = plt.figure(figsize=(11, 7))
+# I — hot-pathway heatmap (left) + temperature trajectory (right).
+fig = plt.figure(figsize=(13, 5))
 gs = gridspec.GridSpec(
-    1, 5, figure=fig,
-    width_ratios=[0.10, 1.0, 1.0, 1.0, 0.05], wspace=0.06,
-    left=0.32, right=0.95, top=0.92, bottom=0.10,
+    1, 2, figure=fig, width_ratios=[1.7, 1.0], wspace=0.22,
+    left=0.13, right=0.97, top=0.91, bottom=0.13,
 )
-_ax_strip = fig.add_subplot(gs[0, 0])
-_ax_p1 = fig.add_subplot(gs[0, 1])
-_ax_p2 = fig.add_subplot(gs[0, 2])
-_ax_p3 = fig.add_subplot(gs[0, 3])
-_cax = fig.add_subplot(gs[0, 4])
-_draw_panel_I(fig, _ax_strip, [_ax_p1, _ax_p2, _ax_p3], _cax)
+gs_I_left = gridspec.GridSpecFromSubplotSpec(
+    1, 4, subplot_spec=gs[0, 0],
+    width_ratios=[1.0, 1.0, 1.0, 0.05], wspace=0.06,
+)
+_ax_p1 = fig.add_subplot(gs_I_left[0, 0])
+_ax_p2 = fig.add_subplot(gs_I_left[0, 1])
+_ax_p3 = fig.add_subplot(gs_I_left[0, 2])
+_cax = fig.add_subplot(gs_I_left[0, 3])
+_ax_traj = fig.add_subplot(gs[0, 1])
+_draw_panel_I(fig, [_ax_p1, _ax_p2, _ax_p3], _cax, _ax_traj)
 _save_panel(fig, "I")
+
+# Supplemental — thermometer view of Panel I (3 per-tissue vertical bars).
+print("\nPanel I supplemental thermometer...")
+fig_t = plt.figure(figsize=(11, 6.5))
+gs_t = gridspec.GridSpec(
+    1, 3, figure=fig_t, wspace=0.65,
+    left=0.06, right=0.95, top=0.88, bottom=0.10,
+)
+_axes_t = [fig_t.add_subplot(gs_t[0, ti]) for ti in range(3)]
+_draw_panel_I_supplemental_thermometer(fig_t, _axes_t)
+fig_t.suptitle("Panel I supplemental — pathway temperature thermometer",
+               fontsize=12, fontweight="bold", y=0.99)
+supp_png = OUT_DIR / "panel_I_supplemental_thermometer.png"
+supp_pdf = OUT_DIR / "panel_I_supplemental_thermometer.pdf"
+fig_t.savefig(supp_png, dpi=DPI_FIG, bbox_inches="tight",
+              facecolor="white")
+fig_t.savefig(supp_pdf, bbox_inches="tight", facecolor="white")
+plt.close(fig_t)
+print(f"  wrote panel_I_supplemental_thermometer.{{png,pdf}}")
 
 
 # %%
@@ -1741,34 +2560,50 @@ if RENDER_FULL_FIGURE:
     # Tight outer margins for minimal whitespace.
     gs_outer = gridspec.GridSpec(
         4, 1, figure=fig,
-        height_ratios=[3.0, 5.0, 3.5, 5.0],
-        hspace=0.35,
+        # Row 1 sized so the three UMAP tiles in Panel A end up
+        # roughly square (matches the ~1:1 UMAP aspect).
+        height_ratios=[3.0, 5.0, 3.5, 4.0],
+        hspace=0.42,
         left=0.05, right=0.97, top=0.97, bottom=0.04,
     )
 
     # Shared column ratios for Row 2 (enrichment panels above ternary).
-    COL_RATIOS = [1.5, 1.0]
+    # Panel E (right column) needs ~1.2:1 W:H for the radial KDE design,
+    # so give it more horizontal space than the legacy ternary did.
+    COL_RATIOS = [1.0, 1.0]
     COL_WSPACE = 0.18
 
-    # ---- Row 1: A (3 UMAPs) | B (tissue triangle) | C (divergence bars) ----
+    # ---- Row 1: A (UMAPs stacked) | B (triangle) | C (tropism+conv) ----
+    # User-requested width split: A=18%, B=32%, C=50%.
     gs_row1 = gridspec.GridSpecFromSubplotSpec(
         1, 3, subplot_spec=gs_outer[0],
-        width_ratios=[3.0, 1.2, 3.5], wspace=0.28,
+        width_ratios=[1.8, 3.2, 5.0], wspace=0.20,
     )
+    # Panel A: 3 UMAPs stacked vertically (smaller tiles per user
+    # request) so the row width can compress to 18%.
     gs_A = gridspec.GridSpecFromSubplotSpec(
-        1, 3, subplot_spec=gs_row1[0, 0], wspace=0.06,
+        3, 1, subplot_spec=gs_row1[0, 0], hspace=0.30,
     )
     ax_A1 = fig.add_subplot(gs_A[0, 0])
-    ax_A2 = fig.add_subplot(gs_A[0, 1])
-    ax_A3 = fig.add_subplot(gs_A[0, 2])
+    ax_A2 = fig.add_subplot(gs_A[1, 0])
+    ax_A3 = fig.add_subplot(gs_A[2, 0])
     ax_B = fig.add_subplot(gs_row1[0, 1])
-    ax_C = fig.add_subplot(gs_row1[0, 2])
+    # Panel C: 2-column subgrid for tropism bar + convergence scatter.
+    gs_C_row1 = gridspec.GridSpecFromSubplotSpec(
+        1, 2, subplot_spec=gs_row1[0, 2],
+        width_ratios=[1.0, 1.3], wspace=0.42,
+    )
+    ax_C_trop = fig.add_subplot(gs_C_row1[0, 0])
+    ax_C_conv = fig.add_subplot(gs_C_row1[0, 1])
+
     _draw_panel_A([ax_A1, ax_A2, ax_A3])
-    panel_tissue_triangle(ax_B, cosine_df)
-    panel_phenotype_divergence(ax_C, cosine_df)
+    # Lineage legend consolidated to Panel E in the composite.
+    panel_tissue_triangle(ax_B, cosine_df, show_legend=False)
+    _draw_tropism_bar(ax_C_trop)
+    _draw_convergence_scatter(ax_C_conv)
     _panel_letter(ax_A1, "A")
     _panel_letter(ax_B, "B")
-    _panel_letter(ax_C, "C")
+    _panel_letter(ax_C_trop, "C")
 
     # ---- Row 2: D (3 enrichment panels) | E (single ternary) ----
     gs_row2 = gridspec.GridSpecFromSubplotSpec(
@@ -1807,32 +2642,37 @@ if RENDER_FULL_FIGURE:
     _panel_letter(ax_F, "G", x=-0.05, y=1.05)
     _panel_letter(ax_G, "H", x=-0.08, y=1.05)
 
-    # ---- Row 4: I — pathway temporal stability (strip | 3 heatmaps | cbar) ----
+    # ---- Row 4: I — hot-pathway heatmap (left) + trajectory (right) ----
     gs_row4 = gridspec.GridSpecFromSubplotSpec(
-        1, 5, subplot_spec=gs_outer[3],
-        width_ratios=[0.10, 1.0, 1.0, 1.0, 0.05], wspace=0.05,
+        1, 2, subplot_spec=gs_outer[3],
+        width_ratios=[1.7, 1.0], wspace=0.22,
     )
-    ax_I_strip = fig.add_subplot(gs_row4[0, 0])
-    ax_I_pbmc = fig.add_subplot(gs_row4[0, 1])
-    ax_I_csf = fig.add_subplot(gs_row4[0, 2])
-    ax_I_tp = fig.add_subplot(gs_row4[0, 3])
-    cax_I = fig.add_subplot(gs_row4[0, 4])
-    _draw_panel_I(fig, ax_I_strip,
-                   [ax_I_pbmc, ax_I_csf, ax_I_tp], cax_I)
-    _panel_letter(ax_I_strip, "I", x=-0.5, y=1.02)
+    gs_I_left = gridspec.GridSpecFromSubplotSpec(
+        1, 4, subplot_spec=gs_row4[0, 0],
+        width_ratios=[1.0, 1.0, 1.0, 0.05], wspace=0.06,
+    )
+    ax_I_pbmc = fig.add_subplot(gs_I_left[0, 0])
+    ax_I_csf  = fig.add_subplot(gs_I_left[0, 1])
+    ax_I_tp   = fig.add_subplot(gs_I_left[0, 2])
+    cax_I     = fig.add_subplot(gs_I_left[0, 3])
+    ax_I_traj = fig.add_subplot(gs_row4[0, 1])
+    _draw_panel_I(fig,
+                   [ax_I_pbmc, ax_I_csf, ax_I_tp], cax_I, ax_I_traj)
+    _panel_letter(ax_I_pbmc, "I", x=-0.30, y=1.05)
 
     # ---- Final sweep ----
     for ax, lab in [
         (ax_A1, "A1"), (ax_A2, "A2"), (ax_A3, "A3"),
-        (ax_B,  "B"),  (ax_C,  "C"),
+        (ax_B,  "B"),
+        (ax_C_trop, "C-trop"), (ax_C_conv, "C-conv"),
         (ax_C1, "D1"), (ax_C2, "D2"), (ax_C3, "D3"),
         (ax_D,  "E"),
         (ax_E,  "F"),  (ax_F,  "G"),
         (ax_G,  "H"),
-        (ax_I_strip, "I-strip"),
         (ax_I_pbmc, "I-PBMC"),
         (ax_I_csf,  "I-CSF"),
         (ax_I_tp,   "I-TP"),
+        (ax_I_traj, "I-traj"),
     ]:
         check_text_overlaps(fig, ax, label=lab)
         check_min_fontsize(ax, label=lab)
@@ -1846,22 +2686,24 @@ if RENDER_FULL_FIGURE:
 # %%
 # ---- Panel I standalone preview ----
 print("\nPanel I preview (standalone)...")
-fig_p = plt.figure(figsize=(11, 7))
+fig_p = plt.figure(figsize=(13, 5))
 gs_p = gridspec.GridSpec(
-    1, 5, figure=fig_p,
-    width_ratios=[0.10, 1.0, 1.0, 1.0, 0.05], wspace=0.06,
-    left=0.32, right=0.95, top=0.92, bottom=0.10,
+    1, 2, figure=fig_p, width_ratios=[1.7, 1.0], wspace=0.22,
+    left=0.13, right=0.97, top=0.90, bottom=0.13,
 )
-ax_strip_p = fig_p.add_subplot(gs_p[0, 0])
-ax_p1 = fig_p.add_subplot(gs_p[0, 1])
-ax_p2 = fig_p.add_subplot(gs_p[0, 2])
-ax_p3 = fig_p.add_subplot(gs_p[0, 3])
-cax_p = fig_p.add_subplot(gs_p[0, 4])
-_draw_panel_I(fig_p, ax_strip_p, [ax_p1, ax_p2, ax_p3], cax_p)
+gs_p_left = gridspec.GridSpecFromSubplotSpec(
+    1, 4, subplot_spec=gs_p[0, 0],
+    width_ratios=[1.0, 1.0, 1.0, 0.05], wspace=0.06,
+)
+ax_p1 = fig_p.add_subplot(gs_p_left[0, 0])
+ax_p2 = fig_p.add_subplot(gs_p_left[0, 1])
+ax_p3 = fig_p.add_subplot(gs_p_left[0, 2])
+cax_p = fig_p.add_subplot(gs_p_left[0, 3])
+ax_p_traj = fig_p.add_subplot(gs_p[0, 1])
+_draw_panel_I(fig_p, [ax_p1, ax_p2, ax_p3], cax_p, ax_p_traj)
 fig_p.suptitle(
-    f"Panel I — pathway temporal stability (top {TOP_N_PATHWAYS_I}, "
-    "stable top → fluctuating bottom)",
-    fontsize=10, y=0.98,
+    "Panel I — Hot-pathway temperature  (heatmap | trajectory)",
+    fontsize=11, fontweight="bold", y=0.98,
 )
 PANEL_I_PREVIEW = OUT_DIR / "panel_I_preview.png"
 fig_p.savefig(PANEL_I_PREVIEW, dpi=DPI_FIG, bbox_inches="tight")

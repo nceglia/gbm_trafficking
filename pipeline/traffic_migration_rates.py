@@ -9,7 +9,7 @@ decompose P into migration / transition / expansion via:
   - matrix logarithm (logm)
   - structured-CTMC Frobenius fit (optimizer)
 
-Outputs go to results/06c_empirical_Q/.
+Outputs go to results/traffic_migration_rates/.
 """
 import io
 import json

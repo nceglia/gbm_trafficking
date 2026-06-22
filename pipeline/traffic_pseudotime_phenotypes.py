@@ -6,8 +6,8 @@ differentiation order? We pin palantir's start cell inside the lineage's
 naive phenotype and one terminal cell inside each labeled terminal
 phenotype, rather than letting palantir freely discover endpoints.
 
-    python pipeline/13_pseudotime_phenotypes.py --lineage CD8
-    python pipeline/13_pseudotime_phenotypes.py --lineage CD4
+    python pipeline/traffic_pseudotime_phenotypes.py --lineage CD8
+    python pipeline/traffic_pseudotime_phenotypes.py --lineage CD4
 """
 import argparse
 import sys
@@ -47,7 +47,7 @@ LINEAGE = _args.lineage
 
 DATA_PATH = paths.H5AD_TCELLS
 UMAP_PKL = REPO_ROOT / "data" / "embeddings" / "X_umap.pkl"
-OUT_DIR = REPO_ROOT / "results" / "13_pseudotime_phenotypes" / LINEAGE
+OUT_DIR = REPO_ROOT / "results" / "traffic_pseudotime_phenotypes" / LINEAGE
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 NAIVE_PHENOTYPE = {

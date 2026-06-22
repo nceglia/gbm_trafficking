@@ -52,6 +52,7 @@ LIBRARIES = ("MSigDB_Hallmark_2020", "KEGG_2021_Human")
 LIBRARY_SLUGS = {
     "MSigDB_Hallmark_2020": "hallmark",
     "KEGG_2021_Human": "kegg",
+    "GO_Biological_Process_2023": "gobp",
 }
 SLUG_TO_LIB = {v: k for k, v in LIBRARY_SLUGS.items()}
 
@@ -71,7 +72,7 @@ PIE_RADIUS_RANGE = (0.01, 0.03)
 
 LINEAGES = ("CD8", "CD4")
 TISSUES = ("PBMC", "CSF", "TP")
-INPUT_DIR = REPO_ROOT / "results" / "04_pseudobulk_de_gsea"
+INPUT_DIR = REPO_ROOT / "results" / "pathway_de_gsea"
 MODULES_DIR = REPO_ROOT / "pipeline" / "modules"
 OUTPUT_DIR = INPUT_DIR / "networks"
 
@@ -85,7 +86,7 @@ def parse_args():
     p.add_argument("--n-edge-genes", type=int, default=N_EDGE_GENES)
     p.add_argument("--output-dir", type=Path, default=OUTPUT_DIR)
     p.add_argument("--libraries", nargs="+", default=["hallmark", "kegg"],
-                   choices=["hallmark", "kegg"])
+                   choices=["hallmark", "kegg", "gobp"])
     p.add_argument("--seed", type=int, default=SEED)
     p.add_argument("--node-scale", type=float, default=NODE_SCALE,
                    help="Multiplier for node/pie size (default 0.5). "

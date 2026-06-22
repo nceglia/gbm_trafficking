@@ -8,6 +8,9 @@ The machine-readable DAG lives in [`manifest.yaml`](manifest.yaml); regenerate
 python pipeline/workflow/render_from_manifest.py
 ```
 
+The driver-naming convention (domain prefixes, where results dirs land,
+how to add a new step) is documented in [`NAMING.md`](NAMING.md).
+
 ## Bayesian and empirical models
 
 The installable package [`trafficking/`](../trafficking/) implements clone-based
@@ -23,9 +26,10 @@ trafficking inference:
 
 **Drivers:**
 
-- [`traffic_migration_rates.py`](traffic_migration_rates.py) — empirical P/Q → `results/06c_empirical_Q/`
+- [`traffic_migration_rates.py`](traffic_migration_rates.py) — empirical P/Q → `results/traffic_migration_rates/`
 - [`traffic_bayesian_comparison.py`](traffic_bayesian_comparison.py) — compares posterior `T_global` to `P_empirical.csv` (**requires empirical Q first**)
-- [`traffic_bayesian_sankey.py`](traffic_bayesian_sankey.py) — all directed tissue edges + Sankey heatmaps
+- [`traffic_bayesian_sankey.py`](traffic_bayesian_sankey.py) — hierarchical Bayesian fit per (lineage, directed edge) + Sankey/heatmap grids → `results/traffic_bayesian_sankey/`
+- [`traffic_empirical_sankey.py`](traffic_empirical_sankey.py) — empirical-P sub-block Sankey/heatmap grids + Bayesian−empirical diff → `results/traffic_empirical_sankey/` (**requires `traffic_migration_rates` and, for diffs, `traffic_bayesian_sankey`**)
 
 These paths are **not portable to myeloid** without TCR clonotypes. A different
 unit of analysis (e.g. patient-level composition dynamics) would be a new model,
@@ -37,7 +41,7 @@ not a parameter change.
 branches but **must run after**
 [`pathway_temporal_scores_myeloid.py`](pathway_temporal_scores_myeloid.py) because
 it overlays myeloid composition from
-`results/10_temporal_scores/temporal_composition_myeloid.csv`.
+`results/pathway_temporal_scores/temporal_composition_myeloid.csv`.
 
 ## Lineage eligibility (short)
 

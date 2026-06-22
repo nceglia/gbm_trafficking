@@ -8,7 +8,7 @@ transition, do they all change in the same way (concentrated
 off-diagonal mass = stereotyped switching) or in many different ways
 (diffuse off-diagonal mass = diverse switching)?
 
-Outputs (results/branch_dispersion_switching/):
+Outputs (results/traffic_branch_dispersion_switching/):
   switching_heatmaps.{png,pdf}
   switching_matrices.csv
   switching_summary.csv
@@ -59,8 +59,8 @@ EMPTY_CELL_COLOR = "#e8e8e8"
 from modules import paths  # noqa: E402
 
 DATA_PATH = paths.H5AD_TCELLS
-SRC_06_DIR = REPO_ROOT / "results" / "06_branch_empirics"
-OUT_DIR = REPO_ROOT / "results" / "branch_dispersion_switching"
+SRC_06_DIR = REPO_ROOT / "results" / "traffic_branch_empirics"
+OUT_DIR = REPO_ROOT / "results" / "traffic_branch_dispersion_switching"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 TISSUES = ("PBMC", "CSF", "TP")
@@ -92,7 +92,7 @@ obs = adata.obs[["trb", "tissue", "timepoint", "phenotype",
                  "lineage", "patient"]].copy()
 print(f"  {adata.n_obs} cells")
 
-# ---- Clone-tissue-time aggregations (mirrors 06_branch_empirics) ----
+# ---- Clone-tissue-time aggregations (mirrors traffic_branch_empirics) ----
 ct = (obs.groupby(["trb", "tissue", "timepoint"], observed=True)
         .size().rename("n").reset_index())
 ph = (obs.groupby(["trb", "tissue", "timepoint", "phenotype"], observed=True)
@@ -103,7 +103,7 @@ for p in PHENOTYPES:
 ph = ph[PHENOTYPES]  # column order = TCELL_PHENOTYPE_ORDER
 
 # %%
-# ---- Build branches (same definition as 06_branch_empirics) ----
+# ---- Build branches (same definition as traffic_branch_empirics) ----
 print("Building branches...")
 records = []
 for t1, t2 in TRANSITIONS:
@@ -514,7 +514,7 @@ else:
 
 if not metrics_loaded_from_06:
     checks.append("\n[WARN] median_log2fc_norm column = NaN because "
-                  "results/06_branch_empirics/edge_metrics_table.csv "
+                  "results/traffic_branch_empirics/edge_metrics_table.csv "
                   "was missing.")
 
 checks.insert(0, f"OVERALL: {'PASS' if ok else 'FAIL'}\n")

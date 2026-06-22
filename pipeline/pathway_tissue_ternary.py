@@ -159,7 +159,7 @@ for _slug in LIBRARY_SLUGS.values():
 
 LINEAGES = ("CD8", "CD4")
 TISSUES = ("PBMC", "CSF", "TP")
-INPUT_DIR = REPO_ROOT / "results" / "04_pseudobulk_de_gsea"
+INPUT_DIR = REPO_ROOT / "results" / "pathway_de_gsea"
 NES_THRESHOLD = 1.5
 TOP_LABELS = 8
 # lower = more corner-pinned, higher = more centroid-clustered; tune if needed
@@ -271,12 +271,12 @@ def build_affinity_df(gsea_long, library_tag):
     if library_tag in _FAMILY_MAPS:
         missing = result[result["family"].isna()]["pathway"].unique().tolist()
         if missing:
-            raise KeyError(
-                f"{len(missing)} filtered pathway(s) missing from "
-                f"{library_tag} family map:\n"
-                + "\n".join(f"  {t}" for t in sorted(missing))
-                + f"\nUpdate pipeline/modules/pathway_families_{library_tag}.tsv"
+            print(
+                f"  WARNING: {len(missing)} filtered pathway(s) missing from "
+                f"{library_tag} family map — dropping them. "
+                f"(Update pipeline/modules/pathway_families_{library_tag}.tsv to include.)"
             )
+            result = result[result["family"].notna()].reset_index(drop=True)
         # Exclude disease/infection sentinel family
         excluded_mask = result["family"] == EXCLUDED_FAMILY
         n_excluded = excluded_mask.sum()

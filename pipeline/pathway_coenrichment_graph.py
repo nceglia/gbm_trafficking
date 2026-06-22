@@ -21,7 +21,7 @@ warnings.filterwarnings("ignore")
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "pipeline"))
 
-from modules.celltyping_clonality import TISSUE_COLORS
+from modules.style import TISSUE_COLORS
 from modules.constants import DIRECTED_TISSUE_PAIRS
 
 # ---- Constants ----
@@ -32,7 +32,7 @@ RANDOM_SEED = 42
 
 LINEAGES = ("CD8", "CD4")
 TISSUES = ("PBMC", "CSF", "TP")
-INPUT_DIR = REPO_ROOT / "results" / "04_pseudobulk_de_gsea"
+INPUT_DIR = REPO_ROOT / "results" / "pathway_de_gsea"
 OUTPUT_DIR = INPUT_DIR
 
 # Module hull colors (categorical palette)

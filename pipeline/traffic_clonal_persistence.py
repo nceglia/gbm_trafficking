@@ -19,7 +19,7 @@ from modules.clone_helpers import (  # noqa: E402
     shorten_phenotype_label,
 )
 
-OUTPUT_DIR = REPO_ROOT / "results" / "07_clonal_trafficking"
+OUTPUT_DIR = REPO_ROOT / "results" / "traffic_clonal_persistence"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 adata = sc.read(str(paths.H5AD_TCELLS))
@@ -226,7 +226,11 @@ for lineage in ["CD8", "CD4"]:
     if "CSF" in cs.columns:
         all3 = cs[cs.notna().all(axis=1)]
         if len(all3) > 0:
-            all3["trajectory"] = all3["PBMC"] + " → " + all3["CSF"] + " → " + all3["TP"]
+            all3["trajectory"] = (
+                all3["PBMC"].astype(str) + " → "
+                + all3["CSF"].astype(str) + " → "
+                + all3["TP"].astype(str)
+            )
             print(f"\n3-compartment trajectories ({len(all3)} clones):")
             print(all3["trajectory"].value_counts().head(15))
 
@@ -474,6 +478,7 @@ def plot_clone_network(
         print(f"Saved: {savepath}")
 
     if standalone:
+        plt.close(fig)
 
     return node_pos
 

@@ -8,7 +8,7 @@ Reads:
   data/objects/MYELOID_GBM.h5ad
 
 Writes:
-  results/04_pseudobulk_de_gsea_myeloid/
+  results/pathway_de_gsea_myeloid/
 """
 import sys
 import warnings

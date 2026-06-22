@@ -2,9 +2,9 @@
 """Cohort clonality summary + per-phenotype temporal trends.
 
 Three figures, all built on a shared aesthetic:
-  results/clonality/clonality_summary.{png,pdf}
-  results/clonality/clonality_phenotype_trends.{png,pdf}
-  results/clonality/clonality_phenotype_correlations.{png,pdf}
+  results/traffic_clonality/clonality_summary.{png,pdf}
+  results/traffic_clonality/clonality_phenotype_trends.{png,pdf}
+  results/traffic_clonality/clonality_phenotype_correlations.{png,pdf}
 
 Plus the four CSVs:
   clonality_table.csv     long form: G1..G5, G_lineage, G_phenotype

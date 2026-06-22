@@ -43,8 +43,8 @@ from pipeline.modules.myeloid_groups import (
 
 # %%
 # ---- Config ----
-INPUT_DIR = REPO_ROOT / "results" / "10_temporal_scores"
-OUTPUT_DIR = REPO_ROOT / "results" / "11_cross_lineage_correlations"
+INPUT_DIR = REPO_ROOT / "results" / "pathway_temporal_scores"
+OUTPUT_DIR = REPO_ROOT / "results" / "pathway_cross_lineage_corr"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 MIN_OBS = 6

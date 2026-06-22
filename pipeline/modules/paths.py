@@ -76,45 +76,54 @@ def cellranger_samples() -> list[str]:
 # go through these constants so a future rename touches one file, not 20.
 RESULTS_DIR = REPO_ROOT / "results"
 
-# QC / preprocessing
-QC_DOUBLETS_DIR              = RESULTS_DIR / "qc_doublets"
+# Every result dir follows the driver-name convention (see pipeline/NAMING.md).
+# Where a constant's spelling diverges from the driver name (e.g.,
+# EMPIRICAL_Q_DIR ← traffic_migration_rates), the constant is kept for
+# backward compatibility but points at the new dir.
 
-# Analysis steps (existing numeric dirs preserved for now; will be
-# renamed alongside the pipeline-driver rename in a later refactor).
-TISSUE_SEPARABILITY_DIR      = RESULTS_DIR / "03_tissue_separability"
-PSEUDOBULK_DE_GSEA_DIR       = RESULTS_DIR / "04_pseudobulk_de_gsea"
-BRANCH_EMPIRICS_DIR          = RESULTS_DIR / "06_branch_empirics"
-TRANSCRIPTOME_SIMILARITY_DIR = RESULTS_DIR / "transcriptome_similarity"
-BRANCH_SIGNALING_DIR         = RESULTS_DIR / "06b_branch_signaling"
-EMPIRICAL_Q_DIR              = RESULTS_DIR / "06c_empirical_Q"
-EMPIRICAL_Q_PER_TIMEPOINT_DIR = RESULTS_DIR / "06d_empirical_Q_per_timepoint"
-BAYESIAN_COMPARISON_DIR      = RESULTS_DIR / "06f_bayesian_comparison"
-BAYESIAN_SANKEY_DIR          = RESULTS_DIR / "06g_bayesian_sankey"
-FIGURE2_DIR                  = RESULTS_DIR / "07_figure2"
-TEMPORAL_TRAJECTORIES_DIR    = RESULTS_DIR / "09_temporal"
-TEMPORAL_SCORES_DIR          = RESULTS_DIR / "10_temporal_scores"
-CROSS_LINEAGE_CORR_DIR       = RESULTS_DIR / "11_cross_lineage_correlations"
-CROSS_LINEAGE_CORR_GROUPED_DIR = RESULTS_DIR / "11_cross_lineage_correlations_grouped"
-LIANA_SIGNALING_DIR          = RESULTS_DIR / "12_liana_signaling"
-PSEUDOTIME_PHENOTYPES_DIR    = RESULTS_DIR / "13_pseudotime_phenotypes"
-PHENOTYPE_DEGS_DIR           = RESULTS_DIR / "14_phenotype_degs"
+# QC / preprocessing
+QC_DOUBLETS_DIR              = RESULTS_DIR / "qc_scrublet_doublets"
+
+# Pathway / GSEA
+PSEUDOBULK_DE_GSEA_DIR       = RESULTS_DIR / "pathway_de_gsea"
+PSEUDOBULK_DE_GSEA_MYELOID_DIR  = RESULTS_DIR / "pathway_de_gsea_myeloid"
+TEMPORAL_SCORES_DIR          = RESULTS_DIR / "pathway_temporal_scores"
+CROSS_LINEAGE_CORR_DIR       = RESULTS_DIR / "pathway_cross_lineage_corr"
+CROSS_LINEAGE_CORR_GROUPED_DIR = RESULTS_DIR / "11_cross_lineage_correlations_grouped"  # orphan, no producer
+
+# Trafficking
+TISSUE_SEPARABILITY_DIR      = RESULTS_DIR / "traffic_tissue_separability"
+TISSUE_SEPARABILITY_MYELOID_DIR = RESULTS_DIR / "traffic_tissue_separability_myeloid"
+TRANSCRIPTOME_SIMILARITY_DIR = RESULTS_DIR / "traffic_transcriptome_cosine"
+TRANSCRIPTOME_SIMILARITY_MYELOID_DIR = RESULTS_DIR / "traffic_transcriptome_cosine_myeloid"
+BRANCH_EMPIRICS_DIR          = RESULTS_DIR / "traffic_branch_empirics"
+EMPIRICAL_Q_DIR              = RESULTS_DIR / "traffic_migration_rates"
+EMPIRICAL_Q_PER_TIMEPOINT_DIR = RESULTS_DIR / "traffic_migration_rates_per_tp"
+EMPIRICAL_Q_FIGURES_DIR      = EMPIRICAL_Q_DIR / "figures"
+BAYESIAN_COMPARISON_DIR      = RESULTS_DIR / "traffic_bayesian_comparison"
+BAYESIAN_SANKEY_DIR          = RESULTS_DIR / "traffic_bayesian_sankey"
+EMPIRICAL_SANKEY_DIR         = RESULTS_DIR / "traffic_empirical_sankey"
+TEMPORAL_TRAJECTORIES_DIR    = RESULTS_DIR / "traffic_temporal_trajectories"
+PSEUDOTIME_PHENOTYPES_DIR    = RESULTS_DIR / "traffic_pseudotime_phenotypes"
+PHENOTYPE_DEGS_DIR           = RESULTS_DIR / "traffic_phenotype_degs"
+CLONAL_TRAFFICKING_DIR       = RESULTS_DIR / "traffic_clonal_persistence"
+CLONALITY_DIR                = RESULTS_DIR / "traffic_clonality"
+BRANCH_DISPERSION_DIR        = RESULTS_DIR / "traffic_branch_dispersion"
+BRANCH_DISPERSION_JSD_DIR    = RESULTS_DIR / "traffic_branch_dispersion_jsd"
+BRANCH_DISPERSION_SWITCHING_DIR = RESULTS_DIR / "traffic_branch_dispersion_switching"
+BRANCH_DISPERSION_TEMPORAL_DIR  = RESULTS_DIR / "traffic_branch_dispersion_temporal"
 TRAFFIC_ARCHETYPES_DIR       = RESULTS_DIR / "traffic_archetypes"
 TRAFFIC_ARCHETYPE_GRAPHS_DIR = RESULTS_DIR / "traffic_archetype_graphs"
 
-# Standalone analyses (non-numbered)
-BRANCH_DISPERSION_DIR           = RESULTS_DIR / "branch_dispersion"
-BRANCH_DISPERSION_JSD_DIR       = RESULTS_DIR / "branch_dispersion_jsd"
-BRANCH_DISPERSION_SWITCHING_DIR = RESULTS_DIR / "branch_dispersion_switching"
-BRANCH_DISPERSION_TEMPORAL_DIR  = RESULTS_DIR / "branch_dispersion_temporal"
-CLONALITY_DIR                   = RESULTS_DIR / "clonality"
-CLONE_NETWORK_EXPLORER_DIR      = RESULTS_DIR / "clone_network_explorer"
-SIGNALING_EXPLORER_DIR          = RESULTS_DIR / "signaling_explorer"
-FIGURE1_DIR                     = RESULTS_DIR / "figure1"
-CLONAL_TRAFFICKING_DIR          = RESULTS_DIR / "07_clonal_trafficking"
-PSEUDOBULK_DE_GSEA_MYELOID_DIR  = RESULTS_DIR / "04_pseudobulk_de_gsea_myeloid"
-TISSUE_SEPARABILITY_MYELOID_DIR = RESULTS_DIR / "03_tissue_separability_myeloid"
-TRANSCRIPTOME_SIMILARITY_MYELOID_DIR = RESULTS_DIR / "transcriptome_similarity_myeloid"
-EMPIRICAL_Q_FIGURES_DIR         = EMPIRICAL_Q_DIR / "figures"
+# Signaling
+BRANCH_SIGNALING_DIR         = RESULTS_DIR / "signaling_branch_intersection"
+LIANA_SIGNALING_DIR          = RESULTS_DIR / "signaling_liana_pathways"
+
+# Figures / explorers
+FIGURE1_DIR                  = RESULTS_DIR / "figure1"  # orphan, written by scripts/figure1_clone_network.py
+FIGURE2_DIR                  = RESULTS_DIR / "figure_main2_trafficking"
+CLONE_NETWORK_EXPLORER_DIR   = RESULTS_DIR / "explorer_clone_network"
+SIGNALING_EXPLORER_DIR       = RESULTS_DIR / "explorer_signaling"
 
 # Repo-root HTML / report artifacts (legacy — prefer deploy/bundle/)
 VIEWER_BUNDLE_DIR           = REPO_ROOT / "deploy" / "bundle"

@@ -5,8 +5,8 @@ timepoint. Patients are the unit of replication: pseudobulk by
 ``~ patient + is_target`` and contrast ``["is_target","1","0"]`` so
 positive log2FC means up in the target phenotype.
 
-    python pipeline/14_phenotype_degs.py --dry-run   # CD4 global Treg only
-    python pipeline/14_phenotype_degs.py             # full sweep
+    python pipeline/traffic_phenotype_degs.py --dry-run   # CD4 global Treg only
+    python pipeline/traffic_phenotype_degs.py             # full sweep
 """
 import argparse
 import sys
@@ -32,8 +32,8 @@ parser.add_argument("--dry-run", action="store_true",
                     help="Only run CD4 global Treg contrast, then exit.")
 args, _ = parser.parse_known_args()
 
-INPUT_DIR = REPO_ROOT / "results" / "13_pseudotime_phenotypes"
-OUT_DIR = REPO_ROOT / "results" / "14_phenotype_degs"
+INPUT_DIR = REPO_ROOT / "results" / "traffic_pseudotime_phenotypes"
+OUT_DIR = REPO_ROOT / "results" / "traffic_phenotype_degs"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 LINEAGES = ["CD8", "CD4"]

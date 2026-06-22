@@ -4,11 +4,11 @@
 For each of the 9 (i→j) edges, plots the distribution of per-branch
 JSD between that branch's per-side phenotype distribution and the
 edge-mean phenotype distribution. Tight low-JSD violins → the edge
-mean (and therefore the 06_branch_empirics paired-bar) is
+mean (and therefore the traffic_branch_empirics paired-bar) is
 representative. Wide / high-JSD violins → the paired-bar is averaging
 over heterogeneous branches.
 
-Outputs (results/branch_dispersion_jsd/):
+Outputs (results/traffic_branch_dispersion_jsd/):
   dispersion_jsd.{png,pdf}
   dispersion_summary.csv
   render_check.txt
@@ -60,8 +60,8 @@ DPI = 200
 from modules import paths  # noqa: E402
 
 DATA_PATH = paths.H5AD_TCELLS
-SRC_06_DIR = REPO_ROOT / "results" / "06_branch_empirics"
-OUT_DIR = REPO_ROOT / "results" / "branch_dispersion_jsd"
+SRC_06_DIR = REPO_ROOT / "results" / "traffic_branch_empirics"
+OUT_DIR = REPO_ROOT / "results" / "traffic_branch_dispersion_jsd"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 TISSUES = ("PBMC", "CSF", "TP")
@@ -92,7 +92,7 @@ obs = adata.obs[["trb", "tissue", "timepoint", "phenotype",
                  "lineage", "patient"]].copy()
 print(f"  {adata.n_obs} cells")
 
-# ---- Clone-tissue-time aggregations (mirrors 06_branch_empirics) ----
+# ---- Clone-tissue-time aggregations (mirrors traffic_branch_empirics) ----
 ct = (obs.groupby(["trb", "tissue", "timepoint"], observed=True)
         .size().rename("n").reset_index())
 ph = (obs.groupby(["trb", "tissue", "timepoint", "phenotype"], observed=True)
@@ -109,7 +109,7 @@ N_sample = (obs.groupby(["patient", "tissue", "timepoint"], observed=True)
               .size().to_dict())
 
 # %%
-# ---- Build branches (mirrors 06_branch_empirics: n_src ≥ 2 AND n_dst ≥ 2) ----
+# ---- Build branches (mirrors traffic_branch_empirics: n_src ≥ 2 AND n_dst ≥ 2) ----
 print("Building branches...")
 records = []
 for t1, t2 in TRANSITIONS:
@@ -297,7 +297,7 @@ for edge in EDGES:
                 )
 
 # %%
-# ---- Load median_log2fc_norm from 06_branch_empirics (for color key) ----
+# ---- Load median_log2fc_norm from traffic_branch_empirics (for color key) ----
 edge_metrics_path = SRC_06_DIR / "edge_metrics_table.csv"
 median_lfc = {}
 if edge_metrics_path.exists():
@@ -317,7 +317,7 @@ else:
     metrics_loaded_from_06 = False
 
 # %%
-# ---- Color norm (identical recipe to 06_branch_empirics expansion graph) ----
+# ---- Color norm (identical recipe to traffic_branch_empirics expansion graph) ----
 _medians = np.array([median_lfc[e] for e in EDGES])
 _max_abs = float(np.max(np.abs(_medians))) if len(_medians) else 0.0
 if EXPANSION_VLIM_AUTO:
@@ -523,9 +523,9 @@ fig.text(
     "Each violin = distribution of branches' JSD from their edge's mean "
     "phenotype distribution. Tight low-JSD violin → edge mean is "
     "representative. Wide / high-JSD violin → edge mean averages over "
-    "heterogeneous behaviours, and the 06_branch_empirics paired-bar "
+    "heterogeneous behaviours, and the traffic_branch_empirics paired-bar "
     "hides structure. Violin fill = median depth-corrected log₂ "
-    "fold-change for that edge (same scale as 06_branch_empirics "
+    "fold-change for that edge (same scale as traffic_branch_empirics "
     "expansion graph).",
     ha="center", va="bottom", fontsize=ANNOT_FS,
     color="dimgray", style="italic", wrap=True,
@@ -543,9 +543,9 @@ print("Running sanity checks...")
 checks = []
 ok = True
 
-# Sanity #1: per-edge mean distributions match 06_branch_empirics paired-bar.
+# Sanity #1: per-edge mean distributions match traffic_branch_empirics paired-bar.
 pheno_dist_path = SRC_06_DIR / "phenotype_dist.csv"
-checks.append("Sanity #1: edge-mean distributions vs 06_branch_empirics:")
+checks.append("Sanity #1: edge-mean distributions vs traffic_branch_empirics:")
 if pheno_dist_path.exists():
     pd06 = pd.read_csv(pheno_dist_path)
     for i, j in EDGES:
@@ -674,7 +674,7 @@ for side_name, jsd_by_edge in (("src", jsd_src_by_edge),
 
 if not metrics_loaded_from_06:
     checks.append("\n[WARN] median_log2fc_norm recomputed locally because "
-                  "results/06_branch_empirics/edge_metrics_table.csv was "
+                  "results/traffic_branch_empirics/edge_metrics_table.csv was "
                   "missing.")
 
 # ---- Noise-floor diagnostic: real dispersion above sampling noise. ----

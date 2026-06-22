@@ -1,7 +1,7 @@
 # %%
 """Temporal pathway and gene-expression scoring (myeloid lineage).
 
-Mirrors 10_temporal_scores.py but for the myeloid AnnData. Reuses the
+Mirrors pathway_temporal_scores_tcell.py but for the myeloid AnnData. Reuses the
 T-cell-derived pathway_definitions.csv and unions the T-cell gene panel
 into the myeloid panel so cross-lineage gene comparisons are possible.
 All output rows carry lineage="Myeloid".
@@ -117,7 +117,7 @@ print(f"Composition rows: {len(comp)} (samples kept: {comp[SAMPLE_KEYS].drop_dup
 # ---- Reuse pathway definitions from the T cell run ----
 if not PATHWAY_DEF_PATH.exists():
     raise FileNotFoundError(
-        f"{PATHWAY_DEF_PATH} not found; run pipeline/10_temporal_scores.py first"
+        f"{PATHWAY_DEF_PATH} not found; run pipeline/pathway_temporal_scores_tcell.py first"
     )
 pathway_def = pd.read_csv(PATHWAY_DEF_PATH)
 print(f"\nLoaded {len(pathway_def)} pathway definitions from {PATHWAY_DEF_PATH.name}")
@@ -135,7 +135,7 @@ print(f"Marker genes (union of top {TOP_MARKERS_PER_PHENO} per phenotype): {len(
 
 if not TCELL_PANEL_PATH.exists():
     raise FileNotFoundError(
-        f"{TCELL_PANEL_PATH} not found; run pipeline/10_temporal_scores.py first"
+        f"{TCELL_PANEL_PATH} not found; run pipeline/pathway_temporal_scores_tcell.py first"
     )
 tcell_panel = {g.strip() for g in TCELL_PANEL_PATH.read_text().splitlines() if g.strip()}
 print(f"T cell panel loaded: {len(tcell_panel)} genes")

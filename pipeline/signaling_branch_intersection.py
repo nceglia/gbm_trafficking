@@ -6,7 +6,7 @@ same-tissue. For each edge, pool branch-participating cells across all
 (patient, transition) and run LIANA on src side and dst side
 separately. Compare per L-R pair.
 
-Output: results/06b_branch_signaling/
+Output: results/signaling_branch_intersection/
 """
 import subprocess
 import sys
@@ -49,7 +49,7 @@ from modules.style import (
 
 DATA_PATH = (REPO_ROOT / "data" / "objects"
              / "GBM_TCR_POS_TCELLS_MYELOID_combined.h5ad")
-OUT_DIR = REPO_ROOT / "results" / "06b_branch_signaling"
+OUT_DIR = REPO_ROOT / "results" / "signaling_branch_intersection"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 MIN_CELLS_PER_BRANCH_END = 2

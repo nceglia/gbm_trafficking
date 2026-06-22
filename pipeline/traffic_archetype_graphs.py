@@ -15,7 +15,10 @@ Writes to results/traffic_archetype_graphs/:
   clone_archetypes.csv, archetype_graphs.csv, archetype_summary.csv,
   subset_matrix.csv,
   archetype_top_graphs.png, archetype_size_distribution.png,
-  subset_diagnostic.png, archetype_phenotypes.png
+  subset_diagnostic.png, archetype_phenotypes.png,
+  trafficking_heat.png/.pdf      (4-panel, clones by exact tissue set)
+  trafficking_heat_crosses.png/.pdf  (3-panel, per tissue-pair subgraph)
+  trafficking_heat_crosses_thr{0.15..0.05}.png/.pdf  (threshold sweep)
 """
 import argparse
 import json
@@ -1087,7 +1090,7 @@ print(f"\ntiebreaker invocations: "
 # Trafficking heat: 4-panel per-edge frequency across clones,
 # filtered by tissue scope.
 # =========================================================
-print("\nPlotting trafficking heat (4-panel)...")
+print("\nPlotting trafficking heat (4-panel, by tissue membership)...")
 from matplotlib import rcParams  # noqa: E402
 from matplotlib.cm import ScalarMappable  # noqa: E402
 from matplotlib.colors import Normalize  # noqa: E402
@@ -1146,10 +1149,10 @@ HEAT_ROW_ORDER = ["CSF", "TP", "PBMC"]
 HEAT_Y = {TISSUE_IDX[t]: (len(HEAT_ROW_ORDER) - 1 - i)
           for i, t in enumerate(HEAT_ROW_ORDER)}
 
-fig, axes = plt.subplots(1, 4, figsize=(20, 5))
 inferno_cmap = plt.get_cmap("inferno")
-for col, pdat in enumerate(panel_data):
-    ax = axes[col]
+
+
+def _draw_heat_panel(ax, pdat, threshold):
     edge_count = pdat["edge_count"]
     max_edge = pdat["max_edge"]
     n_observed_node = pdat["n_observed"]
@@ -1165,7 +1168,7 @@ for col, pdat in enumerate(panel_data):
     n_total = len(edge_count)
     n_after_threshold = sum(
         1 for (u, v), cnt in edge_count.items()
-        if max_edge > 0 and (cnt / max_edge) >= HEAT_EDGE_THRESHOLD
+        if max_edge > 0 and (cnt / max_edge) >= threshold
     )
     print(f"    edges: total={n_total}, "
           f"after threshold={n_after_threshold} "
@@ -1173,7 +1176,7 @@ for col, pdat in enumerate(panel_data):
     # Threshold-only edge cut; inferred-only nodes are retained.
     kept_edges = {
         (u, v): cnt for (u, v), cnt in edge_count.items()
-        if max_edge > 0 and (cnt / max_edge) >= HEAT_EDGE_THRESHOLD
+        if max_edge > 0 and (cnt / max_edge) >= threshold
     }
     kept_nodes = set()
     for (u, v) in kept_edges:
@@ -1282,37 +1285,43 @@ for col, pdat in enumerate(panel_data):
         ax.spines[s].set_visible(False)
     ax.tick_params(length=0)
 
+
+def _add_heat_legends(fig):
+    # Colorbar — left side of the bottom legend strip (narrower).
+    cax = fig.add_axes([0.10, 0.16, 0.38, 0.020])
+    sm = ScalarMappable(cmap=inferno_cmap, norm=Normalize(vmin=0, vmax=1))
+    sm.set_array([])
+    cb = fig.colorbar(sm, cax=cax, orientation="horizontal")
+    cb.set_label("Edge frequency (per-panel normalized)", fontsize=9)
+    cb.ax.tick_params(labelsize=8)
+
+    # Node-size legend — compact, right side, more vertical separation
+    # between dots/labels and the title.
+    lax = fig.add_axes([0.75, 0.04, 0.18, 0.18])
+    lax.set_xlim(0, 1); lax.set_ylim(0, 1)
+    size_fracs = [0.0, 0.25, 0.50, 0.75, 1.0]
+    x_positions = np.linspace(0.10, 0.90, len(size_fracs))
+    for f, x in zip(size_fracs, x_positions):
+        sz = NODE_SIZE_MIN + (NODE_SIZE_MAX - NODE_SIZE_MIN) * f
+        lax.plot(x, 0.75, "o", markerfacecolor="#444",
+                 markeredgecolor="none", markersize=sz, zorder=3)
+        lax.text(x, 0.45, f"{int(f * 100)}%",
+                 ha="center", va="top", fontsize=7)
+    lax.text(0.5, 0.05,
+             "Node size: occupancy (% of panel max)",
+             ha="center", va="bottom", fontsize=8)
+    for s in ("top", "right", "bottom", "left"):
+        lax.spines[s].set_visible(False)
+    lax.set_xticks([]); lax.set_yticks([])
+
+
+# ---- Figure A: 4 panels grouped by exact tissue membership ----
+fig, axes = plt.subplots(1, 4, figsize=(20, 5))
+for col, pdat in enumerate(panel_data):
+    _draw_heat_panel(axes[col], pdat, HEAT_EDGE_THRESHOLD)
 fig.subplots_adjust(left=0.04, right=0.97, top=0.88,
-                     bottom=0.30, wspace=0.10)
-
-# Colorbar — left side of the bottom legend strip (narrower).
-cax = fig.add_axes([0.10, 0.16, 0.38, 0.020])
-sm = ScalarMappable(cmap=inferno_cmap, norm=Normalize(vmin=0, vmax=1))
-sm.set_array([])
-cb = fig.colorbar(sm, cax=cax, orientation="horizontal")
-cb.set_label("Edge frequency (per-panel normalized)",
-             fontsize=9)
-cb.ax.tick_params(labelsize=8)
-
-# Node-size legend — compact, right side, more vertical separation
-# between dots/labels and the title.
-lax = fig.add_axes([0.75, 0.04, 0.18, 0.18])
-lax.set_xlim(0, 1); lax.set_ylim(0, 1)
-size_fracs = [0.0, 0.25, 0.50, 0.75, 1.0]
-x_positions = np.linspace(0.10, 0.90, len(size_fracs))
-for f, x in zip(size_fracs, x_positions):
-    sz = NODE_SIZE_MIN + (NODE_SIZE_MAX - NODE_SIZE_MIN) * f
-    lax.plot(x, 0.75, "o", markerfacecolor="#444",
-             markeredgecolor="none", markersize=sz, zorder=3)
-    lax.text(x, 0.45, f"{int(f * 100)}%",
-             ha="center", va="top", fontsize=7)
-lax.text(0.5, 0.05,
-         "Node size: occupancy (% of panel max)",
-         ha="center", va="bottom", fontsize=8)
-for s in ("top", "right", "bottom", "left"):
-    lax.spines[s].set_visible(False)
-lax.set_xticks([]); lax.set_yticks([])
-
+                    bottom=0.30, wspace=0.10)
+_add_heat_legends(fig)
 fig.suptitle(
     "Cross compartment T cell traffic patterns",
     fontsize=13, fontweight="bold", y=0.97)
@@ -1321,6 +1330,85 @@ fig.savefig(OUT_DIR / "trafficking_heat.png",
 fig.savefig(OUT_DIR / "trafficking_heat.pdf",
             bbox_inches="tight")
 plt.close(fig)
+
+
+# %%
+# =========================================================
+# Trafficking heat (3-panel): per tissue-pair induced subgraph.
+# Unlike the 4-panel version (which buckets clones by their exact
+# tissue membership), every clone here contributes the edges whose
+# both endpoints fall within the panel's tissue pair. Within-tissue
+# persistence edges are kept; only edges touching the third tissue
+# are dropped. A clone spanning all three tissues therefore appears
+# across multiple panels, so no separate "All" panel is needed.
+# =========================================================
+print("\nPlotting trafficking heat (3-panel, per tissue pair)...")
+HEAT_PANELS_PAIRS = [
+    ("CSF ↔ TP",   frozenset({CSF_I, TP_I})),
+    ("PBMC ↔ TP",  frozenset({PBMC_I, TP_I})),
+    ("PBMC ↔ CSF", frozenset({PBMC_I, CSF_I})),
+]
+panel_data_pairs = []
+for label, panel_set in HEAT_PANELS_PAIRS:
+    edge_count = {}
+    n_observed_node = {}
+    n_inferred_node = {}
+    n_clones = 0
+    for cid, (edges, obs_nodes) in clone_graphs.items():
+        kept = [(u, v) for (u, v) in edges
+                if u[0] in panel_set and v[0] in panel_set]
+        if not kept:
+            continue
+        n_clones += 1
+        nodes_on_path = set()
+        for u, v in kept:
+            nodes_on_path.add(u); nodes_on_path.add(v)
+            edge_count[(u, v)] = edge_count.get((u, v), 0) + 1
+        for node in nodes_on_path:
+            if node in obs_nodes:
+                n_observed_node[node] = n_observed_node.get(node, 0) + 1
+            else:
+                n_inferred_node[node] = n_inferred_node.get(node, 0) + 1
+    max_edge = max(edge_count.values()) if edge_count else 0
+    print(f"  {label}: n_clones={n_clones}, max_edge_count={max_edge}")
+    panel_data_pairs.append({
+        "label": label, "n_clones": n_clones,
+        "edge_count": edge_count, "max_edge": max_edge,
+        "n_observed": n_observed_node,
+        "n_inferred": n_inferred_node,
+    })
+
+def _render_crosses_figure(threshold, png_name, pdf_name):
+    fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+    for col, pdat in enumerate(panel_data_pairs):
+        _draw_heat_panel(axes[col], pdat, threshold)
+    fig.subplots_adjust(left=0.05, right=0.97, top=0.88,
+                        bottom=0.30, wspace=0.10)
+    _add_heat_legends(fig)
+    fig.suptitle(
+        f"Cross compartment T cell traffic patterns "
+        f"(per tissue pair, threshold={threshold:.2f})",
+        fontsize=13, fontweight="bold", y=0.97)
+    fig.savefig(OUT_DIR / png_name, dpi=DPI, bbox_inches="tight")
+    fig.savefig(OUT_DIR / pdf_name, bbox_inches="tight")
+    plt.close(fig)
+
+
+# Canonical output at the default threshold.
+_render_crosses_figure(HEAT_EDGE_THRESHOLD,
+                       "trafficking_heat_crosses.png",
+                       "trafficking_heat_crosses.pdf")
+
+# Threshold sweep. The per-panel max is a within-tissue persistence edge
+# shared by ~all clones, so the default cut (relative to that max) prunes
+# the rarer cross-compartment edges. Lower cuts progressively recover
+# them; render a few for side-by-side review.
+HEAT_CROSS_THRESHOLD_SWEEP = [0.15, 0.10, 0.09, 0.08, 0.07, 0.06, 0.05]
+for thr in HEAT_CROSS_THRESHOLD_SWEEP:
+    print(f"  threshold sweep: {thr:.2f}")
+    _render_crosses_figure(thr,
+                           f"trafficking_heat_crosses_thr{thr:.2f}.png",
+                           f"trafficking_heat_crosses_thr{thr:.2f}.pdf")
 
 # Restore font config (only the heat figure uses Arial).
 rcParams["font.family"] = _orig_font_family

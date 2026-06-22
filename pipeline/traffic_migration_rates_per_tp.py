@@ -6,7 +6,7 @@ vectors observed at exactly those two timepoints, decompose it into
 migration / transition / expansion rates via both matrix logarithm and the
 structured optimizer, then summarise consistency of the rates across time.
 
-Outputs go to results/06d_empirical_Q_per_timepoint/.
+Outputs go to results/traffic_migration_rates_per_tp/.
 """
 import sys
 import warnings
@@ -43,7 +43,7 @@ from trafficking.empirical import (  # noqa: E402
 from modules import paths  # noqa: E402
 
 DATA_PATH = paths.H5AD_TCELLS
-OUT_DIR = REPO_ROOT / "results" / "06d_empirical_Q_per_timepoint"
+OUT_DIR = REPO_ROOT / "results" / "traffic_migration_rates_per_tp"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 TISSUES = ("PBMC", "CSF", "TP")

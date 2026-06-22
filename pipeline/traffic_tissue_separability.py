@@ -9,7 +9,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import pertpy as pt
+from pertpy.tools._augur import Augur as _Augur
 import scanpy as sc
 import seaborn as sns
 from scipy import sparse
@@ -81,13 +81,18 @@ else:
         sub = sub[sub.obs["phenotype"].isin(keep)].copy()
         print(f"  Phenotypes with >={MIN_CELLS} cells in both: {len(keep)}")
 
-        ag = pt.tl.Augur("random_forest_classifier")
+        ag = _Augur("random_forest_classifier")
+        prepared = ag.load(sub, label_col="tissue", cell_type_col="phenotype")
         loaded, results = ag.predict(
-            sub, label_col="tissue", cell_type_col="phenotype",
-            n_folds=3, subsample_size=20, n_subsamples=50,
+            prepared,
+            folds=3, subsample_size=20, n_subsamples=50,
             random_state=42, select_variance_features=True, span=0.75,
         )
-        auc_df = results["summary_metrics"].sort_values("mean_augur_score", ascending=False)
+        sm = results["summary_metrics"]
+        if "mean_augur_score" not in sm.columns:
+            # Newer pertpy: metrics are rows, cell types are columns — transpose
+            sm = sm.T
+        auc_df = sm.sort_values("mean_augur_score", ascending=False)
         augur_results[pair_key] = {"auc": auc_df, "full": results, "adata": loaded}
 
         print(f"\n  AUC scores:")
@@ -144,13 +149,17 @@ for t1, t2 in TISSUE_PAIRS:
             continue
         pat_sub = pat_sub[pat_sub.obs["phenotype"].isin(keep)].copy()
         try:
-            ag = pt.tl.Augur("random_forest_classifier")
+            ag = _Augur("random_forest_classifier")
+            prepared = ag.load(pat_sub, label_col="tissue", cell_type_col="phenotype")
             _, results = ag.predict(
-                pat_sub, label_col="tissue", cell_type_col="phenotype",
-                n_folds=3, subsample_size=15, n_subsamples=25,
+                prepared,
+                folds=3, subsample_size=15, n_subsamples=25,
                 random_state=42, select_variance_features=True, span=0.75,
             )
-            for _, row in results["summary_metrics"].iterrows():
+            sm = results["summary_metrics"]
+            if "mean_augur_score" not in sm.columns:
+                sm = sm.T
+            for _, row in sm.iterrows():
                 patient_records.append({
                     "pair": pair_key, "patient": pat,
                     "phenotype": row.name, "AUC": row["mean_augur_score"],
@@ -201,8 +210,16 @@ print("AUGUR AUC vs COSINE DISTANCE")
 print("=" * 60)
 
 for pair_key, res in augur_results.items():
-    auc = res["auc"].reset_index()
-    auc.columns = ["phenotype", "AUC"]
+    auc_obj = res["auc"]
+    if hasattr(auc_obj, "columns") and "mean_augur_score" in auc_obj.columns:
+        auc = auc_obj.reset_index()[["index", "mean_augur_score"]].rename(
+            columns={"index": "phenotype", "mean_augur_score": "AUC"}
+        )
+    else:
+        # Old cache: Series of phenotype -> mean_augur_score.
+        auc = auc_obj.rename("AUC").reset_index()
+        if "phenotype" not in auc.columns:
+            auc = auc.rename(columns={auc.columns[0]: "phenotype"})
     merged = auc.merge(cosine_df[cosine_df["pair"] == pair_key], on="phenotype")
     if len(merged) > 2:
         rho, pval = spearmanr(merged["AUC"], merged["cosine_dist"])
@@ -223,7 +240,12 @@ for ax, (t1, t2) in zip(axes, TISSUE_PAIRS):
     pair_key = f"{t1}_{t2}"
     if pair_key not in augur_results:
         continue
-    auc = augur_results[pair_key]["auc"]["mean_augur_score"].sort_values()
+    auc_obj = augur_results[pair_key]["auc"]
+    if hasattr(auc_obj, "columns") and "mean_augur_score" in auc_obj.columns:
+        auc = auc_obj["mean_augur_score"].sort_values()
+    else:
+        # Old cache stored auc as a Series named 'mean_augur_score'.
+        auc = auc_obj.sort_values()
     colors = [LINEAGE_COLORS["CD8"] if "CD8" in p else LINEAGE_COLORS["CD4"] for p in auc.index]
     ax.barh([shorten(p) for p in auc.index], auc.values, color=colors, edgecolor="black", linewidth=0.5)
     ax.axvline(0.5, color="gray", linestyle="--", alpha=0.5)
@@ -270,8 +292,16 @@ for ax, (t1, t2) in zip(axes, TISSUE_PAIRS):
     pair_key = f"{t1}_{t2}"
     if pair_key not in augur_results:
         continue
-    auc = augur_results[pair_key]["auc"].reset_index()
-    auc.columns = ["phenotype", "AUC"]
+    auc_obj = augur_results[pair_key]["auc"]
+    if hasattr(auc_obj, "columns") and "mean_augur_score" in auc_obj.columns:
+        auc = auc_obj.reset_index()[["index", "mean_augur_score"]].rename(
+            columns={"index": "phenotype", "mean_augur_score": "AUC"}
+        )
+    else:
+        # Old cache: auc is a Series of phenotype -> mean_augur_score.
+        auc = auc_obj.rename("AUC").reset_index().rename(columns={"index": "phenotype"})
+        if "phenotype" not in auc.columns:
+            auc = auc.rename(columns={auc.columns[0]: "phenotype"})
     merged = auc.merge(cosine_df[cosine_df["pair"] == pair_key], on="phenotype")
     if len(merged) == 0:
         continue
@@ -320,8 +350,15 @@ for pair_key, fi in feat_importance.items():
 auc_records = []
 for pair_key, res in augur_results.items():
     auc = res["auc"]
-    for pheno in auc.index:
-        auc_records.append({"pair": pair_key, "phenotype": pheno, "AUC": auc.loc[pheno, "mean_augur_score"]})
+    if hasattr(auc, "columns") and "mean_augur_score" in auc.columns:
+        for pheno in auc.index:
+            auc_records.append({"pair": pair_key, "phenotype": pheno,
+                                "AUC": auc.loc[pheno, "mean_augur_score"]})
+    else:
+        # Old cache: Series.
+        for pheno in auc.index:
+            auc_records.append({"pair": pair_key, "phenotype": pheno,
+                                "AUC": auc.loc[pheno]})
 
 auc_df = pd.DataFrame(auc_records)
 auc_pivot = auc_df.pivot_table(index="phenotype", columns="pair", values="AUC")

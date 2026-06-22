@@ -10,7 +10,7 @@ zero = enriched in movers, left = enriched in stayers — with a
 clone-level mixed-effects logistic regression backing each phenotype
 (BH-FDR across the (tissue × phenotype) grid).
 
-Outputs (results/branch_dispersion/):
+Outputs (results/traffic_branch_dispersion/):
   stayer_vs_mover.{png,pdf}
   stayer_vs_mover_table.csv     long form, all three categories
   stayer_vs_mover_stats.csv     per (tissue × phenotype) test row

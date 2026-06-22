@@ -5,10 +5,10 @@ For each (lineage ∈ {CD8, CD4}, directed tissue pair) we fit the
 hierarchical transition model in ``trafficking.model`` / ``inference``
 and pull the posterior ``T_global`` matrix. We then extract the analogous
 cross-tissue block from the empirical P estimated in
-``results/06c_empirical_Q/P_empirical.csv``, row-normalise it, and
+``results/traffic_migration_rates/P_empirical.csv``, row-normalise it, and
 compare entry-by-entry.
 
-Outputs go to ``results/06f_bayesian_comparison/``.
+Outputs go to ``results/traffic_bayesian_comparison/``.
 """
 import sys
 import time
@@ -43,8 +43,8 @@ from trafficking.data import _clean_tcr  # noqa: E402
 from modules import paths  # noqa: E402
 
 DATA_PATH = paths.H5AD_TCELLS
-P_EMP_PATH = REPO_ROOT / "results" / "06c_empirical_Q" / "P_empirical.csv"
-OUT_DIR = REPO_ROOT / "results" / "06f_bayesian_comparison"
+P_EMP_PATH = REPO_ROOT / "results" / "traffic_migration_rates" / "P_empirical.csv"
+OUT_DIR = REPO_ROOT / "results" / "traffic_bayesian_comparison"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 # 6 directed pairs from the 3 undirected pairs (both directions).

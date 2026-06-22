@@ -61,9 +61,9 @@ DPI = 200
 from modules import paths  # noqa: E402
 
 DATA_PATH = paths.H5AD_TCELLS
-MYELOID_COMP_CSV = (REPO_ROOT / "results" / "10_temporal_scores"
+MYELOID_COMP_CSV = (REPO_ROOT / "results" / "pathway_temporal_scores"
                     / "temporal_composition_myeloid.csv")
-OUT_DIR = REPO_ROOT / "results" / "06_branch_empirics"
+OUT_DIR = REPO_ROOT / "results" / "traffic_branch_empirics"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 CACHE_NES = OUT_DIR / "_cache_nes.csv"
 

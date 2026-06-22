@@ -9,8 +9,8 @@ tissue assignments are re-rolled by the empirical Q transition matrix.
 
 Reads:
   data/objects/GBM_TCR_POS_TCELLS_singlets.h5ad   (paths.H5AD_TCELLS)
-  results/06c_empirical_Q/migration_rates.csv
-  results/06c_empirical_Q/P_empirical.csv
+  results/traffic_migration_rates/migration_rates.csv
+  results/traffic_migration_rates/P_empirical.csv
 
 Writes to results/traffic_archetypes/:
   clone_archetypes.csv, archetype_prototypes.npz, archetype_summary.csv,
@@ -58,6 +58,14 @@ N_NULL = 5000
 LEIDEN_RESOLUTIONS = [0.3, 0.5, 0.8, 1.0, 1.5]
 HIER_KS = [4, 5, 6, 7, 8]
 DPI = 200
+
+# Feature weights. Cell-count-weighted occupancy drowns the CSF signal
+# (median 1 cell per CSF observation), so we upweight the binary presence
+# mask and add explicit transition indicators that capture trafficking
+# direction independent of cell count.
+W_OCCUPANCY = 1.0
+W_PRESENCE = 2.0
+W_TRANSITION = 3.0
 
 
 # %%
@@ -124,36 +132,64 @@ bin_obs_groups = bin_obs_e_idx.groupby(level=0)
 
 
 def _clone_features(grp):
-    """Compute the (3*T + 3*T + 3 + 3 + 1 + 1 + 1)-vector for one clone."""
+    """Compute weighted feature vector for one clone.
+
+    Layout (length 3T + 3T + 3 + 3 + 3 + 3 = 6T + 12, T=6 → 48):
+      [0       : 3T          ) occupancy (cell-count-weighted, * W_OCCUPANCY)
+      [3T      : 6T          ) presence (binary, * W_PRESENCE)
+      [6T      : 6T+3        ) first-tissue one-hot
+      [6T+3    : 6T+6        ) last-tissue one-hot
+      [6T+6    : 6T+9        ) scalars (n_unique, n_trans, entropy)
+      [6T+9    : 6T+12       ) transition indicators * W_TRANSITION:
+          csf_before_tp, pbmc_before_tp, csf_before_pbmc
+    """
     occ = np.zeros((3, T), dtype=float)
     pres = np.zeros((3, T), dtype=int)
     total_per_tp = np.zeros(T, dtype=float)
+    first_tp_by_tissue = [None, None, None]
     for _, r in grp.iterrows():
         i = TISSUE_IDX[r["tissue"]]; j = TP_IDX[r["timepoint"]]
         occ[i, j] += float(r["n_cells"])
         pres[i, j] = 1
         total_per_tp[j] += float(r["n_cells"])
-    # Normalize each observed timepoint column to sum to 1.
+        if first_tp_by_tissue[i] is None or j < first_tp_by_tissue[i]:
+            first_tp_by_tissue[i] = j
     obs_tp = total_per_tp > 0
     occ[:, obs_tp] = occ[:, obs_tp] / total_per_tp[obs_tp]
-    # Order of observations along time: list of (j, tissue_idx_of_max).
     obs_js = np.where(obs_tp)[0]
     seq_tissues = [int(np.argmax(occ[:, j])) for j in obs_js]
     first_t = seq_tissues[0]; last_t = seq_tissues[-1]
     n_unique = len(set(seq_tissues))
     n_trans = int(sum(1 for a, b in zip(seq_tissues, seq_tissues[1:])
                        if a != b))
-    # Tissue entropy over total cell counts.
     tissue_totals = occ.sum(axis=1) + 1e-12
     ent = float(shannon_entropy(tissue_totals / tissue_totals.sum(),
                                  base=2))
     first_oh = np.zeros(3); first_oh[first_t] = 1
     last_oh = np.zeros(3); last_oh[last_t] = 1
+    # Transition indicators: tissue X observed at strictly earlier
+    # timepoint than tissue Y.
+    pbmc_i, csf_i, tp_i = TISSUE_IDX["PBMC"], TISSUE_IDX["CSF"], TISSUE_IDX["TP"]
+    csf_before_tp = float(
+        first_tp_by_tissue[csf_i] is not None
+        and first_tp_by_tissue[tp_i] is not None
+        and first_tp_by_tissue[csf_i] < first_tp_by_tissue[tp_i])
+    pbmc_before_tp = float(
+        first_tp_by_tissue[pbmc_i] is not None
+        and first_tp_by_tissue[tp_i] is not None
+        and first_tp_by_tissue[pbmc_i] < first_tp_by_tissue[tp_i])
+    csf_before_pbmc = float(
+        first_tp_by_tissue[csf_i] is not None
+        and first_tp_by_tissue[pbmc_i] is not None
+        and first_tp_by_tissue[csf_i] < first_tp_by_tissue[pbmc_i])
     return np.concatenate([
-        occ.ravel(),
-        pres.ravel().astype(float),
+        W_OCCUPANCY * occ.ravel(),
+        W_PRESENCE * pres.ravel().astype(float),
         first_oh, last_oh,
         np.array([n_unique, n_trans, ent], dtype=float),
+        W_TRANSITION * np.array(
+            [csf_before_tp, pbmc_before_tp, csf_before_pbmc],
+            dtype=float),
     ])
 
 
@@ -179,11 +215,15 @@ for k, cid in enumerate(
     g = bin_obs_groups.get_group(cid)
     features[calib_n + k] = _clone_features(g)
 
-# Z-score the 3 scalar tail features only.
+# Z-score only the 3 scalar features (n_unique, n_trans, entropy).
+# The transition indicators at the tail are binary by design and stay
+# at scale W_TRANSITION.
 sc_start = 3 * T + 3 * T + 3 + 3
-sc_mean = features[:, sc_start:].mean(axis=0)
-sc_std = features[:, sc_start:].std(axis=0) + 1e-9
-features[:, sc_start:] = (features[:, sc_start:] - sc_mean) / sc_std
+sc_end = sc_start + 3
+sc_mean = features[:, sc_start:sc_end].mean(axis=0)
+sc_std = features[:, sc_start:sc_end].std(axis=0) + 1e-9
+features[:, sc_start:sc_end] = (features[:, sc_start:sc_end]
+                                  - sc_mean) / sc_std
 
 print(f"  feature matrix: {features.shape}")
 
@@ -314,7 +354,8 @@ null_features = np.zeros((N_NULL, features.shape[1]), dtype=float)
 for k in tqdm(range(N_NULL), desc="  sim"):
     null_features[k] = _simulate_clone_features(rng)
 # Apply the same scalar-tail z-score using observed stats.
-null_features[:, sc_start:] = (null_features[:, sc_start:] - sc_mean) / sc_std
+null_features[:, sc_start:sc_end] = (
+    null_features[:, sc_start:sc_end] - sc_mean) / sc_std
 
 # Re-cluster using the chosen method+setting.
 if best_method == "leiden":

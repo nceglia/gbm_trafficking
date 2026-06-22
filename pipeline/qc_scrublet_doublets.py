@@ -6,8 +6,8 @@ capture efficiency across batches makes a global run flag whole batches
 spuriously. Writes:
 
   data/objects/GBM_TCR_POS_TCELLS_singlets.h5ad   (filtered AnnData)
-  results/qc_doublets/scrublet_summary.csv        (per-cell scores)
-  results/qc_doublets/doublet_score_hist.png      (per-batch histogram)
+  results/qc_scrublet_doublets/scrublet_summary.csv        (per-cell scores)
+  results/qc_scrublet_doublets/doublet_score_hist.png      (per-batch histogram)
 
 Reads paths.H5AD_TCELLS_RAW (celltyping output). Downstream pipeline steps
 use paths.H5AD_TCELLS, which points at the singlets file written here.
