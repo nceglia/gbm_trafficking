@@ -75,7 +75,6 @@
 \newcommand{\Csp}{\mathcal{C}}                    % clonotype set
 \newcommand{\Qsp}{\mathcal{Q}}                    % forward intervals
 \newcommand{\Dsp}{\mathcal{D}}                    % data
-\newcommand{\Asp}{\mathcal{A}}                    % allowed destinations
 \newcommand{\simplex}[1]{\Delta^{#1}}
 \newcommand{\Nsrc}{N^{\mathrm{src}}}
 \newcommand{\Ndst}{N^{\mathrm{dst}}}
@@ -289,8 +288,6 @@ $\theta_j \in \simplex{L-1}$ & empirical source probability vector\\
 $\widehat{\phi}_j$           & empirical destination probability vector\\
 $T \in \Reals^{L\times L}$   & shared row-stochastic transition matrix\\
 $\pi_j = \theta_j T$         & model-implied destination probability vector\\
-$M \in \{0,1\}^{L\times L}$  & biological support mask\\
-$\Asp(z)$                    & allowed destination set for source state $z$\\
 $\alpha_z$                   & Dirichlet concentration for row $z$\\
 $w_{jzz'}$                   & backward attribution probability\\
 $A_{jzz'}$                   & latent allocation count\\
@@ -494,6 +491,19 @@ distribution per row:
 where $\alpha_z$ collects the prior concentration parameters for the
 destination distribution of source state $z$.
 
+\begin{remark}[Support restrictions are an implementation detail]
+In practice the implementation may exclude biologically implausible
+transitions---for example large backward jumps along a differentiation or
+activation axis---by fixing the corresponding entries of $T$ to zero, i.e.\ by
+placing the Dirichlet only on the retained entries of each row. This sparsifies
+$T$ and shrinks the parameter count, but it does not change the form of the
+model: every row remains a Dirichlet-distributed categorical over its
+destinations, and the expressions below hold verbatim once each sum over
+destination states is read as a sum over the retained destinations. We therefore
+treat the support as a fixed preprocessing choice and write
+$T_{z\cdot}\sim\Dir(\alpha_z)$ over the full destination set throughout.
+\end{remark}
+
 \subsection{Posterior over transition matrices}
 
 After observing the data
@@ -565,70 +575,6 @@ giving a probabilistic decomposition of observed destination counts into
 contributions from latent source tissue--phenotype states.
 
 % ======================================================================
-\section{Transition Support and Biological Restrictions}
-% ======================================================================
-
-The unrestricted transition matrix has $33 \times 32 = 1056$ free
-row-stochastic parameters. To shrink this space and encode biological
-structure, we introduce a hard support mask
-\[
-  M \in \{0,1\}^{L\times L},
-  \qquad L = 33 .
-\]
-For source state $z = (a,u)$ and destination state $z' = (b,v)$, the entry
-$M_{zz'} = M_{(a,u),(b,v)}$ indicates whether that transition is in the
-support of the model:
-\[
-  M_{zz'} = 1 \ \Rightarrow\ \text{transition allowed},
-  \qquad
-  M_{zz'} = 0 \ \Rightarrow\ T_{zz'} = 0 .
-\]
-
-\subsection{Allowed destination set}
-
-For each source state $z$, the allowed destination set is
-\[
-  \Asp(z) = \{\, z' \in \Zsp : M_{zz'} = 1 \,\} .
-\]
-Each row of $T$ is then a probability distribution over its allowed
-destinations:
-\[
-  \sum_{z'\in\Asp(z)} T_{zz'} = 1,
-  \qquad
-  T_{zz'} = 0 \ \text{ for } z' \notin \Asp(z) .
-\]
-
-\subsection{Restricted prior}
-
-With the support mask, the Dirichlet prior is placed only on the allowed
-entries of each row,
-\[
-  T_{z,\Asp(z)} \;\sim\; \Dir\!\bigl( \alpha_{z,\Asp(z)} \bigr),
-\]
-and entries outside the allowed set are fixed to zero.
-
-\subsection{Biological interpretation}
-
-The support mask encodes biological structure in the joint tissue--phenotype
-transition space. A source state $z = (a,u)$ represents cells observed in
-tissue $a$ with phenotype $u$, and the allowed set $\Asp(z)$ represents the
-tissue--phenotype fates included for cells starting in that state.
-
-The mask can restrict phenotype changes, tissue movement, or both. Examples
-include phenotype transitions that are implausible over one forward
-interval---such as large backward jumps along a differentiation or activation
-axis---as well as tissue--phenotype transitions excluded for biological or
-modeling reasons. The mask is applied to the latent transition matrix, not to
-the observed counts: the source and destination count vectors are still built
-from the empirical data.
-
-\begin{remark}
-A soft version replaces the binary mask $M_{zz'} \in \{0,1\}$ with prior
-plausibility weights $M_{zz'} \in [0,1]$, so that implausible transitions
-receive small prior mass rather than zero support.
-\end{remark}
-
-% ======================================================================
 \section{Full Generative Story}
 \label{sec:generative}
 % ======================================================================
@@ -643,19 +589,12 @@ across tissue--phenotype states. It can be summarized as follows.
         $z = (s,k)$ pairs an anatomical tissue with an annotated T-cell
         phenotype.
 
-  \item \textbf{Allowed fates.} For each source state $z$, let
-        $\Asp(z) = \{ z' \in \Zsp : M_{zz'} = 1 \}$ be the tissue--phenotype
-        fates available to cells starting in $z$.
-
-  \item \textbf{Transition rows.} For each source state $z$, draw the
-        restricted row
+  \item \textbf{Transition rows.} For each source state $z$, draw the row
         \[
-          T_{z,\Asp(z)} \sim \Dir\!\bigl( \alpha_{z,\Asp(z)} \bigr),
-          \qquad
-          T_{zz'} = 0 \ \text{ for } z' \notin \Asp(z) .
+          T_{z\cdot} \sim \Dir\!\bigl( \alpha_z \bigr) .
         \]
         Row $T_{z\cdot}$ describes how clone mass starting in state $z$ is
-        redistributed across allowed destinations after one forward interval.
+        redistributed across destinations after one forward interval.
 
   \item \textbf{Source distribution.} For each patient $i$, interval
         $q\in\Qsp_i$, and retained clonotype $c\in\Csp_{iq}$, form the
@@ -682,7 +621,7 @@ controlling how much count information the observation contributes.
 
 Putting the pieces together, the generative model is, compactly,
 \[
-  T_{z,\Asp(z)} \sim \Dir\!\bigl(\alpha_{z,\Asp(z)}\bigr),
+  T_{z\cdot} \sim \Dir\!\bigl(\alpha_z\bigr),
   \qquad
   \pi_j = \theta_j T,
   \qquad
@@ -695,21 +634,20 @@ Figure~\ref{fig:plate}.
   \centering
   \includegraphics[width=0.82\linewidth]{plate_joint_transition.pdf}
   \caption{Plate diagram of the generative model. The transition rows
-    $T_{z,\Asp(z)}$ are drawn once per source state $z$ (top plate, indexed by
-    $z\in\Zsp$) from a Dirichlet prior whose support is set by the mask $M$ and
-    whose concentration is $\alpha_z$. This transition block sits \emph{outside}
-    the patient plate: a single matrix $T$ is shared across all patients and
-    intervals. The observation side is drawn with explicit nesting---patient
-    $i$, forward interval $q\in\Qsp_i$, retained clonotype $c\in\Csp_{iq}$---so a
-    clone-level observation is the triple $(i,q,c)$. Within the innermost plate
-    each observation contributes the empirical source distribution
-    $\theta_{iqc}$, deterministically normalized from the observed source counts
-    $x_{iqc}$; the pushforward $\pi_{iqc} = \theta_{iqc} T$ then drives a
-    multinomial draw of the observed destination counts $y_{iqc}$ with total
-    $\Ndst_{iqc}$. Double circles ($x_{iqc}$, $y_{iqc}$) mark observed
-    quantities and solid dots ($M$, $\alpha_z$, $\Ndst_{iqc}$) mark fixed
-    inputs. The latent allocation counts used for fitting are a computational
-    augmentation and are introduced separately in
+    $T_{z\cdot}$ are drawn once per source state $z$ (top plate, indexed by
+    $z\in\Zsp$) from a Dirichlet prior with concentration $\alpha_z$. This
+    transition block sits \emph{outside} the patient plate: a single matrix $T$
+    is shared across all patients and intervals. The observation side is drawn
+    with explicit nesting---patient $i$, forward interval $q\in\Qsp_i$, retained
+    clonotype $c\in\Csp_{iq}$---so a clone-level observation is the triple
+    $(i,q,c)$. Within the innermost plate each observation contributes the
+    empirical source distribution $\theta_{iqc}$, deterministically normalized
+    from the observed source counts $x_{iqc}$; the pushforward
+    $\pi_{iqc} = \theta_{iqc} T$ then drives a multinomial draw of the observed
+    destination counts $y_{iqc}$ with total $\Ndst_{iqc}$. Double circles
+    ($x_{iqc}$, $y_{iqc}$) mark observed quantities and solid dots ($\alpha_z$,
+    $\Ndst_{iqc}$) mark fixed inputs. The latent allocation counts used for
+    fitting are a computational augmentation and are introduced separately in
     Section~\ref{sec:inference-comp}.}
   \label{fig:plate}
 \end{figure}
@@ -724,8 +662,8 @@ observed data are the clone-level forward observations
   \Dsp = \bigl\{ (x_j, y_j, i_j, q_j, c_j) \bigr\}_{j=1}^{J} .
 \]
 The source probability vectors $\theta_j$ and destination totals $\Ndst_j$ are
-derived from the observed count vectors, while the support mask $M$ and prior
-parameters $\alpha$ are fixed model inputs.
+derived from the observed count vectors, while the prior parameters $\alpha$ are
+fixed model inputs.
 
 \subsection{Learned quantity}
 
@@ -861,15 +799,12 @@ distribution as $\vq(T,\xi)$ and adopt a mean-field factorization
 \[
   \vq(T,\xi) = \vq(T)\,\vq(\xi) .
 \]
-The transition matrix receives independent Dirichlet factors over the allowed
-entries of each row,
+The transition matrix receives independent Dirichlet factors, one per row,
 \[
   \vq(T)
   =
   \prod_{z\in\Zsp}
-    \Dir\!\bigl( T_{z,\Asp(z)};\, \lambda_{z,\Asp(z)} \bigr),
-  \qquad
-  \Asp(z) = \{\, z'\in\Zsp : M_{zz'} = 1 \,\},
+    \Dir\!\bigl( T_{z\cdot};\, \lambda_{z\cdot} \bigr),
 \]
 and the allocation variables receive multinomial factors,
 \[
@@ -892,8 +827,6 @@ For each observation $j$, source state $z$, and destination state $z'$,
 \[
   r_{jzz'} \propto \theta_j(z)\,
   \exp\!\bigl( \E_{\vq}[\log T_{zz'}] \bigr),
-  \qquad
-  r_{jzz'} = 0 \ \text{ if } z' \notin \Asp(z),
 \]
 normalized over source states so that $\sum_{z\in\Zsp} r_{jzz'} = 1$ for each
 $j$ and $z'$. Under the Dirichlet factor, the required expectation is
@@ -902,7 +835,7 @@ $j$ and $z'$. Under the Dirichlet factor, the required expectation is
   =
   \psi(\lambda_{zz'})
   -
-  \psi\!\Bigl( \sum_{\bar z\in\Asp(z)} \lambda_{z\bar z} \Bigr),
+  \psi\!\Bigl( \sum_{\bar z\in\Zsp} \lambda_{z\bar z} \Bigr),
 \]
 where $\psi$ is the digamma function. Biologically, this step probabilistically
 assigns observed destination tissue--phenotype counts back to the source
@@ -910,7 +843,7 @@ tissue--phenotype states that could have produced them.
 
 \subsubsection{Transition-row update}
 
-For each source state $z$ and allowed destination $z' \in \Asp(z)$,
+For each source state $z$ and destination state $z'$,
 \[
   \lambda_{zz'}
   =
@@ -918,8 +851,7 @@ For each source state $z$ and allowed destination $z' \in \Asp(z)$,
 \]
 so the variational posterior parameter is the prior concentration plus the
 expected number of transitions allocated from source state $z$ to destination
-state $z'$. Entries outside the allowed set stay fixed at zero:
-$T_{zz'} = 0$ for $z' \notin \Asp(z)$.
+state $z'$.
 
 \subsection{Optimization objective}
 
@@ -937,14 +869,12 @@ transition-row update until $\mathcal{L}(\vq)$ stabilizes.
 \subsection{Estimated transition matrix}
 
 After convergence, the fitted transition matrix is summarized by the
-variational posterior mean $\widehat{T}_{zz'} = \E_{\vq}[T_{zz'}]$. For allowed
-transitions this is the normalized Dirichlet parameter:
+variational posterior mean $\widehat{T}_{zz'} = \E_{\vq}[T_{zz'}]$, the
+normalized Dirichlet parameter:
 \[
   \widehat{T}_{zz'}
   =
-  \frac{\lambda_{zz'}}{\sum_{\bar z\in\Asp(z)} \lambda_{z\bar z}},
-  \qquad
-  \widehat{T}_{zz'} = 0 \ \text{ for } z' \notin \Asp(z) .
+  \frac{\lambda_{zz'}}{\sum_{\bar z\in\Zsp} \lambda_{z\bar z}} .
 \]
 The matrix $\widehat{T}$ is the estimated one-interval transition probability
 matrix over the $33$-state tissue--phenotype space, and it is the fitted

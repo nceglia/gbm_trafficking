@@ -3,10 +3,14 @@
 Plate diagram for the joint tissue-phenotype transition model (model_methods.tex).
 
 This diagram corresponds to the generative model:
-    T_{z,A(z)} ~ Dirichlet(alpha_{z,A(z)})
+    T_z ~ Dirichlet(alpha_z)
     theta_iqc = Normalize(x_iqc)
     pi_iqc    = theta_iqc T
     y_iqc     ~ Multinomial(N_dst_iqc, pi_iqc)
+
+(Biologically implausible transitions may be masked out in the implementation;
+that is a fixed preprocessing choice, not part of the model form, so it is not
+shown here.)
 
 The observation side is drawn with explicit nesting so the data hierarchy is
 visible rather than hidden in a flattened index:
@@ -16,11 +20,11 @@ visible rather than hidden in a flattened index:
             └── clonotype c in C_iq
                   └── x_iqc -> theta_iqc -> pi_iqc -> y_iqc
 
-The shared transition block (M, alpha_z -> T_{z,A(z)}) sits OUTSIDE the patient
-plate: a single matrix T is shared across all patients and intervals. The
-patient plate is present because observations are grouped by patient, not
-because T varies by patient. For algebra/VI the triple can be flattened to a
-single index j = (i, q, c).
+The shared transition block (alpha_z -> T_z) sits OUTSIDE the patient plate: a
+single matrix T is shared across all patients and intervals. The patient plate
+is present because observations are grouped by patient, not because T varies by
+patient. For algebra/VI the triple can be flattened to a single index
+j = (i, q, c).
 
 The variational quantities used for inference (lambda, r, xi) are intentionally
 not shown here; they are introduced separately in the Computational Inference
@@ -90,17 +94,16 @@ def build_plate(out_dir: Path = OUT) -> None:
     # ---------------------------------------------------------------------
     # Global / row-level transition prior  (top plate, indexed by z).
     # Shared across all patients and intervals -> drawn OUTSIDE the patient
-    # plate below. Placed directly above pi so the T -> pi edge is vertical.
+    # plate below. alpha_z, T_z and pi share the x of pi, so alpha -> T and
+    # T -> pi are both clean vertical edges.
     # ---------------------------------------------------------------------
-    pgm.add_node("M", r"$M$", 4.15, 6.40, fixed=True)
-    pgm.add_node("alpha", r"$\alpha_z$", 6.15, 6.40, fixed=True)
-    pgm.add_node("Trow", r"$T_{z,\mathcal{A}(z)}$", 5.15, 5.40)
+    pgm.add_node("alpha", r"$\alpha_z$", 5.15, 6.40, fixed=True)
+    pgm.add_node("Trow", r"$T_{z}$", 5.15, 5.40)
 
-    pgm.add_edge("M", "Trow")        # 45 degrees down-right
-    pgm.add_edge("alpha", "Trow")    # 45 degrees down-left
+    pgm.add_edge("alpha", "Trow")    # vertical
 
     pgm.add_plate(
-        [3.60, 4.85, 3.10, 2.10],
+        [4.05, 4.85, 2.20, 2.10],
         label=r"$z \in \mathcal{Z}$",
         shift=-0.12,
         rect_params={"ec": "k", "fc": "none"},
