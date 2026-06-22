@@ -13,18 +13,19 @@ that is a fixed preprocessing choice, not part of the model form, so it is not
 shown here.)
 
 The observation side is drawn with explicit nesting so the data hierarchy is
-visible rather than hidden in a flattened index:
+visible rather than hidden in a flattened index (Option B: theta has no node of
+its own; the normalization theta = Normalize(x) is folded into the x -> pi edge):
 
     patient i
-      └── forward interval q in Q_i
-            └── clonotype c in C_iq
-                  └── x_iqc -> theta_iqc -> pi_iqc -> y_iqc
+      └── forward step r in R_i        (r = source timepoint; dest = r+1)
+            └── clonotype c in C_ir
+                  └── x_irc -> pi_irc -> y_irc
 
 The shared transition block (alpha_z -> T_z) sits OUTSIDE the patient plate: a
-single matrix T is shared across all patients and intervals. The patient plate
-is present because observations are grouped by patient, not because T varies by
+single matrix T is shared across all patients and steps. The patient plate is
+present because observations are grouped by patient, not because T varies by
 patient. For algebra/VI the triple can be flattened to a single index
-j = (i, q, c).
+j = (i, r, c).
 
 The variational quantities used for inference (lambda, r, xi) are intentionally
 not shown here; they are introduced separately in the Computational Inference
@@ -71,19 +72,17 @@ OUT = Path(__file__).resolve().parent / "figures"
 
 
 def build_plate(out_dir: Path = OUT) -> None:
-    # Geometry is laid out on a regular grid so that every edge is purely
-    # horizontal, vertical, or 45 degrees:
-    #   * the observation chain x -> theta -> pi -> y is one horizontal row;
+    # Option B layout.  Every edge is horizontal, vertical, or 45 degrees:
+    #   * the observation row x -> pi -> y is horizontal (the deterministic
+    #     normalization theta = Normalize(x) is folded into the x -> pi edge, so
+    #     theta has no node of its own);
     #   * the shared T sits directly above pi, so T -> pi is a clean vertical;
-    #   * N^dst sits directly above y, so N^dst -> y is vertical;
-    #   * the priors M, alpha sit one unit up and one unit out from T, so
-    #     M -> T and alpha -> T are symmetric 45-degree diagonals.
-    # The three nested observation plates (patient > interval > clone) get
-    # generous, even margins (~0.6 grid units between successive borders) so
-    # each plate's enumeration label sits in a clear band and is never crossed
-    # by an inner border.
+    #   * alpha sits directly above T, so alpha -> T is vertical;
+    #   * N^dst sits directly above y, so N^dst -> y is vertical.
+    # The three nested observation plates (patient > step > clone) get generous,
+    # even margins so each plate's enumeration label sits in a clear band.
     pgm = daft.PGM(
-        shape=(8.7, 7.2),
+        shape=(7.8, 7.2),
         origin=(0.0, 0.0),
         observed_style="inner",
         grid_unit=1.6,
@@ -93,62 +92,58 @@ def build_plate(out_dir: Path = OUT) -> None:
 
     # ---------------------------------------------------------------------
     # Global / row-level transition prior  (top plate, indexed by z).
-    # Shared across all patients and intervals -> drawn OUTSIDE the patient
-    # plate below. alpha_z, T_z and pi share the x of pi, so alpha -> T and
-    # T -> pi are both clean vertical edges.
+    # Shared across all patients and steps -> drawn OUTSIDE the patient plate.
+    # alpha_z, T_z and pi share the x of pi, so alpha -> T and T -> pi are both
+    # clean vertical edges.
     # ---------------------------------------------------------------------
-    pgm.add_node("alpha", r"$\alpha_z$", 5.15, 6.40, fixed=True)
-    pgm.add_node("Trow", r"$T_{z}$", 5.15, 5.40)
+    pgm.add_node("alpha", r"$\alpha_z$", 4.00, 6.40, fixed=True)
+    pgm.add_node("Trow", r"$T_{z}$", 4.00, 5.40)
 
     pgm.add_edge("alpha", "Trow")    # vertical
 
     pgm.add_plate(
-        [4.05, 4.85, 2.20, 2.10],
+        [2.90, 4.85, 2.20, 2.10],
         label=r"$z \in \mathcal{Z}$",
         shift=-0.12,
         rect_params={"ec": "k", "fc": "none"},
     )
 
     # ---------------------------------------------------------------------
-    # Observation model with explicit patient / interval / clone nesting.
-    # The pi node is kept compact ($\pi_{iqc}$); the relation
-    # pi_iqc = theta_iqc T is carried by the theta->pi and T->pi edges (and
-    # stated in the caption), which avoids a wide label overrunning its arrows.
+    # Observation model with explicit patient / step / clone nesting.
+    # pi_irc = theta_irc T is the deterministic pushforward; it keeps a node
+    # (where the data x and the latent T meet) while theta does not.
     # ---------------------------------------------------------------------
-    pgm.add_node("x", r"$x_{iqc}$", 1.95, 2.25, observed=True)
-    pgm.add_node("theta", r"$\theta_{iqc}$", 3.55, 2.25)
-    pgm.add_node("pi", r"$\pi_{iqc}$", 5.15, 2.25)
+    pgm.add_node("x", r"$x_{irc}$", 2.10, 2.25, observed=True)
+    pgm.add_node("pi", r"$\pi_{irc}$", 4.00, 2.25)
     # offset lifts the label clear of the dot (daft only nudges fixed-node
-    # labels up by 6 pt by default, which lets the iqc subscript touch the dot).
-    pgm.add_node("Ndst", r"$N^{\mathrm{dst}}_{iqc}$", 6.75, 3.05, fixed=True, offset=(0, 11))
-    pgm.add_node("y", r"$y_{iqc}$", 6.75, 2.25, observed=True)
+    # labels up by 6 pt by default, which lets the irc subscript touch the dot).
+    pgm.add_node("Ndst", r"$N^{\mathrm{dst}}_{irc}$", 5.90, 3.05, fixed=True, offset=(0, 11))
+    pgm.add_node("y", r"$y_{irc}$", 5.90, 2.25, observed=True)
 
-    pgm.add_edge("x", "theta")       # horizontal
-    pgm.add_edge("theta", "pi")      # horizontal
+    pgm.add_edge("x", "pi")          # horizontal (normalization folded in)
     pgm.add_edge("Trow", "pi")       # vertical
     pgm.add_edge("pi", "y")          # horizontal
     pgm.add_edge("Ndst", "y")        # vertical
 
-    # Clone plate (innermost): wraps x, theta, pi, y and the per-clone total
-    # N^dst_iqc.
+    # Clone plate (innermost): wraps x, pi, y and the per-clone total N^dst_irc.
     pgm.add_plate(
-        [1.40, 1.40, 5.90, 2.50],
-        label=r"$c \in \mathcal{C}_{iq}$",
+        [1.55, 1.40, 4.90, 2.50],
+        label=r"$c \in \mathcal{C}_{ir}$",
         shift=-0.10,
         rect_params={"ec": "k", "fc": "none"},
     )
 
-    # Interval plate, nested inside patient.
+    # Step plate, nested inside patient.
     pgm.add_plate(
-        [1.05, 0.80, 6.60, 3.40],
-        label=r"$q \in \mathcal{Q}_i$",
+        [1.20, 0.80, 5.60, 3.40],
+        label=r"$r \in \mathcal{R}_i$",
         shift=-0.10,
         rect_params={"ec": "k", "fc": "none"},
     )
 
     # Patient plate (outermost on the observation side; T lives outside it).
     pgm.add_plate(
-        [0.70, 0.20, 7.30, 4.30],
+        [0.85, 0.20, 6.30, 4.30],
         label=r"$i = 1,\ldots,I$",
         shift=-0.10,
         rect_params={"ec": "k", "fc": "none"},

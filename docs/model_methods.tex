@@ -73,13 +73,11 @@
 \newcommand{\Zsp}{\mathcal{Z}}                    % joint state space
 \newcommand{\Ssp}{\mathcal{S}}                    % anatomical sites
 \newcommand{\Csp}{\mathcal{C}}                    % clonotype set
-\newcommand{\Qsp}{\mathcal{Q}}                    % forward intervals
+\newcommand{\Rsp}{\mathcal{R}}                    % forward steps (source timepoints)
 \newcommand{\Dsp}{\mathcal{D}}                    % data
 \newcommand{\simplex}[1]{\Delta^{#1}}
 \newcommand{\Nsrc}{N^{\mathrm{src}}}
 \newcommand{\Ndst}{N^{\mathrm{dst}}}
-\newcommand{\rsrc}{r^{\mathrm{src}}}
-\newcommand{\rdst}{r^{\mathrm{dst}}}
 \newcommand{\Zsrc}{Z_{\mathrm{src}}}
 \newcommand{\Zdst}{Z_{\mathrm{dst}}}
 \newcommand{\E}{\mathbb{E}}
@@ -115,7 +113,7 @@ phenotype state.
 
 The data are represented as aggregate
 clone-by-timepoint-by-site-by-phenotype counts, from which we construct
-clone-level observations across forward study intervals.
+clone-level observations across forward study steps.
 
 \subsection{Indices}
 
@@ -168,79 +166,86 @@ as $z = (a,u)$ and the destination state as $z' = (b,v)$, where $a,b \in \Ssp$
 are source and destination tissues and $u,v \in \{1,\ldots,K\}$ are source and
 destination phenotypes.
 
-\subsection{Valid forward intervals}
+\subsection{Valid forward steps}
 
-Forward intervals are defined per patient. For patient $i$, let $\Qsp_i$ be the
-set of valid forward intervals observed for that patient. Each element
-$q \in \Qsp_i$ is a pair of study timepoints with source timepoint $\rsrc_{iq}$
-and destination timepoint $\rdst_{iq}$. For adjacent study intervals,
-$\rdst_{iq} = \rsrc_{iq} + 1$. Here $q$ is not a matrix index; it simply labels a
-forward interval within patient $i$.
+Forward steps are defined per patient. For patient $i$, let
+$\Rsp_i \subseteq \{1,\ldots,R-1\}$ be the set of source timepoints at which
+patient $i$ has a valid forward step. We index a step by its source timepoint
+$r \in \Rsp_i$; the step runs from timepoint $r$ to the next sampled timepoint,
+written $r+1$. Thus $r$ is not a matrix index---it simply labels a forward step
+within patient $i$ by where it starts.
 
-Each $q \in \Qsp_i$ is one observed forward interval. Intervals such as
+\begin{remark}[Skipped timepoints]
+Writing the destination as $r+1$ assumes consecutive sampling. When a patient is
+missing a timepoint---so that, say, $T_1$ and $T_3$ are paired---$r+1$ should be
+read as the \emph{next available} timepoint for that patient. Which timepoints
+are paired is a data-preprocessing detail and does not change anything below.
+\end{remark}
+
+Each $r \in \Rsp_i$ is one observed forward step. Steps such as
 $T_1 \!\to\! T_2$, $T_2 \!\to\! T_3$, and $T_3 \!\to\! T_4$ are treated as
 repeated observations of the \emph{same} forward transition process: the
-transition matrix is shared across all patients and intervals, and the indices
-$i$ and $q$ merely organize observations rather than selecting a separate
+transition matrix is shared across all patients and steps, and the indices
+$i$ and $r$ merely organize observations rather than selecting a separate
 matrix.
 
-\subsection{Clone-level observations within an interval}
+\subsection{Clone-level observations within a step}
 
-Fix a patient $i$, a valid interval $q \in \Qsp_i$, and a clonotype $c$ observed
-for that patient. The source and destination count vectors over the joint state
-space are
+Fix a patient $i$, a valid step $r \in \Rsp_i$, and a clonotype $c$ observed for
+that patient. The source and destination count vectors over the joint state
+space are read directly off the count tensor at timepoints $r$ and $r+1$,
 \[
-  x_{iqc}(s,k) = Y_{i\, c\, \rsrc_{iq}\, s\, k},
+  x_{irc}(s,k) = Y_{i\, c\, r\, s\, k},
   \qquad
-  y_{iqc}(s,k) = Y_{i\, c\, \rdst_{iq}\, s\, k},
+  y_{irc}(s,k) = Y_{i\, c\, (r+1)\, s\, k},
   \qquad (s,k)\in\Zsp,
 \]
-so that $x_{iqc} \in \Znn^{L}$ collects the source counts at the source
-timepoint and $y_{iqc} \in \Znn^{L}$ collects the destination counts at the
+so that $x_{irc} \in \Znn^{L}$ collects the source counts at the source
+timepoint and $y_{irc} \in \Znn^{L}$ collects the destination counts at the
 destination timepoint. Their totals are
 \[
-  \Nsrc_{iqc} = \sum_{z\in\Zsp} x_{iqc}(z),
+  \Nsrc_{irc} = \sum_{z\in\Zsp} x_{irc}(z),
   \qquad
-  \Ndst_{iqc} = \sum_{z\in\Zsp} y_{iqc}(z).
+  \Ndst_{irc} = \sum_{z\in\Zsp} y_{irc}(z).
 \]
 
-For each patient $i$ and interval $q \in \Qsp_i$ we keep only clonotypes seen at
+For each patient $i$ and step $r \in \Rsp_i$ we keep only clonotypes seen at
 both ends:
 \[
-  \Csp_{iq}
+  \Csp_{ir}
   =
   \bigl\{\,
     c \in \{1,\ldots,C_{i}\}
     \;:\;
-    \Nsrc_{iqc} > 0 \ \text{and}\ \Ndst_{iqc} > 0
+    \Nsrc_{irc} > 0 \ \text{and}\ \Ndst_{irc} > 0
   \,\bigr\}.
 \]
-This makes the data hierarchy explicit: patients contain valid forward
-intervals, and each forward interval has a retained set of clonotypes,
+This makes the data hierarchy explicit: patients contain valid forward steps,
+and each forward step has a retained set of clonotypes,
 \[
   i
   \;\longrightarrow\;
-  q \in \Qsp_i
+  r \in \Rsp_i
   \;\longrightarrow\;
-  c \in \Csp_{iq}.
+  c \in \Csp_{ir}.
 \]
-A \emph{clone-level forward observation} is therefore a triple $(i,q,c)$ with
-$q \in \Qsp_i$ and $c \in \Csp_{iq}$. For compact notation we collapse the
+A \emph{clone-level forward observation} is therefore a triple $(i,r,c)$ with
+$r \in \Rsp_i$ and $c \in \Csp_{ir}$. For compact notation we collapse the
 triple into a single index,
 \[
-  j \;\equiv\; (i,q,c),
+  j \;\equiv\; (i,r,c),
   \qquad
-  x_j = x_{iqc},
+  x_j = x_{irc},
   \qquad
-  y_j = y_{iqc},
+  y_j = y_{irc},
 \]
-and each observation contributes the tuple $(x_j, y_j, i_j, q_j, c_j)$. Later
-sections write $j$ for the triple $(i,q,c)$ so the equations stay compact, while
+and each observation contributes the tuple $(x_j, y_j, i_j, r_j, c_j)$. Later
+sections write $j$ for the triple $(i,r,c)$ so the equations stay compact, while
 the plate diagram (Figure~\ref{fig:plate}) shows the full hierarchy.
 
 \subsection{Observed zeros and valid samples}
 
-Each patient's interval set $\Qsp_i$ is built from valid forward intervals that
+Each patient's step set $\Rsp_i$ is built from valid forward steps that
 carry the VDJ-profiled samples needed to form source and destination count
 vectors.
 Within a valid sample, a zero entry means the clonotype was not observed in
@@ -252,11 +257,11 @@ mathematical setup.
 
 The setup produces the clone-level forward observations
 \[
-  \Dsp_0 = \bigl\{ (x_j, y_j, i_j, q_j, c_j) \bigr\}_{j=1}^{J},
-  \qquad j \equiv (i_j, q_j, c_j),
+  \Dsp_0 = \bigl\{ (x_j, y_j, i_j, r_j, c_j) \bigr\}_{j=1}^{J},
+  \qquad j \equiv (i_j, r_j, c_j),
 \]
 each containing a source count vector, a destination count vector, a patient, a
-forward interval, and a clonotype identity. The count vectors live in the joint
+forward step, and a clonotype identity. The count vectors live in the joint
 tissue--phenotype state space $\Zsp = \Ssp \times \{1,\ldots,K\}$, with
 $|\Zsp| = 33$.
 
@@ -278,10 +283,10 @@ $s \in \Ssp$                 & anatomical site, $\Ssp=\{\mathrm{PBMC},\mathrm{CS
 $k \in \{1,\ldots,K\}$       & phenotype state ($K=11$)\\
 $z = (s,k) \in \Zsp$         & joint tissue--phenotype state ($L=|\Zsp|=33$)\\
 $Y_{icrsk}$                  & observed count tensor\\
-$\Qsp_i$                     & valid forward intervals for patient $i$\\
-$q \in \Qsp_i$               & forward interval, timepoints $\rsrc_{iq},\rdst_{iq}$\\
-$\Csp_{iq}$                  & clonotypes present at both ends of interval $q$\\
-$j = (i_j,q_j,c_j)$          & clone-level observation, $j=1,\ldots,J$\\
+$\Rsp_i$                     & valid forward steps for patient $i$ ($\subseteq\{1,\ldots,R-1\}$)\\
+$r \in \Rsp_i$               & forward step, from source timepoint $r$ to $r+1$\\
+$\Csp_{ir}$                  & clonotypes present at both ends of step $r$\\
+$j = (i_j,r_j,c_j)$          & clone-level observation, $j=1,\ldots,J$\\
 $x_j,\,y_j \in \Znn^{L}$     & source / destination count vectors\\
 $\Nsrc_j,\,\Ndst_j$          & source / destination totals\\
 $\theta_j \in \simplex{L-1}$ & empirical source probability vector\\
@@ -302,14 +307,14 @@ $\Dsp$                       & full dataset\\
 \section{Empirical Source and Destination Summaries}
 % ======================================================================
 
-Each clone-level observation $j = (i_j, q_j, c_j)$ comes with two empirical count
+Each clone-level observation $j = (i_j, r_j, c_j)$ comes with two empirical count
 vectors,
 \[
   x_j,\, y_j \in \Znn^{L},
   \qquad L = 33,
 \]
 where $x_j$ holds the source tissue--phenotype counts for clonotype $c_j$ in
-patient $i_j$ at the source timepoint of interval $q_j$, and $y_j$ holds the
+patient $i_j$ at the source timepoint of step $r_j$, and $y_j$ holds the
 destination counts for the same clonotype at the destination timepoint.
 
 \subsection{Source and destination totals}
@@ -320,8 +325,8 @@ The totals
   \qquad
   \Ndst_j = \sum_{z\in\Zsp} y_j(z)
 \]
-are both strictly positive, because $c_j \in \Csp_{q_j}$ guarantees the
-clonotype is observed at both ends of the interval.
+are both strictly positive, because $c_j \in \Csp_{i_j r_j}$ guarantees the
+clonotype is observed at both ends of the step.
 
 \subsection{Source probability vector}
 
@@ -388,7 +393,7 @@ destination state $z' = (b,v)$, the entry
   \,\bigr)
 \]
 is the probability that source state $(a,u)$ contributes to destination state
-$(b,v)$ over one forward interval.
+$(b,v)$ over one forward step.
 
 \subsection{Row-stochastic structure}
 
@@ -428,12 +433,12 @@ The corresponding model-implied mean destination count vector is
 Here $y_j$ is a count vector, $\pi_j$ is a probability vector, and
 $\Ndst_j \pi_j$ is the expected destination count vector.
 
-\subsection{Role of forward intervals}
+\subsection{Role of forward steps}
 
-The same matrix $T$ is used for every patient $i$ and interval $q \in \Qsp_i$.
+The same matrix $T$ is used for every patient $i$ and step $r \in \Rsp_i$.
 The pair $(i,q)$ identifies a patient and a pair of study timepoints---telling
 us which source and destination count vectors to build---but it does not select
-a different transition matrix. All intervals are treated as repeated observations of a
+a different transition matrix. All steps are treated as repeated observations of a
 common one-step forward transition process.
 
 % ======================================================================
@@ -508,7 +513,7 @@ $T_{z\cdot}\sim\Dir(\alpha_z)$ over the full destination set throughout.
 
 After observing the data
 \[
-  \Dsp = \bigl\{ (x_j, y_j, i_j, q_j, c_j) \bigr\}_{j=1}^{J},
+  \Dsp = \bigl\{ (x_j, y_j, i_j, r_j, c_j) \bigr\}_{j=1}^{J},
 \]
 inference targets the posterior $p(T \mid \Dsp)$, which captures uncertainty
 about the joint tissue--phenotype transition kernel after all clone-level
@@ -579,7 +584,7 @@ contributions from latent source tissue--phenotype states.
 \label{sec:generative}
 % ======================================================================
 
-The full model is a model for the one-interval redistribution of clone mass
+The full model is a model for the one-step redistribution of clone mass
 across tissue--phenotype states. It can be summarized as follows.
 
 \begin{keybox}[title={Generative model}]
@@ -594,11 +599,11 @@ across tissue--phenotype states. It can be summarized as follows.
           T_{z\cdot} \sim \Dir\!\bigl( \alpha_z \bigr) .
         \]
         Row $T_{z\cdot}$ describes how clone mass starting in state $z$ is
-        redistributed across destinations after one forward interval.
+        redistributed across destinations after one forward step.
 
-  \item \textbf{Source distribution.} For each patient $i$, interval
-        $q\in\Qsp_i$, and retained clonotype $c\in\Csp_{iq}$, form the
-        observation $j = (i,q,c)$ and compute the empirical source probability
+  \item \textbf{Source distribution.} For each patient $i$, step
+        $r\in\Rsp_i$, and retained clonotype $c\in\Csp_{ir}$, form the
+        observation $j = (i,r,c)$ and compute the empirical source probability
         vector $\theta_j$ from $x_j$. This is where the clone mass sits at the
         source timepoint.
 
@@ -613,7 +618,7 @@ across tissue--phenotype states. It can be summarized as follows.
 \end{enumerate}
 \end{keybox}
 
-In words: each clone begins an interval with an observed distribution across
+In words: each clone begins a step with an observed distribution across
 tissue--phenotype states; the transition matrix maps that source distribution
 forward into a destination probability vector; and the observed destination
 counts are sampled from that vector, with the destination total $\Ndst_j$
@@ -632,23 +637,39 @@ Figure~\ref{fig:plate}.
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=0.82\linewidth]{plate_joint_transition.pdf}
-  \caption{Plate diagram of the generative model. The transition rows
-    $T_{z\cdot}$ are drawn once per source state $z$ (top plate, indexed by
-    $z\in\Zsp$) from a Dirichlet prior with concentration $\alpha_z$. This
-    transition block sits \emph{outside} the patient plate: a single matrix $T$
-    is shared across all patients and intervals. The observation side is drawn
-    with explicit nesting---patient $i$, forward interval $q\in\Qsp_i$, retained
-    clonotype $c\in\Csp_{iq}$---so a clone-level observation is the triple
-    $(i,q,c)$. Within the innermost plate each observation contributes the
-    empirical source distribution $\theta_{iqc}$, deterministically normalized
-    from the observed source counts $x_{iqc}$; the pushforward
-    $\pi_{iqc} = \theta_{iqc} T$ then drives a multinomial draw of the observed
-    destination counts $y_{iqc}$ with total $\Ndst_{iqc}$. Double circles
-    ($x_{iqc}$, $y_{iqc}$) mark observed quantities and solid dots ($\alpha_z$,
-    $\Ndst_{iqc}$) mark fixed inputs. The latent allocation counts used for
-    fitting are a computational augmentation and are introduced separately in
-    Section~\ref{sec:inference-comp}.}
+  \includegraphics[width=0.78\linewidth]{plate_joint_transition.pdf}
+
+  \smallskip
+  {\small
+  \begin{tabular}{@{}ll@{}}
+    \toprule
+    \textbf{Node} & \textbf{Meaning}\\
+    \midrule
+    $x_{irc}$ & observed source counts at the start of the step (over the $33$ states)\\
+    $\theta_{irc}=\mathrm{Normalize}(x_{irc})$ & source distribution (deterministic; folded into the $x\!\to\!\pi$ edge)\\
+    $\pi_{irc}=\theta_{irc}T$ & model-implied destination distribution\\
+    $y_{irc}$ & observed destination counts at the end of the step\\
+    $T_{z}$ & latent transition row, shared across all patients and steps\\
+    $\Ndst_{irc}$ & destination cell total (fixed)\\
+    $\alpha_z$ & Dirichlet prior concentration (fixed)\\
+    \bottomrule
+  \end{tabular}}
+
+  \caption{Plate diagram of the generative model (node key above). The transition
+    rows $T_{z}$ are drawn once per source state $z$ (top plate) from a Dirichlet
+    prior $\alpha_z$; this block sits \emph{outside} the patient plate, so a
+    single $T$ is shared across all patients and steps. The observation side
+    nests patient $i$, forward step $r\in\Rsp_i$, and retained clonotype
+    $c\in\Csp_{ir}$, so a clone-level observation is the triple $(i,r,c)$. Within
+    the innermost plate the observed source counts $x_{irc}$ are normalized and
+    pushed through $T$ to the destination distribution
+    $\pi_{irc}=\theta_{irc}T$, which then drives a multinomial draw of the
+    observed destination counts $y_{irc}$ with total $\Ndst_{irc}$. Double
+    circles ($x_{irc}$, $y_{irc}$) mark observed quantities and solid dots
+    ($\alpha_z$, $\Ndst_{irc}$) mark fixed inputs; the deterministic
+    normalization $\theta_{irc}=\mathrm{Normalize}(x_{irc})$ is folded into the
+    $x\!\to\!\pi$ edge. Latent allocation counts used for fitting are a
+    computational augmentation introduced in Section~\ref{sec:inference-comp}.}
   \label{fig:plate}
 \end{figure}
 
@@ -659,7 +680,7 @@ Figure~\ref{fig:plate}.
 Inference estimates the posterior over the shared transition matrix $T$. The
 observed data are the clone-level forward observations
 \[
-  \Dsp = \bigl\{ (x_j, y_j, i_j, q_j, c_j) \bigr\}_{j=1}^{J} .
+  \Dsp = \bigl\{ (x_j, y_j, i_j, r_j, c_j) \bigr\}_{j=1}^{J} .
 \]
 The source probability vectors $\theta_j$ and destination totals $\Ndst_j$ are
 derived from the observed count vectors, while the prior parameters $\alpha$ are
@@ -668,13 +689,13 @@ fixed model inputs.
 \subsection{Learned quantity}
 
 The main learned object is the posterior $p(T \mid \Dsp)$, whose summaries
-describe the inferred one-interval redistribution of clone mass across
+describe the inferred one-step redistribution of clone mass across
 tissue--phenotype states. A single-transition summary is
 \[
   \E\!\left[ T_{(a,u),(b,v)} \mid \Dsp \right],
 \]
 the posterior mean probability that source state $(a,u)$ contributes to
-destination state $(b,v)$ over one forward interval.
+destination state $(b,v)$ over one forward step.
 
 \subsection{Derived tissue-level summaries}
 
@@ -752,7 +773,7 @@ $\Zsp = \Ssp \times \{1,\ldots,K\}$ ($|\Zsp| = L = 33$), the empirical source
 distributions $\theta_j$, the pushforwards $\pi_j = \theta_j T$, and the
 observed destination counts $y_j$.
 
-Recall the data $\Dsp = \{(x_j, y_j, i_j, q_j, c_j)\}_{j=1}^{J}$. For each
+Recall the data $\Dsp = \{(x_j, y_j, i_j, r_j, c_j)\}_{j=1}^{J}$. For each
 observation $j$, the source counts $x_j$ are normalized into $\theta_j$, and the
 destination counts are modeled as
 \[
@@ -794,7 +815,7 @@ from the variational distribution.
 
 \subsection{Variational family}
 
-To avoid overloading the interval index $q \in \Qsp_i$, we write the variational
+To avoid overloading the step index $r \in \Rsp_i$, we write the variational
 distribution as $\vq(T,\xi)$ and adopt a mean-field factorization
 \[
   \vq(T,\xi) = \vq(T)\,\vq(\xi) .
@@ -876,7 +897,7 @@ normalized Dirichlet parameter:
   =
   \frac{\lambda_{zz'}}{\sum_{\bar z\in\Zsp} \lambda_{z\bar z}} .
 \]
-The matrix $\widehat{T}$ is the estimated one-interval transition probability
+The matrix $\widehat{T}$ is the estimated one-step transition probability
 matrix over the $33$-state tissue--phenotype space, and it is the fitted
 quantity used for posterior summaries, posterior predictive checks, posterior
 attribution summaries, and subsequent rate decomposition.
