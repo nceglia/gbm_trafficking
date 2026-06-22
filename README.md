@@ -16,7 +16,7 @@ See [`deploy/README.md`](deploy/README.md).
 
 ```bash
 python -m viewers.build.all          # after pipeline steps finish
-./deploy/sync.sh user@vm:/var/www/gbm-viewer
+./deploy/release.sh                  # atomic release to slvicosspecdat1
 ```
 
 ## Celltyping CLI
