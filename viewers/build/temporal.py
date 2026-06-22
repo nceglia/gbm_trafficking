@@ -16,8 +16,9 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from viewers.paths import TEMPORAL_HTML, TEMPORAL_SCORES_DIR, ensure_bundle
 from viewers.build import landing
+from viewers.build.vendor import inline_script_tags
+from viewers.paths import TEMPORAL_HTML, TEMPORAL_SCORES_DIR, ensure_bundle
 
 INPUT_DIR = TEMPORAL_SCORES_DIR
 OUTPUT_PATH = TEMPORAL_HTML
@@ -68,6 +69,10 @@ def main():
         for key, tag, _ in INPUTS
     )
     html = TEMPLATE.replace("__DATA_BLOCKS__", blocks)
+    html = html.replace(
+        "__VENDOR_SCRIPTS__",
+        inline_script_tags(["plotly", "pako", "papaparse"]),
+    )
     OUTPUT_PATH.write_text(html, encoding="utf-8")
 
     size_mb = OUTPUT_PATH.stat().st_size / 1024 / 1024
@@ -81,9 +86,7 @@ TEMPLATE = r"""<!DOCTYPE html>
 <head>
   <meta charset="utf-8">
   <title>GBM Temporal Explorer</title>
-  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
-  <script src="https://unpkg.com/papaparse@5/papaparse.min.js"></script>
+  __VENDOR_SCRIPTS__
   <style>
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; height: 100%;

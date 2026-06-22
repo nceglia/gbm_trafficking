@@ -1,0 +1,322 @@
+title: GBM Trafficking Pipeline Report
+subtitle: Static summary of curated pipeline outputs for internal collaborators.
+publish_limits:
+  table_max_bytes: 30000000
+  figure_max_bytes: 25000000
+  text_max_bytes: 1000000
+excluded_suffixes:
+  - .h5ad
+  - .pkl
+  - .pickle
+  - .npz
+  - .npy
+  - .h5
+sections:
+  - id: quickstart
+    title: How to read this site
+    lead: Start with the narrative report for method context, then open the temporal, signaling, and clone-network explorers for interactive drilling.
+    notes:
+      - The VM serves copied static artifacts only. It does not contain the raw AnnData objects or full pipeline results tree.
+      - Large compute caches and raw object files are intentionally excluded from deployment.
+
+  - id: qc
+    title: QC and input audits
+    lead: Doublet and ambient-RNA checks document the filtering and sample-level quality controls upstream of the trafficking analyses.
+    methods:
+      - Scrublet scores are computed on the T-cell object and summarized by sample.
+      - Ambient audit outputs track soup signatures, off-lineage programs, and sample contamination estimates.
+    tables:
+      - path: results/qc_scrublet_doublets/scrublet_summary.csv
+        title: Scrublet summary
+      - path: results/qc_ambient_audit/batch_summary.csv
+        title: Ambient audit batch summary
+      - path: results/qc_ambient_audit/contamination_fraction.csv
+        title: Contamination fraction
+      - path: results/qc_ambient_audit/per_sample_soup.csv
+        title: Per-sample soup scores
+    figures:
+      - path: results/qc_scrublet_doublets/*.png
+      - path: results/qc_ambient_audit/*.png
+    text:
+      - path: results/qc_ambient_audit/audit_summary.txt
+        title: Ambient audit notes
+
+  - id: temporal
+    title: Temporal composition and pathway scores
+    lead: Phenotype composition, pathway activity, and selected gene panels across patient, tissue, and timepoint bins.
+    methods:
+      - T-cell and myeloid temporal score tables are built on the analysis machine, then compressed into the temporal explorer.
+      - Gene-expression matrices are included in the temporal explorer but not duplicated in the narrative report because they are large.
+    text:
+      - path: results/pathway_temporal_scores/gene_panel_tcell.txt
+        title: T-cell gene panel
+      - path: results/pathway_temporal_scores/gene_panel_myeloid.txt
+        title: Myeloid gene panel
+    figures:
+      - path: results/traffic_temporal_trajectories/*.png
+        title: Temporal trajectory figures
+    tables:
+      - path: results/pathway_temporal_scores/temporal_composition_tcell.csv
+        title: T-cell temporal composition
+      - path: results/pathway_temporal_scores/temporal_composition_myeloid.csv
+        title: Myeloid temporal composition
+      - path: results/pathway_temporal_scores/temporal_pathway_scores_tcell.csv
+        title: T-cell temporal pathway scores
+      - path: results/pathway_temporal_scores/temporal_pathway_scores_myeloid.csv
+        title: Myeloid temporal pathway scores
+      - path: results/pathway_temporal_scores/pathway_definitions.csv
+        title: Pathway definitions
+      - path: results/pathway_temporal_scores/pathway_cosine_distance_summary.csv
+        title: Pathway cosine distance summary
+      - path: results/traffic_temporal_trajectories/*.csv
+        title: T-cell temporal trajectory tables
+    related:
+      - label: Open temporal explorer
+        href: ../temporal.html
+
+  - id: pathway
+    title: Differential expression and pathway programs
+    lead: Pseudobulk differential expression and GSEA outputs identify tissue-associated transcriptional programs in T cells and myeloid cells.
+    methods:
+      - T-cell pathway outputs use clone-pseudobulk contrasts across PBMC, CSF, and TP.
+      - Myeloid pathway outputs use sample-level pseudobulk contrasts across the same tissue axes.
+    tables:
+      - path: results/pathway_de_gsea/de_*.csv
+        title: T-cell differential expression tables
+      - path: results/pathway_de_gsea/gsea_*.csv
+        title: T-cell GSEA tables
+      - path: results/pathway_de_gsea_myeloid/*.csv
+        title: Myeloid DE/GSEA tables
+    figures:
+      - path: results/pathway_de_gsea/*.png
+      - path: results/pathway_de_gsea/networks/*.png
+
+  - id: migration_signatures
+    title: Migration signatures and target programs
+    lead: Newer pathway modules distill migration, motility, entry, and KLF6-associated programs from clone-node and transition-level analyses.
+    methods:
+      - Migration signature outputs combine Open Targets/pathway evidence with clone-node rewiring scores.
+      - Entry, motility, and KLF6 modules publish compact score summaries, differential tables, validation plots, and caveat notes.
+      - Per-cell and transition-level CSVs are copied only when they remain below the report size limits.
+    tables:
+      - path: results/pathway_migration_signature_ot/*.csv
+        title: Migration signature OT/pathway tables
+      - path: results/migration_gene_lists/*.csv
+        title: Migration gene-list intersections
+      - path: results/pathway_entry_signature/*.csv
+        title: Entry signature tables
+      - path: results/pathway_motility_traffic/*.csv
+        title: Motility and traffic pathway tables
+      - path: results/pathway_klf6_analysis/*.csv
+        title: KLF6 specificity and traffic-class tables
+      - path: results/traffic_draining_ot/*.csv
+        title: Draining Open Targets rewiring tables
+    figures:
+      - path: results/pathway_migration_signature_ot/*.png
+      - path: results/migration_gene_lists/*.png
+      - path: results/pathway_entry_signature/*.png
+      - path: results/pathway_motility_traffic/*.png
+      - path: results/pathway_klf6_analysis/*.png
+      - path: results/traffic_draining_ot/*.png
+    text:
+      - path: results/pathway_entry_signature/CAVEATS.txt
+        title: Entry-signature caveats
+
+  - id: separability
+    title: Tissue separability and transcriptome similarity
+    lead: Separability and cosine-similarity analyses quantify how transcriptionally distinct tissue compartments are within each lineage.
+    methods:
+      - Augur cache files are not deployed; only human-readable summaries and figures are copied when available.
+      - Cosine summaries compare tissue-level pseudobulk expression patterns.
+    tables:
+      - path: results/traffic_tissue_separability/augur_auc_summary.csv
+        title: T-cell Augur AUC summary
+      - path: results/traffic_tissue_separability/augur_per_patient.csv
+        title: T-cell Augur per-patient summary
+      - path: results/traffic_tissue_separability_myeloid/augur_auc_summary.csv
+        title: Myeloid Augur AUC summary
+      - path: results/traffic_tissue_separability_myeloid/augur_per_patient.csv
+        title: Myeloid Augur per-patient summary
+      - path: results/traffic_transcriptome_cosine/cosine_distance_summary.csv
+        title: T-cell cosine distance summary
+      - path: results/traffic_transcriptome_cosine_myeloid/cosine_distance_summary.csv
+        title: Myeloid cosine distance summary
+      - path: results/traffic_tissue_separability/cosine_distance_summary.csv
+        title: T-cell separability cosine summary
+      - path: results/traffic_tissue_separability_myeloid/cosine_distance_summary.csv
+        title: Myeloid separability cosine summary
+    figures:
+      - path: results/traffic_tissue_separability/*.png
+      - path: results/traffic_tissue_separability_myeloid/*.png
+      - path: results/traffic_transcriptome_cosine/*.png
+      - path: results/traffic_transcriptome_cosine_myeloid/*.png
+    notes:
+      - Large Augur cache objects are intentionally excluded; only summaries and figures are deployed.
+
+  - id: cross_lineage
+    title: Cross-lineage pathway coupling
+    lead: Correlation outputs connect T-cell phenotype/pathway state to myeloid composition and pathway state across matched patient-time tissue observations.
+    methods:
+      - Coarse and fine cross-lineage runs are grouped separately in the source tree.
+      - The report publishes correlation summaries and heatmaps; the signaling explorer uses these correlations for pathway context.
+    tables:
+      - path: results/pathway_cross_lineage_corr/pathway_correlations_summary.csv
+        title: Pathway correlation summary
+      - path: results/pathway_cross_lineage_corr/phenotype_correlations.csv
+        title: Phenotype correlations
+      - path: results/pathway_cross_lineage_corr/patient_observations.csv
+        title: Patient observations
+      - path: results/11_cross_lineage_correlations_grouped/phenotype_correlations.csv
+        title: Grouped phenotype correlations
+    figures:
+      - path: results/pathway_cross_lineage_corr/*.png
+      - path: results/11_cross_lineage_correlations_grouped/*.png
+
+  - id: signaling
+    title: T-cell to myeloid signaling
+    lead: LIANA-derived ligand-receptor summaries link cellular interaction scores to tissue branches and pathway context.
+    methods:
+      - The full LIANA per-timepoint matrix is large and is transformed into the signaling explorer on the analysis machine.
+      - The VM receives the built explorer and compact supporting tables only.
+    tables:
+      - path: results/signaling_liana_pathways/skipped_bins.csv
+        title: Skipped signaling bins
+      - path: results/explorer_signaling/entry_matrix.csv
+        title: Explorer entry matrix
+      - path: results/explorer_signaling/temporal_trajectory.csv
+        title: Explorer temporal trajectory
+      - path: results/explorer_signaling/pathway_lookup.csv
+        title: Explorer pathway lookup
+      - path: results/signaling_branch_intersection/*.csv
+        title: Branch signaling summaries
+    figures:
+      - path: results/signaling_branch_intersection/*.png
+    related:
+      - label: Open signaling explorer
+        href: ../signaling.html
+
+  - id: trafficking
+    title: Empirical and Bayesian trafficking
+    lead: TCR clone state vectors support empirical transition estimates, CTMC-style migration rates, and Bayesian transition comparisons.
+    methods:
+      - These analyses require TCR clonotypes and are not portable to myeloid-only data without changing the unit of analysis.
+      - GPU-backed Bayesian steps run upstream; the report only copies summaries and plots.
+    tables:
+      - path: results/traffic_migration_rates/*.csv
+        title: Empirical migration and transition tables
+      - path: results/traffic_migration_rates_per_tp/*.csv
+        title: Per-timepoint migration stability tables
+      - path: results/traffic_bayesian_comparison/*.csv
+        title: Bayesian comparison tables
+      - path: results/traffic_bayesian_sankey/*.csv
+        title: Bayesian Sankey and transition tables
+    figures:
+      - path: results/traffic_migration_rates/figures/*.png
+      - path: results/traffic_migration_rates_per_tp/*.png
+      - path: results/traffic_bayesian_comparison/*.png
+      - path: results/traffic_bayesian_sankey/*.png
+
+  - id: drainage_rewiring
+    title: Drainage rewiring and empirical Sankey
+    lead: Transition-level rewiring analyses compare observed clone traffic to phenotype, pathway, and transcription-factor programs across tissue edges.
+    methods:
+      - Drainage rewiring tables summarize event balance, tissue-pair specificity, GSEA terms, selected genes, and TF activity by source-target edge.
+      - Empirical Sankey outputs provide observed transition matrices and visual flow comparisons without requiring Bayesian refitting on the VM.
+    tables:
+      - path: results/traffic_drainage_rewiring/*.csv
+        title: Drainage rewiring summary tables
+      - path: results/traffic_drainage_rewiring/*/*/*.csv
+        title: Drainage rewiring edge-level tables
+      - path: results/traffic_empirical_sankey/*.csv
+        title: Empirical Sankey transition tables
+    figures:
+      - path: results/traffic_drainage_rewiring/*.png
+      - path: results/traffic_drainage_rewiring/*/*/*.png
+      - path: results/traffic_empirical_sankey/**/*.png
+
+  - id: branch
+    title: Branch dynamics and clone network
+    lead: Branch-level clone empirics describe which clone populations persist, move, expand, contract, or switch phenotypes across tissue-time edges.
+    methods:
+      - Branch empirics use T-cell TCR clones and overlay myeloid composition from temporal scores.
+      - The clone-network explorer is generated as a standalone D3 page.
+    tables:
+      - path: results/traffic_branch_empirics/*.csv
+        title: Branch empirics tables
+      - path: results/traffic_branch_dispersion/*.csv
+        title: Stayer/mover dispersion tables
+      - path: results/traffic_branch_dispersion_jsd/*.csv
+        title: JSD dispersion tables
+      - path: results/traffic_branch_dispersion_switching/*.csv
+        title: Phenotype switching tables
+      - path: results/traffic_branch_dispersion_temporal/*.csv
+        title: Temporal branch dispersion tables
+    figures:
+      - path: results/traffic_branch_empirics/*.png
+      - path: results/traffic_branch_dispersion/*.png
+      - path: results/traffic_branch_dispersion_jsd/*.png
+      - path: results/traffic_branch_dispersion_switching/*.png
+      - path: results/traffic_branch_dispersion_temporal/*.png
+      - path: results/figure1/*.png
+    text:
+      - path: results/traffic_branch_empirics/render_check.txt
+        title: Branch empirics render check
+      - path: results/explorer_clone_network/data_summary.txt
+        title: Clone-network build summary
+    related:
+      - label: Open clone network explorer
+        href: ../clone_network.html
+
+  - id: archetypes
+    title: Clone traffic archetypes
+    lead: Archetype modules group clones by trafficking graph structure and summarize recurring movement patterns across tissues.
+    methods:
+      - The archetype outputs publish cluster assignments, graph summaries, null/silhouette diagnostics, and merged traffic-graph figures.
+      - Raw clone-network explorer data remain in the standalone clone-network page.
+    tables:
+      - path: results/traffic_archetypes/*.csv
+        title: Traffic archetype tables
+      - path: results/traffic_archetypes/*/*.csv
+        title: Alternate archetype-run tables
+      - path: results/traffic_archetype_graphs/*.csv
+        title: Archetype graph tables
+    figures:
+      - path: results/traffic_archetypes/*.png
+      - path: results/traffic_archetypes/*/*.png
+      - path: results/traffic_archetype_graphs/*.png
+
+  - id: clonality
+    title: Clonality, persistence, and pseudotime
+    lead: Clonality and pseudotime outputs summarize clone dominance, persistence, and phenotype-associated trajectories.
+    methods:
+      - Pseudotime `.h5ad` objects are intentionally excluded; only figures and compact summaries are published.
+      - Phenotype DEG summaries are copied, while the very large DEG matrix is omitted unless explicitly whitelisted later.
+    tables:
+      - path: results/traffic_clonality/*.csv
+        title: Clonality tables
+      - path: results/traffic_phenotype_degs/summary.csv
+        title: Phenotype DEG summary
+    figures:
+      - path: results/traffic_clonality/*.png
+      - path: results/traffic_pseudotime_phenotypes/*/*.png
+      - path: results/traffic_clonal_persistence/*.png
+
+  - id: main_figures
+    title: Main integrated figures
+    lead: Figure-level outputs collect the most interpretable panels for manuscript-style review.
+    tables:
+      - path: results/figure_main2_trafficking/*.csv
+        title: Figure 2 source tables
+      - path: results/figure_cd8_drainage_integrated/*.csv
+        title: Integrated CD8 drainage figure tables
+      - path: results/figure_cd8_drainage_amplitude/*.csv
+        title: CD8 drainage amplitude figure tables
+      - path: results/figure_cd8_rewiring_amplitude/*.csv
+        title: CD8 rewiring amplitude figure tables
+    figures:
+      - path: results/figure_main2_trafficking/*.png
+      - path: results/figure1/*.png
+      - path: results/figure3/*.png
+      - path: results/figure_cd8_drainage_integrated/*.png
+      - path: results/figure_cd8_drainage_amplitude/*.png
+      - path: results/figure_cd8_rewiring_amplitude/*.png

@@ -31,7 +31,7 @@ def main(argv: list[str] | None = None) -> None:
     )
     args = parser.parse_args(argv)
 
-    selected = args.only or sorted(BUILDERS)
+    selected = args.only or list(BUILDERS)
     for name in selected:
         script = BUILDERS[name]
         print(f"\n=== {name} ===")

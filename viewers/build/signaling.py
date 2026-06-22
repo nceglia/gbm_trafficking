@@ -1,7 +1,7 @@
 # %%
 """Build deploy/bundle/signaling.html — L-R signaling explorer.
 
-Gzip+base64 CSVs inlined, Plotly + pako + papaparse from CDN, no server.
+Gzip+base64 CSVs inlined, Plotly + pako + papaparse inlined, no server.
 Intermediate CSVs remain under results/signaling_explorer/ on the build machine.
 """
 import base64
@@ -30,6 +30,7 @@ sys.path.insert(0, str(REPO_ROOT / "pipeline"))
 
 from modules.style import TISSUE_COLORS
 from viewers.build import landing
+from viewers.build.vendor import inline_script_tags
 from viewers.paths import (
     CROSS_LINEAGE_CORR_DIR,
     LIANA_SIGNALING_DIR,
@@ -563,9 +564,7 @@ header .info { font-size: 12px; color: var(--muted); margin-top: 8px; }
 <script type="application/json" id="pathway-xref-b64">__XREF_B64__</script>
 <script type="application/json" id="pathway-lookup-b64">__PW_LOOKUP_B64__</script>
 
-<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+__VENDOR_SCRIPTS__
 
 <script>
 const TISSUE_COLORS = {
@@ -1366,6 +1365,8 @@ html = html.replace("__CSF_COLOR__", TISSUE_COLORS["CSF"])
 html = html.replace("__TP_COLOR__", TISSUE_COLORS["TP"])
 html = html.replace("__BRANCHES_JSON__",
                      json.dumps([list(b) for b in BRANCHES]))
+html = html.replace("__VENDOR_SCRIPTS__",
+                    inline_script_tags(["plotly", "pako", "papaparse"]))
 # B64 payloads last so they don't get masked by other substitutions.
 html = html.replace("__ENTRY_B64__", entry_b64)
 html = html.replace("__DETAIL_B64__", detail_b64)

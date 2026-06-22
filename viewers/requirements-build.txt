@@ -1,3 +1,4 @@
 # Minimal deps to build static viewers on the analysis machine.
 # Clone-network build additionally needs anndata (see main requirements.txt).
 pandas>=2.0
+pyyaml>=6.0

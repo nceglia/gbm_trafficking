@@ -1,518 +1,722 @@
-"""Consolidate results/ into deploy/bundle/report/ static site.
+"""Build the static narrative report under deploy/bundle/report/.
 
-Reads existing CSVs/PNGs under results/, copies/concatenates them into the
-deploy bundle, writes manifest.json, and lays down a vanilla-JS frontend
-(Tabulator + Plotly via CDN). No analysis is re-run.
-
-Serve locally:
-    python -m http.server -d deploy/bundle
+The report copies curated, publishable artifacts from results/ into the deploy
+bundle. It never copies raw AnnData objects, large caches, or compute-only
+intermediates unless they are explicitly added to viewers/report_catalog.yaml.
 """
+
+from __future__ import annotations
+
+import hashlib
+import html
 import json
 import re
 import shutil
+import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
 import pandas as pd
+import yaml
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from viewers.build import landing
-from viewers.paths import REPORT_DIR, RESULTS_DIR, ensure_bundle
+from viewers.paths import BUNDLE_DIR, REPORT_DIR, ensure_bundle
+
+CATALOG_PATH = REPO_ROOT / "viewers" / "report_catalog.yaml"
+PIPELINE_MANIFEST = REPO_ROOT / "pipeline" / "manifest.yaml"
 
 DATA_DIR = REPORT_DIR / "data"
 FIG_DIR = REPORT_DIR / "figures"
+TEXT_DIR = REPORT_DIR / "text"
+FILES_DIR = REPORT_DIR / "files"
 ASSETS_DIR = REPORT_DIR / "assets"
 
-
-# ---------- helpers ----------------------------------------------------------
-
-def caption_from_filename(name: str) -> str:
-    return Path(name).stem.replace("_", " ")
-
-
-def reset_report():
-    ensure_bundle()
-    if REPORT_DIR.exists():
-        shutil.rmtree(REPORT_DIR)
-    for d in (DATA_DIR, FIG_DIR, ASSETS_DIR):
-        d.mkdir(parents=True)
-
-
-def copy_pngs(src_files, dest_subdir):
-    src_files = list(src_files)
-    if not src_files:
-        return []
-    out_dir = FIG_DIR / dest_subdir
-    out_dir.mkdir(parents=True, exist_ok=True)
-    entries = []
-    for src in src_files:
-        shutil.copy2(src, out_dir / src.name)
-        entries.append({
-            "file": f"figures/{dest_subdir}/{src.name}",
-            "caption": caption_from_filename(src.name),
-        })
-    return entries
-
+GLOB_CHARS = set("*?[]")
+TABLE_SUFFIXES = {".csv", ".tsv"}
+FIGURE_SUFFIXES = {".png", ".jpg", ".jpeg", ".svg"}
+TEXT_SUFFIXES = {".txt", ".md", ".log"}
+FILE_SUFFIXES = {".pdf"}
 
 SEARCH_HINTS = {
     "phenotype", "contrast", "tissue", "tissue_pair", "term", "pathway",
     "patient", "lineage", "gene", "name", "family", "source", "library",
-    "pathway_1", "pathway_2",
+    "pathway_1", "pathway_2", "edge", "timepoint", "clone_id", "trb",
 }
 
 
-def detect_search_cols(csv_path: Path) -> list:
-    cols = list(pd.read_csv(csv_path, nrows=0).columns)
+def _read_yaml(path: Path) -> dict:
+    return yaml.safe_load(path.read_text(encoding="utf-8"))
+
+
+def _size_label(n_bytes: int) -> str:
+    if n_bytes >= 1024 * 1024 * 1024:
+        return f"{n_bytes / 1024 / 1024 / 1024:.1f} GB"
+    if n_bytes >= 1024 * 1024:
+        return f"{n_bytes / 1024 / 1024:.1f} MB"
+    if n_bytes >= 1024:
+        return f"{n_bytes / 1024:.0f} KB"
+    return f"{n_bytes} B"
+
+
+def _caption_from_filename(path: Path) -> str:
+    stem = path.stem
+    stem = re.sub(r"[_-]+", " ", stem)
+    return stem.strip().capitalize()
+
+
+def _safe_name(path: Path) -> str:
+    rel = path.relative_to(REPO_ROOT).as_posix()
+    return re.sub(r"[^A-Za-z0-9_.-]+", "__", rel)
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for block in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def _git_sha() -> str:
+    try:
+        return subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"],
+            cwd=REPO_ROOT,
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+    except Exception:
+        return "unknown"
+
+
+def _git_dirty() -> bool:
+    try:
+        out = subprocess.run(
+            ["git", "status", "--short"],
+            cwd=REPO_ROOT,
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+        return bool(out)
+    except Exception:
+        return True
+
+
+def _reset_report() -> None:
+    ensure_bundle()
+    if REPORT_DIR.exists():
+        shutil.rmtree(REPORT_DIR)
+    for path in (DATA_DIR, FIG_DIR, TEXT_DIR, FILES_DIR, ASSETS_DIR):
+        path.mkdir(parents=True, exist_ok=True)
+
+
+def _glob_matches(pattern: str) -> list[Path]:
+    if any(ch in pattern for ch in GLOB_CHARS):
+        matches = sorted(REPO_ROOT.glob(pattern))
+    else:
+        p = REPO_ROOT / pattern
+        matches = [p] if p.exists() else []
+    return [p for p in matches if p.is_file()]
+
+
+def _detect_search_cols(csv_path: Path) -> list[str]:
+    try:
+        cols = list(pd.read_csv(csv_path, nrows=0).columns)
+    except Exception:
+        return []
     likely = [c for c in cols if c.lower() in SEARCH_HINTS]
-    return likely or cols[:1]
+    return likely or cols[: min(3, len(cols))]
 
 
-# ---------- (a) tissue separability -----------------------------------------
+def _copy_artifact(
+    src: Path,
+    section_id: str,
+    kind: str,
+    title: str,
+    description: str | None,
+    artifacts: list[dict],
+) -> dict:
+    root = {
+        "table": DATA_DIR,
+        "figure": FIG_DIR,
+        "text": TEXT_DIR,
+        "file": FILES_DIR,
+    }[kind]
+    out_dir = root / section_id
+    out_dir.mkdir(parents=True, exist_ok=True)
+    dest = out_dir / _safe_name(src)
+    shutil.copy2(src, dest)
+    rel_dest = dest.relative_to(REPORT_DIR).as_posix()
+    rel_src = src.relative_to(REPO_ROOT).as_posix()
+    size = dest.stat().st_size
+    entry = {
+        "type": kind,
+        "section": section_id,
+        "source": rel_src,
+        "file": rel_dest,
+        "title": title,
+        "description": description or "",
+        "bytes": size,
+        "size": _size_label(size),
+        "sha256": _sha256(dest),
+    }
+    artifacts.append(entry)
+    return entry
 
-def section_tissue_separability():
-    src_dir = RESULTS_DIR / "03_tissue_separability"
-    if not src_dir.is_dir():
-        return None
 
-    figures = copy_pngs(sorted(src_dir.glob("*.png")), "tissue_separability")
-    csv_renames = [
-        ("augur_auc_summary.csv", "augur_results.csv", "Augur AUC"),
-        ("augur_per_patient.csv", "augur_per_patient.csv", "Augur per patient"),
-        ("cosine_distance_summary.csv", "cosine_distance_summary.csv", "Cosine distance summary"),
-    ]
-    tables = []
-    for src_name, dst_name, title in csv_renames:
-        src = src_dir / src_name
-        if not src.exists():
+def _resolve_items(
+    section: dict,
+    item_key: str,
+    kind: str,
+    allowed_suffixes: set[str],
+    max_bytes: int,
+    excluded_suffixes: set[str],
+    artifacts: list[dict],
+    skipped: list[dict],
+) -> list[dict]:
+    entries = []
+    for item in section.get(item_key, []) or []:
+        matches = _glob_matches(item["path"])
+        if not matches:
+            skipped.append({
+                "section": section["id"],
+                "source": item["path"],
+                "type": kind,
+                "reason": "missing",
+            })
             continue
-        dst = DATA_DIR / dst_name
-        shutil.copy2(src, dst)
-        tables.append({
-            "id": dst_name.replace(".csv", ""),
-            "file": f"data/{dst_name}",
-            "title": title,
-            "search": detect_search_cols(dst),
-        })
+        for src in matches:
+            rel_src = src.relative_to(REPO_ROOT).as_posix()
+            suffix = src.suffix.lower()
+            size = src.stat().st_size
+            limit = int(item.get("max_bytes", max_bytes))
+            if suffix in excluded_suffixes:
+                skipped.append({
+                    "section": section["id"],
+                    "source": rel_src,
+                    "type": kind,
+                    "reason": f"excluded suffix {suffix}",
+                })
+                continue
+            if allowed_suffixes and suffix not in allowed_suffixes:
+                skipped.append({
+                    "section": section["id"],
+                    "source": rel_src,
+                    "type": kind,
+                    "reason": f"unsupported suffix {suffix or '(none)'}",
+                })
+                continue
+            if size > limit:
+                skipped.append({
+                    "section": section["id"],
+                    "source": rel_src,
+                    "type": kind,
+                    "reason": f"{_size_label(size)} exceeds {_size_label(limit)}",
+                })
+                continue
+            base_title = item.get("title") or _caption_from_filename(src)
+            title = base_title
+            if len(matches) > 1:
+                title = f"{base_title}: {_caption_from_filename(src)}"
+            entry = _copy_artifact(
+                src=src,
+                section_id=section["id"],
+                kind=kind,
+                title=title,
+                description=item.get("description"),
+                artifacts=artifacts,
+            )
+            if kind == "table":
+                entry["search"] = _detect_search_cols(src)
+                entry["delimiter"] = "\t" if suffix == ".tsv" else ","
+            entries.append(entry)
+    return entries
 
-    if not figures and not tables:
-        return None
+
+def _pipeline_payload(manifest: dict) -> dict:
+    steps = []
+    for step_id, spec in sorted(manifest.get("steps", {}).items()):
+        steps.append({
+            "id": step_id,
+            "tier": spec.get("tier", ""),
+            "lineage": spec.get("lineage", ""),
+            "script": spec.get("file", ""),
+            "tcr_required": bool(spec.get("tcr_required", False)),
+            "depends_on": spec.get("depends_on", []),
+            "writes": spec.get("writes", []),
+            "resources": spec.get("resources", {}),
+        })
+    tiers = []
+    for tier in sorted({s["tier"] for s in steps if s["tier"]}):
+        members = [s for s in steps if s["tier"] == tier]
+        tiers.append({
+            "tier": tier,
+            "count": len(members),
+            "tcr_required": sum(1 for s in members if s["tcr_required"]),
+            "lineages": sorted({s["lineage"] for s in members if s["lineage"]}),
+        })
     return {
-        "id": "tissue_separability",
-        "title": "Tissue separability",
-        "type": "section",
-        "tables": tables,
-        "figures": figures,
+        "version": manifest.get("version"),
+        "tier_summary": tiers,
+        "steps": steps,
+        "data_prep": manifest.get("data_prep", []),
     }
 
 
-# ---------- (b) pseudobulk DE + GSEA ----------------------------------------
+def _build_sections(catalog: dict, artifacts: list[dict], skipped: list[dict]) -> list[dict]:
+    limits = catalog.get("publish_limits", {})
+    excluded_suffixes = set(catalog.get("excluded_suffixes", []))
+    table_limit = int(limits.get("table_max_bytes", 30_000_000))
+    figure_limit = int(limits.get("figure_max_bytes", 25_000_000))
+    text_limit = int(limits.get("text_max_bytes", 1_000_000))
 
-DE_RE = re.compile(r"^de_(?P<lineage>[A-Z0-9]+)_(?P<contrast>.+)\.csv$")
-GSEA_RE = re.compile(
-    r"^gsea_(?P<source>hallmark|kegg|gobp)_(?P<lineage>[A-Z0-9]+)_(?P<contrast>.+)\.csv$"
-)
-
-
-def _read_de(p: Path, lineage: str, contrast: str) -> pd.DataFrame:
-    df = pd.read_csv(p)
-    if "gene" not in df.columns and "Unnamed: 0" in df.columns:
-        df = df.rename(columns={"Unnamed: 0": "gene"})
-    df["lineage"] = lineage
-    df["contrast"] = contrast
-    return df
-
-
-def section_pseudobulk_de_gsea():
-    src_dir = RESULTS_DIR / "04_pseudobulk_de_gsea"
-    if not src_dir.is_dir():
-        return None
-
-    tables = []
-
-    de_frames = []
-    for p in sorted(src_dir.glob("de_*.csv")):
-        m = DE_RE.match(p.name)
-        if not m:
-            continue
-        de_frames.append(_read_de(p, m.group("lineage"), m.group("contrast")))
-    if de_frames:
-        de_path = DATA_DIR / "de_results.csv"
-        pd.concat(de_frames, ignore_index=True).to_csv(de_path, index=False)
-        tables.append({
-            "id": "de_results",
-            "file": "data/de_results.csv",
-            "title": "Differential expression (clone-pseudobulk DESeq2)",
-            "search": detect_search_cols(de_path),
+    sections = []
+    for section in catalog.get("sections", []):
+        tables = _resolve_items(
+            section, "tables", "table", TABLE_SUFFIXES, table_limit,
+            excluded_suffixes, artifacts, skipped,
+        )
+        figures = _resolve_items(
+            section, "figures", "figure", FIGURE_SUFFIXES, figure_limit,
+            excluded_suffixes, artifacts, skipped,
+        )
+        text_blocks = _resolve_items(
+            section, "text", "text", TEXT_SUFFIXES, text_limit,
+            excluded_suffixes, artifacts, skipped,
+        )
+        files = _resolve_items(
+            section, "files", "file", FILE_SUFFIXES, figure_limit,
+            excluded_suffixes, artifacts, skipped,
+        )
+        sections.append({
+            "id": section["id"],
+            "title": section["title"],
+            "type": "result",
+            "lead": section.get("lead", ""),
+            "methods": section.get("methods", []),
+            "notes": section.get("notes", []),
+            "related": section.get("related", []),
+            "tables": tables,
+            "figures": figures,
+            "text": text_blocks,
+            "files": files,
         })
+    return sections
 
-    gsea_frames = []
-    for p in sorted(src_dir.glob("gsea_*.csv")):
-        m = GSEA_RE.match(p.name)
-        if not m:
-            continue
-        df = pd.read_csv(p)
-        df["source"] = m.group("source")
-        df["lineage"] = m.group("lineage")
-        df["contrast"] = m.group("contrast")
-        gsea_frames.append(df)
-    if gsea_frames:
-        gsea_path = DATA_DIR / "gsea_results.csv"
-        pd.concat(gsea_frames, ignore_index=True).to_csv(gsea_path, index=False)
-        tables.append({
-            "id": "gsea_results",
-            "file": "data/gsea_results.csv",
-            "title": "GSEA results",
-            "search": detect_search_cols(gsea_path),
-        })
-
-    # Top-level PNGs that are NOT claimed by ternary/coenrichment sections.
-    enrich_pngs = [
-        p for p in sorted(src_dir.glob("*.png"))
-        if not p.name.startswith("pathway_ternary")
-        and not p.name.startswith("pathway_coenrichment")
-    ]
-    figures = copy_pngs(enrich_pngs, "pathway_enrichment")
-
-    if not tables and not figures:
-        return None
-    return {
-        "id": "pathway_enrichment",
-        "title": "Pseudobulk DE + pathway enrichment",
-        "type": "section",
-        "tables": tables,
-        "figures": figures,
-    }
-
-
-# ---------- (c) pathway visualizations --------------------------------------
-
-def section_pathway_ternary():
-    src_dir = RESULTS_DIR / "04_pseudobulk_de_gsea"
-    if not src_dir.is_dir():
-        return None
-    pngs = sorted(src_dir.glob("pathway_ternary*.png"))
-    if not pngs:
-        return None
-    return {
-        "id": "pathway_ternary",
-        "title": "Pathway ternary",
-        "type": "section",
-        "tables": [],
-        "figures": copy_pngs(pngs, "pathway_ternary"),
-    }
-
-
-def section_pathway_coenrichment():
-    src_dir = RESULTS_DIR / "04_pseudobulk_de_gsea"
-    if not src_dir.is_dir():
-        return None
-    pngs = sorted(src_dir.glob("pathway_coenrichment*.png"))
-    if not pngs:
-        return None
-    return {
-        "id": "pathway_coenrichment",
-        "title": "Pathway co-enrichment",
-        "type": "section",
-        "tables": [],
-        "figures": copy_pngs(pngs, "pathway_coenrichment"),
-    }
-
-
-EDGES_RE = re.compile(r"^edges_(?P<library>[a-z]+)_(?P<lineage>[A-Z0-9]+)\.csv$")
-AFFINITY_RE = re.compile(r"^gene_tissue_affinity_(?P<library>[a-z]+)_(?P<lineage>[A-Z0-9]+)\.csv$")
-
-
-def section_pathway_networks():
-    src_dir = RESULTS_DIR / "04_pseudobulk_de_gsea" / "networks"
-    if not src_dir.is_dir():
-        return None
-
-    tables = []
-
-    edges_frames = []
-    for p in sorted(src_dir.glob("edges_*.csv")):
-        m = EDGES_RE.match(p.name)
-        if not m:
-            continue
-        df = pd.read_csv(p)
-        df["library"] = m.group("library")
-        df["lineage"] = m.group("lineage")
-        edges_frames.append(df)
-    if edges_frames:
-        edges_path = DATA_DIR / "pathway_edges.csv"
-        pd.concat(edges_frames, ignore_index=True).to_csv(edges_path, index=False)
-        tables.append({
-            "id": "pathway_edges",
-            "file": "data/pathway_edges.csv",
-            "title": "Pathway co-membership edges",
-            "search": detect_search_cols(edges_path),
-        })
-
-    affinity_frames = []
-    for p in sorted(src_dir.glob("gene_tissue_affinity_*.csv")):
-        m = AFFINITY_RE.match(p.name)
-        if not m:
-            continue
-        df = pd.read_csv(p)
-        df["library"] = m.group("library")
-        df["lineage"] = m.group("lineage")
-        affinity_frames.append(df)
-    if affinity_frames:
-        affinity_path = DATA_DIR / "gene_tissue_affinity.csv"
-        pd.concat(affinity_frames, ignore_index=True).to_csv(affinity_path, index=False)
-        tables.append({
-            "id": "gene_tissue_affinity",
-            "file": "data/gene_tissue_affinity.csv",
-            "title": "Gene tissue affinity",
-            "search": detect_search_cols(affinity_path),
-        })
-
-    figures = copy_pngs(sorted(src_dir.glob("*.png")), "pathway_networks")
-
-    if not tables and not figures:
-        return None
-    return {
-        "id": "pathway_networks",
-        "title": "Pathway proximity networks",
-        "type": "section",
-        "tables": tables,
-        "figures": figures,
-    }
-
-
-# ---------- frontend templates ----------------------------------------------
 
 INDEX_HTML = """\
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>GBM Trafficking Report</title>
-  <link rel="stylesheet" href="https://unpkg.com/tabulator-tables@6/dist/css/tabulator.min.css">
   <link rel="stylesheet" href="assets/styles.css">
 </head>
 <body>
   <aside id="sidebar">
-    <h1>GBM Trafficking</h1>
+    <a class="home" href="../index.html">GBM Trafficking</a>
     <nav id="nav"></nav>
   </aside>
   <main id="content"></main>
-  <script src="https://unpkg.com/tabulator-tables@6/dist/js/tabulator.min.js"></script>
-  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
   <script src="assets/app.js"></script>
 </body>
 </html>
 """
 
+
 STYLES_CSS = """\
 * { box-sizing: border-box; }
-html, body { margin: 0; padding: 0; height: 100%; }
+html, body { margin: 0; min-height: 100%; }
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  background: #f7f7f8;
-  color: #222;
+  background: #f5f6f8;
+  color: #20242a;
   display: flex;
-  min-height: 100vh;
 }
 #sidebar {
-  width: 240px;
+  width: 265px;
   background: #fff;
-  border-right: 1px solid #e2e2e6;
+  border-right: 1px solid #dfe3e8;
+  height: 100vh;
   position: sticky;
   top: 0;
-  align-self: flex-start;
-  height: 100vh;
   overflow-y: auto;
-  padding: 1.25rem 1rem;
+  padding: 1rem .85rem;
 }
-#sidebar h1 { font-size: 1.05rem; margin: 0 0 1rem 0; letter-spacing: .01em; }
+.home {
+  display: block;
+  color: #171a1f;
+  font-weight: 700;
+  text-decoration: none;
+  margin: .25rem .35rem 1rem;
+}
 #nav a {
   display: block;
-  padding: .4rem .6rem;
-  color: #333;
+  padding: .42rem .55rem;
+  border-radius: 6px;
+  color: #343941;
   text-decoration: none;
-  border-radius: 4px;
-  font-size: .92rem;
-  margin-bottom: 2px;
+  font-size: .9rem;
+  line-height: 1.25;
 }
-#nav a.active { background: #eef2ff; color: #2952cc; font-weight: 600; }
-#nav a:hover { background: #f0f0f4; }
+#nav a:hover { background: #edf3f7; }
+#nav a.active { background: #dfeef4; color: #0f5168; font-weight: 650; }
 #content {
   flex: 1;
-  padding: 1.5rem 2rem 4rem;
-  max-width: 1200px;
+  max-width: 1280px;
+  padding: 1.6rem 2rem 4rem;
 }
-section { margin-bottom: 2.5rem; }
-h2 { margin-top: 0; font-size: 1.4rem; }
-h3 { font-size: 1.05rem; margin: 1.5rem 0 .5rem; }
-.search-box {
-  width: 100%;
-  padding: .5rem .75rem;
-  margin-bottom: .5rem;
-  border: 1px solid #d0d0d6;
-  border-radius: 4px;
-  font-size: .92rem;
-  font-family: inherit;
+h1 { margin: 0 0 .5rem; font-size: 1.7rem; }
+h2 { margin: 0 0 .45rem; font-size: 1.35rem; }
+h3 { margin: 1.25rem 0 .6rem; font-size: 1.05rem; }
+p { line-height: 1.5; }
+.lead { color: #404852; max-width: 900px; }
+.meta-row, .cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: .75rem;
+  margin: 1rem 0 1.25rem;
 }
-.tabulator { font-size: .82rem; }
-.figures { display: grid; grid-template-columns: 1fr; gap: 1.5rem; }
-@media (min-width: 1100px) {
-  .figures { grid-template-columns: 1fr 1fr; }
+.metric, .panel {
+  background: #fff;
+  border: 1px solid #dfe3e8;
+  border-radius: 8px;
+  padding: .85rem;
 }
-figure { margin: 0; background: #fff; padding: .75rem; border: 1px solid #e2e2e6; border-radius: 6px; }
-figure img { max-width: 100%; height: auto; display: block; }
-figcaption { font-size: .82rem; color: #555; margin-top: .35rem; font-family: ui-monospace, monospace; }
-.empty { color: #888; font-style: italic; }
+.metric .k { font-size: .76rem; color: #66707d; text-transform: uppercase; }
+.metric .v { font-size: 1.1rem; font-weight: 700; margin-top: .2rem; }
+.panel { margin: .85rem 0; }
+.method-list, .notes { margin: .75rem 0 1rem; padding-left: 1.1rem; }
+.notes { color: #52606d; }
+.related a, .download {
+  display: inline-block;
+  color: #0b5d78;
+  text-decoration: none;
+  font-weight: 600;
+  margin-right: .8rem;
+}
+.related a:hover, .download:hover { text-decoration: underline; }
+.toolbar {
+  display: flex;
+  gap: .6rem;
+  align-items: center;
+  flex-wrap: wrap;
+  margin: .6rem 0;
+}
+button {
+  border: 1px solid #b8c4ce;
+  background: #fff;
+  color: #1f2a33;
+  border-radius: 6px;
+  padding: .35rem .65rem;
+  font: inherit;
+  cursor: pointer;
+}
+button:hover { background: #eef4f6; }
+input[type="search"] {
+  min-width: 260px;
+  padding: .4rem .55rem;
+  border: 1px solid #c5ced6;
+  border-radius: 6px;
+  font: inherit;
+}
+.table-wrap { overflow: auto; max-height: 580px; border: 1px solid #dfe3e8; }
+table { border-collapse: collapse; width: 100%; background: #fff; font-size: .82rem; }
+th, td {
+  border-bottom: 1px solid #e9edf1;
+  padding: .38rem .5rem;
+  text-align: left;
+  vertical-align: top;
+  white-space: nowrap;
+}
+th { position: sticky; top: 0; background: #f2f5f7; z-index: 1; }
+td.long { max-width: 420px; overflow: hidden; text-overflow: ellipsis; }
+.figures {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  gap: 1rem;
+}
+figure { margin: 0; background: #fff; border: 1px solid #dfe3e8; border-radius: 8px; padding: .75rem; }
+figure img { width: 100%; height: auto; display: block; }
+figcaption { color: #53606c; font-size: .82rem; margin-top: .45rem; }
+pre {
+  white-space: pre-wrap;
+  background: #17212b;
+  color: #edf4f8;
+  border-radius: 8px;
+  padding: .85rem;
+  overflow: auto;
+}
+.pill {
+  display: inline-block;
+  border: 1px solid #cad4dc;
+  border-radius: 999px;
+  padding: .1rem .45rem;
+  margin: .08rem;
+  color: #41505d;
+  background: #fff;
+  font-size: .75rem;
+}
+.empty, .muted { color: #66707d; }
+@media (max-width: 760px) {
+  body { display: block; }
+  #sidebar { position: relative; width: auto; height: auto; }
+  #content { padding: 1rem; }
+  .figures { grid-template-columns: 1fr; }
+}
 """
 
-APP_JS = r"""// vanilla-JS report renderer; manifest-driven sidebar + tabulator tables.
+
+APP_JS = r"""// Static narrative report renderer. No external JS dependencies.
+
+let MANIFEST = null;
 
 async function init() {
-  const manifest = await fetch("data/manifest.json").then(r => r.json());
+  MANIFEST = await fetch("data/manifest.json").then(r => r.json());
   const nav = document.getElementById("nav");
-  manifest.sections.forEach(sec => {
+  MANIFEST.sections.forEach(sec => {
     const a = document.createElement("a");
-    a.textContent = sec.title;
     a.href = "#" + sec.id;
+    a.textContent = sec.title;
     a.dataset.id = sec.id;
-    a.addEventListener("click", e => {
-      e.preventDefault();
-      activate(sec.id, manifest);
+    a.addEventListener("click", ev => {
+      ev.preventDefault();
+      activate(sec.id);
     });
     nav.appendChild(a);
   });
-  const initial = window.location.hash.slice(1) || manifest.sections[0].id;
-  activate(initial, manifest);
+  activate(location.hash.slice(1) || "overview");
 }
 
-function activate(id, manifest) {
-  const sec = manifest.sections.find(s => s.id === id);
-  if (!sec) return;
+function activate(id) {
+  const sec = MANIFEST.sections.find(s => s.id === id) || MANIFEST.sections[0];
   document.querySelectorAll("#nav a").forEach(a => {
-    a.classList.toggle("active", a.dataset.id === id);
+    a.classList.toggle("active", a.dataset.id === sec.id);
   });
-  history.replaceState(null, "", "#" + id);
-  renderSection(sec, manifest);
+  history.replaceState(null, "", "#" + sec.id);
+  renderSection(sec);
 }
 
-function renderSection(sec, manifest) {
+function el(tag, attrs = {}, children = []) {
+  const node = document.createElement(tag);
+  Object.entries(attrs).forEach(([k, v]) => {
+    if (k === "className") node.className = v;
+    else if (k === "text") node.textContent = v;
+    else node.setAttribute(k, v);
+  });
+  children.forEach(child => node.appendChild(child));
+  return node;
+}
+
+function renderSection(sec) {
   const main = document.getElementById("content");
   main.innerHTML = "";
-  const heading = document.createElement("h2");
-  heading.textContent = sec.title;
-  main.appendChild(heading);
+  if (sec.type === "overview") renderOverview(main, sec);
+  else if (sec.type === "pipeline") renderPipeline(main, sec);
+  else if (sec.type === "artifacts") renderArtifacts(main, sec);
+  else renderResult(main, sec);
+}
 
-  if (sec.type === "static") {
-    const intro = document.createElement("p");
-    intro.textContent = "GBM trafficking analysis report. Use the sidebar to navigate.";
-    main.appendChild(intro);
+function renderHeader(main, sec) {
+  main.appendChild(el("h1", {text: sec.title}));
+  if (sec.lead) main.appendChild(el("p", {className: "lead", text: sec.lead}));
+}
 
-    const summary = document.createElement("div");
-    const ts = manifest.generated_at || "";
-    summary.innerHTML =
-      "<p><strong>Generated:</strong> " + ts + "</p>" +
-      "<p><strong>Sections:</strong> " +
-      manifest.sections.filter(s => s.type !== "static").map(s => s.title).join(", ") +
-      "</p>";
-    main.appendChild(summary);
-    return;
+function renderOverview(main, sec) {
+  renderHeader(main, sec);
+  const r = MANIFEST.release;
+  const metrics = [
+    ["Generated", r.generated_at],
+    ["Git SHA", r.git_sha + (r.git_dirty ? " (dirty)" : "")],
+    ["Copied artifacts", String(r.artifact_count)],
+    ["Bundle size", r.bundle_size],
+    ["Skipped artifacts", String(MANIFEST.skipped.length)],
+  ];
+  const row = el("div", {className: "meta-row"});
+  metrics.forEach(([k, v]) => {
+    row.appendChild(el("div", {className: "metric"}, [
+      el("div", {className: "k", text: k}),
+      el("div", {className: "v", text: v || "unknown"}),
+    ]));
+  });
+  main.appendChild(row);
+
+  const links = el("div", {className: "panel related"});
+  links.appendChild(el("h3", {text: "Open first"}));
+  [
+    ["Narrative report", "#quickstart"],
+    ["Temporal explorer", "../temporal.html"],
+    ["Signaling explorer", "../signaling.html"],
+    ["Clone network", "../clone_network.html"],
+    ["Artifact appendix", "#artifacts"],
+  ].forEach(([label, href]) => {
+    links.appendChild(el("a", {href, text: label}));
+  });
+  main.appendChild(links);
+
+  if (sec.notes && sec.notes.length) renderList(main, "Deployment notes", sec.notes, "notes");
+}
+
+function renderPipeline(main, sec) {
+  renderHeader(main, sec);
+  const p = MANIFEST.pipeline;
+  const cards = el("div", {className: "cards"});
+  p.tier_summary.forEach(t => {
+    cards.appendChild(el("div", {className: "metric"}, [
+      el("div", {className: "k", text: t.tier}),
+      el("div", {className: "v", text: `${t.count} steps`}),
+      el("div", {className: "muted", text: `${t.tcr_required} TCR-required; ${t.lineages.join(", ")}`}),
+    ]));
+  });
+  main.appendChild(cards);
+  const rows = p.steps.map(s => ({
+    step: s.id,
+    tier: s.tier,
+    lineage: s.lineage,
+    script: s.script,
+    tcr_required: s.tcr_required ? "yes" : "no",
+    writes: (s.writes || []).join("; "),
+  }));
+  renderObjectTable(main, "Pipeline steps", rows);
+}
+
+function renderResult(main, sec) {
+  renderHeader(main, sec);
+  if (sec.methods && sec.methods.length) renderList(main, "How this was made", sec.methods, "method-list");
+  if (sec.notes && sec.notes.length) renderList(main, "Notes", sec.notes, "notes");
+  if (sec.related && sec.related.length) {
+    const box = el("div", {className: "panel related"});
+    sec.related.forEach(link => box.appendChild(el("a", {href: link.href, text: link.label})));
+    main.appendChild(box);
   }
-
-  (sec.tables || []).forEach(t => renderTable(main, t));
-
-  const figs = sec.figures || [];
-  if (figs.length) {
-    const grid = document.createElement("div");
-    grid.className = "figures";
-    figs.forEach(f => {
-      const fig = document.createElement("figure");
-      const img = document.createElement("img");
-      img.src = f.file;
-      img.loading = "lazy";
-      img.alt = f.caption || "";
-      const cap = document.createElement("figcaption");
-      cap.textContent = f.caption || "";
-      fig.appendChild(img);
-      fig.appendChild(cap);
-      grid.appendChild(fig);
+  if (sec.tables.length) {
+    main.appendChild(el("h2", {text: "Tables"}));
+    sec.tables.forEach(t => renderTablePanel(main, t));
+  }
+  if (sec.figures.length) {
+    main.appendChild(el("h2", {text: "Figures"}));
+    const grid = el("div", {className: "figures"});
+    sec.figures.forEach(f => {
+      grid.appendChild(el("figure", {}, [
+        el("img", {src: f.file, alt: f.title || f.source, loading: "lazy"}),
+        el("figcaption", {text: `${f.title} (${f.size})`}),
+      ]));
     });
     main.appendChild(grid);
-  } else if (!(sec.tables || []).length) {
-    const empty = document.createElement("p");
-    empty.className = "empty";
-    empty.textContent = "No outputs on disk yet.";
-    main.appendChild(empty);
+  }
+  if (sec.text.length) {
+    main.appendChild(el("h2", {text: "Text outputs"}));
+    sec.text.forEach(t => renderTextPanel(main, t));
+  }
+  if (sec.files.length) {
+    main.appendChild(el("h2", {text: "Files"}));
+    sec.files.forEach(f => {
+      main.appendChild(el("p", {}, [el("a", {className: "download", href: f.file, text: `${f.title} (${f.size})`})]));
+    });
+  }
+  if (!sec.tables.length && !sec.figures.length && !sec.text.length && !sec.files.length) {
+    main.appendChild(el("p", {className: "empty", text: "No deployable artifacts were found for this section."}));
   }
 }
 
-function renderTable(main, spec) {
-  const wrap = document.createElement("section");
-  const h = document.createElement("h3");
-  h.textContent = spec.title;
-  wrap.appendChild(h);
+function renderList(main, title, items, cls) {
+  main.appendChild(el("h3", {text: title}));
+  const ul = el("ul", {className: cls});
+  items.forEach(item => ul.appendChild(el("li", {text: item})));
+  main.appendChild(ul);
+}
 
-  const search = document.createElement("input");
-  search.className = "search-box";
-  search.placeholder = "Search across all columns...";
-  wrap.appendChild(search);
-
-  const div = document.createElement("div");
-  wrap.appendChild(div);
-  main.appendChild(wrap);
-
-  fetch(spec.file).then(r => r.text()).then(csv => {
-    const rows = parseCSV(csv);
-    if (!rows.length) {
-      div.textContent = "(empty)";
-      return;
-    }
-    const cols = Object.keys(rows[0]).map(k => ({
-      title: k, field: k, headerFilter: "input", resizable: true,
-      formatter: (cell) => {
-        const v = cell.getValue();
-        if (typeof v === "string" && v.length > 80) {
-          const span = document.createElement("span");
-          span.title = v;
-          span.textContent = v.slice(0, 80) + "...";
-          return span;
-        }
-        return v == null ? "" : v;
-      },
-    }));
-    const tab = new Tabulator(div, {
-      data: rows,
-      columns: cols,
-      pagination: "local",
-      paginationSize: 50,
-      layout: "fitDataStretch",
-      height: "560px",
-    });
-
-    let timer = null;
-    search.addEventListener("input", () => {
-      clearTimeout(timer);
-      timer = setTimeout(() => {
-        const q = search.value.toLowerCase();
-        if (!q) { tab.clearFilter(true); return; }
-        tab.setFilter((data) => {
-          for (const v of Object.values(data)) {
-            if (v != null && String(v).toLowerCase().includes(q)) return true;
-          }
-          return false;
-        });
-      }, 200);
-    });
-  }).catch(err => {
-    div.textContent = "Failed to load " + spec.file + ": " + err;
+function renderTablePanel(main, spec) {
+  const panel = el("section", {className: "panel"});
+  panel.appendChild(el("h3", {text: spec.title}));
+  panel.appendChild(el("p", {className: "muted", text: `${spec.source} - ${spec.size}`}));
+  const toolbar = el("div", {className: "toolbar"});
+  const load = el("button", {type: "button", text: "Load table"});
+  const search = el("input", {type: "search", placeholder: "Search loaded rows..."});
+  const download = el("a", {className: "download", href: spec.file, text: "Download"});
+  toolbar.appendChild(load);
+  toolbar.appendChild(search);
+  toolbar.appendChild(download);
+  panel.appendChild(toolbar);
+  const host = el("div");
+  panel.appendChild(host);
+  main.appendChild(panel);
+  let rows = null;
+  load.addEventListener("click", async () => {
+    load.disabled = true;
+    load.textContent = "Loading...";
+    const text = await fetch(spec.file).then(r => r.text());
+    rows = parseCSV(text, spec.delimiter || ",");
+    renderObjectTable(host, "", rows, search.value);
+    load.textContent = `${rows.length} rows loaded`;
+  });
+  search.addEventListener("input", () => {
+    if (rows) renderObjectTable(host, "", rows, search.value);
   });
 }
 
-// Minimal RFC-ish CSV parser (handles quoted fields w/ commas, newlines, "" escapes).
-function parseCSV(text) {
+function renderTextPanel(main, spec) {
+  const panel = el("section", {className: "panel"});
+  panel.appendChild(el("h3", {text: spec.title}));
+  panel.appendChild(el("p", {className: "muted", text: `${spec.source} - ${spec.size}`}));
+  const pre = el("pre", {text: "Loading..."});
+  panel.appendChild(pre);
+  main.appendChild(panel);
+  fetch(spec.file).then(r => r.text()).then(text => { pre.textContent = text; });
+}
+
+function renderArtifacts(main, sec) {
+  renderHeader(main, sec);
+  renderObjectTable(main, "Copied artifacts", MANIFEST.artifacts.map(a => ({
+    section: a.section,
+    type: a.type,
+    title: a.title,
+    size: a.size,
+    source: a.source,
+    file: a.file,
+    sha256: a.sha256.slice(0, 12),
+  })));
+  renderObjectTable(main, "Skipped or intentionally excluded", MANIFEST.skipped);
+}
+
+function renderObjectTable(main, title, rows, filter = "") {
+  const host = title ? el("section", {className: "panel"}) : main;
+  if (title) host.appendChild(el("h3", {text: title}));
+  if (!rows || !rows.length) {
+    host.appendChild(el("p", {className: "empty", text: "No rows."}));
+    if (title) main.appendChild(host);
+    return;
+  }
+  const q = (filter || "").toLowerCase();
+  const filtered = q ? rows.filter(r => Object.values(r).some(v => String(v ?? "").toLowerCase().includes(q))) : rows;
+  const columns = Object.keys(filtered[0] || rows[0]);
+  const table = el("table");
+  const thead = el("thead");
+  thead.appendChild(el("tr", {}, columns.map(c => el("th", {text: c}))));
+  table.appendChild(thead);
+  const tbody = el("tbody");
+  filtered.slice(0, 250).forEach(row => {
+    tbody.appendChild(el("tr", {}, columns.map(c => {
+      const val = row[c] == null ? "" : String(row[c]);
+      return el("td", {className: val.length > 80 ? "long" : "", title: val, text: val});
+    })));
+  });
+  table.appendChild(tbody);
+  host.querySelectorAll(".table-wrap, .muted.count").forEach(n => n.remove());
+  host.appendChild(el("p", {className: "muted count", text: `Showing ${Math.min(filtered.length, 250)} of ${filtered.length} rows`}));
+  host.appendChild(el("div", {className: "table-wrap"}, [table]));
+  if (title) main.appendChild(host);
+}
+
+function parseCSV(text, delimiter) {
   const rows = [];
   let i = 0, field = "", row = [], inQuote = false;
   while (i < text.length) {
@@ -525,7 +729,7 @@ function parseCSV(text) {
       field += c; i++;
     } else {
       if (c === '"') { inQuote = true; i++; }
-      else if (c === ",") { row.push(field); field = ""; i++; }
+      else if (c === delimiter) { row.push(field); field = ""; i++; }
       else if (c === "\r") { i++; }
       else if (c === "\n") { row.push(field); rows.push(row); row = []; field = ""; i++; }
       else { field += c; i++; }
@@ -541,51 +745,91 @@ function parseCSV(text) {
   });
 }
 
-init();
+init().catch(err => {
+  document.getElementById("content").textContent = "Report failed to load: " + err;
+});
 """
 
 
-# ---------- driver ----------------------------------------------------------
-
-def write_frontend():
-    (REPORT_DIR / "index.html").write_text(INDEX_HTML)
-    (ASSETS_DIR / "styles.css").write_text(STYLES_CSS)
-    (ASSETS_DIR / "app.js").write_text(APP_JS)
+def _write_frontend() -> None:
+    (REPORT_DIR / "index.html").write_text(INDEX_HTML, encoding="utf-8")
+    (ASSETS_DIR / "styles.css").write_text(STYLES_CSS, encoding="utf-8")
+    (ASSETS_DIR / "app.js").write_text(APP_JS, encoding="utf-8")
 
 
-def main():
-    reset_report()
+def _bundle_size() -> int:
+    if not BUNDLE_DIR.exists():
+        return 0
+    return sum(p.stat().st_size for p in BUNDLE_DIR.rglob("*") if p.is_file())
 
-    sections = [{"id": "overview", "title": "Overview", "type": "static"}]
-    for builder in (
-        section_tissue_separability,
-        section_pseudobulk_de_gsea,
-        section_pathway_ternary,
-        section_pathway_coenrichment,
-        section_pathway_networks,
-    ):
-        s = builder()
-        if s is not None:
-            sections.append(s)
+
+def main() -> None:
+    _reset_report()
+    catalog = _read_yaml(CATALOG_PATH)
+    pipeline_manifest = _read_yaml(PIPELINE_MANIFEST)
+    artifacts: list[dict] = []
+    skipped: list[dict] = []
+
+    result_sections = _build_sections(catalog, artifacts, skipped)
+    generated_at = datetime.now(timezone.utc).isoformat()
+
+    release = {
+        "generated_at": generated_at,
+        "git_sha": _git_sha(),
+        "git_dirty": _git_dirty(),
+        "artifact_count": len(artifacts),
+        "skipped_count": len(skipped),
+        "bundle_size_bytes": 0,
+        "bundle_size": "0 B",
+    }
+
+    overview = {
+        "id": "overview",
+        "title": catalog.get("title", "GBM Trafficking Report"),
+        "type": "overview",
+        "lead": catalog.get("subtitle", ""),
+        "notes": [
+            "Generated on the analysis machine and deployed as static files.",
+            "Raw AnnData objects, compute caches, and full results trees are not copied to the VM.",
+            "The report is curated by viewers/report_catalog.yaml.",
+        ],
+    }
+    pipeline = {
+        "id": "pipeline",
+        "title": "Pipeline methods",
+        "type": "pipeline",
+        "lead": "DAG, lineage, dependencies, and resource notes from pipeline/manifest.yaml.",
+    }
+    appendix = {
+        "id": "artifacts",
+        "title": "Artifact appendix",
+        "type": "artifacts",
+        "lead": "Copied files, skipped files, checksums, and source paths.",
+    }
 
     manifest = {
-        "generated_at": datetime.now(timezone.utc).isoformat(),
-        "sections": sections,
+        "generated_at": generated_at,
+        "catalog": CATALOG_PATH.relative_to(REPO_ROOT).as_posix(),
+        "release": release,
+        "pipeline": _pipeline_payload(pipeline_manifest),
+        "sections": [overview, pipeline] + result_sections + [appendix],
+        "artifacts": artifacts,
+        "skipped": skipped,
     }
-    (DATA_DIR / "manifest.json").write_text(json.dumps(manifest, indent=2))
+    (DATA_DIR / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+    _write_frontend()
 
-    write_frontend()
+    release["bundle_size_bytes"] = _bundle_size()
+    release["bundle_size"] = _size_label(release["bundle_size_bytes"])
+    manifest["release"] = release
+    (DATA_DIR / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+    (BUNDLE_DIR / "release.json").write_text(json.dumps(release, indent=2), encoding="utf-8")
 
-    # Summary
-    print("=== gbm_report/data/ ===")
-    for p in sorted(DATA_DIR.iterdir()):
-        print(f"  {p.name}: {p.stat().st_size:,} bytes")
-    fig_count = sum(1 for p in FIG_DIR.rglob("*") if p.is_file())
-    print(f"=== gbm_report/figures/: {fig_count} files ===")
-    for sub in sorted(p for p in FIG_DIR.iterdir() if p.is_dir()):
-        n = sum(1 for f in sub.rglob("*") if f.is_file())
-        print(f"  {sub.name}/: {n}")
-    print(f"=== open: {(REPORT_DIR / 'index.html').resolve()}")
+    print("=== gbm_report ===")
+    print(f"  sections: {len(result_sections)} result sections")
+    print(f"  artifacts copied: {len(artifacts)}")
+    print(f"  skipped: {len(skipped)}")
+    print(f"  report: {REPORT_DIR / 'index.html'}")
     landing.write_landing()
 
 
