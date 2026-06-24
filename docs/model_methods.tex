@@ -554,29 +554,29 @@ Figure~\ref{fig:plate}.
     \textbf{Node} & \textbf{Meaning}\\
     \midrule
     $x_{irc}$ & observed source counts at the start of the step (over the $33$ states)\\
-    $\theta_{irc}=\mathrm{Normalize}(x_{irc})$ & source distribution (deterministic; folded into the $x\!\to\!\pi$ edge)\\
-    $\pi_{irc}=\theta_{irc}T$ & model-implied destination distribution\\
-    $y_{irc}$ & observed destination counts at the end of the step\\
-    $T_{z\cdot}$ & latent transition row, shared across all patients and steps\\
-    $\Ndst_{irc}$ & destination cell total (fixed)\\
-    $\alpha_z$ & Dirichlet prior concentration (fixed)\\
+    $\tilde{x}_{irc}=x_{irc}/\dsrc_{irs}$ & depth-rescaled source (deterministic; folded into the $x\!\to\!\mu$ edge)\\
+    $\mu_{irc}=\tilde{x}_{irc}M$ & destination intensity vector\\
+    $y_{irc}$ & observed destination counts in tissue $s$ at the end of the step\\
+    $M_{z\cdot}$ & latent growth-matrix row, shared across all patients and steps\\
+    $d_{irs}$ & destination sequencing depth, Poisson exposure (fixed)\\
+    $m_{irs}$ & sample missingness flag (fixed)\\
+    $(a_z, b_z)$ & Gamma prior shape / rate (fixed)\\
     \bottomrule
   \end{tabular}}
 
-  \caption{Plate diagram of the generative model (node key above). The transition
-    rows $T_{z\cdot}$ are drawn once per source state $z$ (top plate) from a Dirichlet
-    prior $\alpha_z$; this block sits \emph{outside} the patient plate, so a
-    single $T$ is shared across all patients and steps. The observation side
-    nests patient $i$, forward step $r\in\Rsp_i$, and retained clonotype
-    $c\in\Csp_{ir}$, so a clone-level observation is the triple $(i,r,c)$. Within
-    the innermost plate the observed source counts $x_{irc}$ are normalized and
-    pushed through $T$ to the destination distribution
-    $\pi_{irc}=\theta_{irc}T$, which then drives a multinomial draw of the
-    observed destination counts $y_{irc}$ with total $\Ndst_{irc}$. Double
-    circles ($x_{irc}$, $y_{irc}$) mark observed quantities and solid dots
-    ($\alpha_z$, $\Ndst_{irc}$) mark fixed inputs; the deterministic
-    normalization $\theta_{irc}=\mathrm{Normalize}(x_{irc})$ is folded into the
-    $x\!\to\!\pi$ edge. Latent allocation counts used for fitting are a
+  \caption{Plate diagram of the generative model (node key above). The rows
+    $M_{z\cdot}$ are drawn once per source state $z$ from a Gamma prior
+    $(a_z, b_z)$; this block sits \emph{outside} the patient plate, so a single
+    $M$ is shared across all patients and steps. The observation side nests
+    patient $i$, step $r\in\Rsp_i$, clone $c\in\Csp_{ir}$, and tissue
+    $s\in\Ssp$. The depth-rescaled source $\tilde{x}_{irc}$ is pushed through
+    $M$ to the intensity $\mu_{irc}=\tilde{x}_{irc}M$, and within each tissue
+    sub-block the destination counts $y_{irc}$ are a Poisson draw with mean
+    $d_{irs}\,\mu_{irc}$, gated by missingness $m_{irs}$. Double circles
+    ($x_{irc}$, $y_{irc}$) mark observed quantities; solid dots
+    ($(a_z, b_z)$, $d_{irs}$, $m_{irs}$) mark fixed inputs; the depth-rescaling
+    $\tilde{x}_{irc}=\mathrm{Rescale}(x_{irc})$ is folded into the
+    $x\!\to\!\mu$ edge. Latent allocation counts used for fitting are a
     computational augmentation introduced in Section~\ref{sec:inference-comp}.}
   \label{fig:plate}
 \end{figure}
