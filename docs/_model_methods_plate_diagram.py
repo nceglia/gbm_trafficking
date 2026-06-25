@@ -4,13 +4,13 @@ Plate diagram for the joint tissue-phenotype population-dynamics model
 (model_methods.tex).
 
 This diagram corresponds to the Gamma-Poisson generative model:
-    M_{z.}     ~ Gamma(a_z, b_z)               (one row of the growth matrix M)
+    M_{z.}     ~ Gamma(a_z, b_z)               (one row of the mean matrix M)
     xtilde_irc = x_irc / d^src_irs             (depth-rescaled source; deterministic)
     mu_irc     = xtilde_irc M                  (destination intensity vector)
     y_irc(z')  ~ Poisson(d_irs * mu_irc(z'))   over non-missing tissue sub-blocks
 
-M is a non-negative growth matrix with free row sums (M_{zz'} = expected number
-of destination-z' cells per source-z cell over one 8-week step); it is not
+M is a non-negative mean matrix with free row sums (M_{zz'} = expected number
+of destination-z' cells per source-z cell over one forward step); it is not
 row-stochastic.
 
 The observation side is drawn with explicit nesting so the data hierarchy is
@@ -29,7 +29,7 @@ xtilde = x / d^src is folded into the x -> mu edge, so x_irc stays the observed
 raw-count node and xtilde has no node of its own.
 
 The shared prior block ((a_z, b_z) -> M_{z.}) sits OUTSIDE the patient plate: a
-single growth matrix M is shared across all patients and steps.
+single mean matrix M is shared across all patients and steps.
 
 The variational quantities used for inference (shape/rate, responsibilities r,
 allocations xi) are intentionally not shown here; they are introduced separately
@@ -96,7 +96,7 @@ def build_plate(out_dir: Path = OUT) -> None:
     )
 
     # ---------------------------------------------------------------------
-    # Gamma prior over growth-matrix rows  (top plate, indexed by z).
+    # Gamma prior over mean-matrix rows  (top plate, indexed by z).
     # Shared across all patients and steps -> drawn OUTSIDE the patient plate.
     # (a_z,b_z), M_{z.} and mu share the x of mu, so (a,b) -> M and M -> mu are
     # both clean vertical edges.

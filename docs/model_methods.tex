@@ -196,7 +196,7 @@ are paired is a data-preprocessing detail and does not change anything below.
 
 Each $r \in \Rsp_i$ is one observed forward step. Steps such as
 $T_1 \!\to\! T_2$, $T_2 \!\to\! T_3$, and $T_3 \!\to\! T_4$ are treated as
-repeated observations of the \emph{same} forward process: the growth matrix is
+repeated observations of the \emph{same} forward process: the mean matrix is
 shared across all patients and steps, and the indices $i$ and $r$ merely
 organize observations rather than selecting a separate matrix.
 
@@ -324,11 +324,15 @@ $\Csp_{ir}$                  & clonotypes present at the source timepoint of ste
 $j = (i_j,r_j,c_j)$          & clone-level observation, $j=1,\ldots,J$\\
 $x_j,\,y_j \in \Znn^{L}$     & source / destination count vectors\\
 $\tilde{x}_j$                & depth-rescaled source, $\tilde{x}_j(z)=x_j(z)/\dsrc_{j,s}$\\
-$M \in \Reals_{\geq 0}^{L\times L}$ & non-negative growth matrix (free row sums)\\
+$M \in \Reals_{\geq 0}^{L\times L}$ & non-negative mean matrix (free row sums)\\
 $\mu_j = \tilde{x}_j M \in \Reals_{\geq 0}^{L}$ & destination intensity vector\\
+$T \in \Reals^{L\times L}$   & recovered transition matrix, $M=\operatorname{diag}(g)\,T$, row-stochastic\\
+$g_z = \sum_{z'} M_{zz'}$    & per-state expansion factor\\
 $a_z,\,b_z$                  & Gamma prior shape / rate for row $z$\\
 $w_{jzz'}$                   & backward attribution probability\\
 $\xi_{jzz'}$                 & latent allocation count (computational)\\
+$\rho^a(u)$                  & empirical source-cell phenotype distribution in tissue $a$ (pooled)\\
+$\theta(z)$                  & clone source composition, source cells as a distribution over states\\
 $\Dsp$                       & full dataset\\
 \bottomrule
 \end{tabular}
@@ -337,10 +341,10 @@ $\Dsp$                       & full dataset\\
 \end{table}
 
 % ======================================================================
-\section{Joint Tissue--Phenotype Growth Matrix}
+\section{Joint Tissue--Phenotype Mean Matrix}
 % ======================================================================
 
-The central latent object is a single joint tissue--phenotype \emph{growth
+The central latent object is a single joint tissue--phenotype \emph{mean
 matrix}
 \[
   M \in \Reals_{\geq 0}^{L\times L},
@@ -357,19 +361,19 @@ over one forward step:
         \text{ per cell in state } (a,u) \text{ at } r\,] .
 \]
 $M$ differs from a transition matrix only in that its rows are not constrained
-to sum to one (Section~\ref{sec:growth-factors}); the row sum is freed to carry
-growth.
+to sum to one (Section~\ref{sec:expansion-factors}); the row sum is freed to carry
+expansion.
 
-\subsection{Non-negative rows and growth factors}
-\label{sec:growth-factors}
+\subsection{Non-negative rows and expansion factors}
+\label{sec:expansion-factors}
 
 $M$ has non-negative entries, $M_{zz'} \geq 0$, and \emph{free} row sums---rows
 are not constrained to sum to one. The row sum
 \[
   g_z \;=\; \sum_{z'\in\Zsp} M_{zz'}
 \]
-is the net growth factor (per step) of source state $z$: $g_z > 1$ is net
-expansion of that state, $g_z < 1$ net contraction or death.
+is the net expansion factor (per step) of source state $z$: $g_z > 1$ is net
+expansion of that state, $g_z < 1$ net contraction or clonal loss.
 
 Writing $g_z = \sum_{z'\in\Zsp} M_{zz'}$ and, wherever $g_z > 0$,
 $T_{zz'} = M_{zz'}/g_z$, the matrix factors uniquely as
@@ -388,7 +392,7 @@ transition matrix only when expansion is uniform across states.
 For observation $j$ with depth-rescaled source $\tilde{x}_j$, the destination
 \emph{intensity vector} is the pushforward of $\tilde{x}_j$ through $M$:
 
-\begin{keybox}[title={Central growth calculation}]
+\begin{keybox}[title={Destination intensity}]
 \[
   \mu_j = \tilde{x}_j M \in \Reals_{\geq 0}^{L},
   \qquad\text{equivalently}\qquad
@@ -415,7 +419,7 @@ different matrix; all steps are repeated observations of a common one-step
 forward process.
 
 % ======================================================================
-\section{Bayesian Treatment of the Growth Matrix}
+\section{Bayesian Treatment of the Mean Matrix}
 % ======================================================================
 
 The matrix $M$ is a latent non-negative kernel of per-cell destination
@@ -451,7 +455,7 @@ intensity
 $\mu_j = \tilde{x}_j M$.
 \end{keybox}
 
-\subsection{Prior over growth-matrix entries}
+\subsection{Prior over mean-matrix entries}
 
 Each entry receives an independent Gamma prior in shape--rate form,
 \[
@@ -471,11 +475,11 @@ For the likelihood to support the data, the support guard is: for every
 non-missing destination state $z'$ with $y_j(z') > 0$, at least one source state
 in the support of $\tilde{x}_j$ must reach $z'$ (i.e.\ have $M_{zz'} > 0$).
 
-\subsection{Posterior over growth matrices}
+\subsection{Posterior over mean matrices}
 
 After observing the data $\Dsp$, inference targets the posterior
 $p(M \mid \Dsp)$, which captures uncertainty about the joint tissue--phenotype
-growth kernel after all clone-level forward observations. Posterior summaries
+mean kernel after all clone-level forward observations. Posterior summaries
 include posterior means $\E[M_{zz'} \mid \Dsp]$ and credible intervals for
 individual entries.
 
@@ -517,29 +521,21 @@ The full model is a model for the one-step expansion and redistribution of clone
 mass across tissue--phenotype states. It can be summarized as follows.
 
 \begin{keybox}[title={Generative model}]
+The state space $\Zsp$ ($|\Zsp| = 33$) and the fixed inputs---each observation's
+depth-rescaled source $\tilde{x}_j$, the destination depths $d_{j,s'}$, and the
+missingness flags $m_{j,s'}$---are given. The model generates the destination
+counts as follows.
 \begin{enumerate}[leftmargin=2em, itemsep=4pt]
-  \item \textbf{State space.} Define
-        $\Zsp = \Ssp \times \{1,\ldots,K\}$ with $|\Zsp| = 33$. Each state
-        $z = (s,k)$ pairs an anatomical tissue with an annotated T-cell
-        phenotype.
-
-  \item \textbf{Growth-matrix entries.} For each source state $z$ and
-        destination state $z'$, draw independently
+  \item \textbf{Mean-matrix entries.} For each source state $z$, draw the row
+        independently (entrywise),
         \[
-          M_{zz'} \sim \Gam\!\bigl( a_z, b_z \bigr) .
+          M_{z\cdot} \sim \Gam\!\bigl( a_z, b_z \bigr),
         \]
-        Entry $M_{zz'}$ is the expected number of destination-$z'$ cells per
-        source-$z$ cell over one forward step.
+        shared across all patients and steps.
 
-  \item \textbf{Source.} For each patient $i$, step $r\in\Rsp_i$, and retained
-        clonotype $c\in\Csp_{ir}$, form the observation $j = (i,r,c)$ and the
-        fixed depth-rescaled source $\tilde{x}_j$.
-
-  \item \textbf{Intensity.} Push the source forward,
-        $\mu_j = \tilde{x}_j M$.
-
-  \item \textbf{Observation.} For each destination state $z'$ whose tissue is
-        non-missing ($m_{j,s'} = 1$), draw the destination count
+  \item \textbf{Observation.} For each observation $j = (i,r,c)$, push the source
+        forward to the intensity $\mu_j = \tilde{x}_j M$, and for each destination
+        state $z'$ with $m_{j,s'} = 1$, draw
         \[
           y_j(z') \;\sim\; \Pois\!\bigl( d_{j,s'}\, \mu_j(z') \bigr),
           \qquad s' = \mathrm{tissue}(z') .
@@ -573,7 +569,7 @@ Figure~\ref{fig:plate}.
     $\tilde{x}_{irc}=x_{irc}/\dsrc_{irs}$ & depth-rescaled source (deterministic; folded into the $x\!\to\!\mu$ edge)\\
     $\mu_{irc}=\tilde{x}_{irc}M$ & destination intensity vector\\
     $y_{irc}$ & observed destination counts in tissue $s$ at the end of the step\\
-    $M_{z\cdot}$ & latent growth-matrix row, shared across all patients and steps\\
+    $M_{z\cdot}$ & latent mean-matrix row, shared across all patients and steps\\
     $d_{irs}$ & destination sequencing depth, Poisson exposure (fixed)\\
     $m_{irs}$ & sample missingness flag (fixed)\\
     $(a_z, b_z)$ & Gamma prior shape / rate (fixed)\\
@@ -602,7 +598,7 @@ Figure~\ref{fig:plate}.
 \label{sec:inference-comp}
 % ======================================================================
 
-Inference estimates the posterior over the shared growth matrix $M$. The
+Inference estimates the posterior over the shared mean matrix $M$. The
 observed data are the clone-level forward observations $\Dsp$; the depth-rescaled
 sources $\tilde{x}_j$, the depths $d_{j,s'}$, and the missingness flags
 $m_{j,s'}$ are fixed inputs, as are the Gamma prior parameters $a_z, b_z$.
@@ -643,7 +639,7 @@ approximate responsibility $r_{jzz'}$.
 
 \subsection{Variational family}
 
-We adopt a mean-field factorization $\vq(M,\xi) = \vq(M)\,\vq(\xi)$. The growth
+We adopt a mean-field factorization $\vq(M,\xi) = \vq(M)\,\vq(\xi)$. The mean
 matrix receives independent Gamma factors, one per entry,
 \[
   \vq(M)
@@ -716,9 +712,9 @@ The coordinate updates maximize the evidence lower bound (ELBO)
 and the algorithm iterates between the allocation update and the entry update
 until $\mathcal{L}(\vq)$ stabilizes.
 
-\subsection{Estimated growth matrix}
+\subsection{Estimated mean matrix}
 
-After convergence, the fitted growth matrix is the variational posterior mean of
+After convergence, the fitted mean matrix is the variational posterior mean of
 each Gamma factor,
 \[
   \widehat{M}_{zz'} = \E_{\vq}[M_{zz'}]
@@ -726,7 +722,7 @@ each Gamma factor,
   \frac{\mathrm{shape}_{zz'}}{\mathrm{rate}_{zz'}} ,
 \]
 explicitly \emph{not} normalized across destinations $z'$. The matrix
-$\widehat{M}$ is the estimated one-step growth matrix over the $33$-state
+$\widehat{M}$ is the estimated one-step mean matrix over the $33$-state
 tissue--phenotype space.
 
 \subsection{Algorithm summary}
@@ -799,12 +795,12 @@ Switch rate
   & switched $=\sum_{v\neq u} h$, kept $=h(u)$\\
 \bottomrule
 \end{tabular}
-\caption{Per-step read-outs of the fitted growth matrix $\widehat{M}$.}
+\caption{Per-step read-outs of the fitted mean matrix $\widehat{M}$.}
 \label{tab:readouts}
 \end{table}
 
-Here $T$ and the per-state growth factor $g_z$ are the factors of
-$\widehat{M}=\operatorname{diag}(g)\,T$ from Section~\ref{sec:growth-factors},
+Here $T$ and the per-state expansion factor $g_z$ are the factors of
+$\widehat{M}=\operatorname{diag}(g)\,T$ from Section~\ref{sec:expansion-factors},
 and $\theta(z)$ is a clone's source composition---its source cells as a
 distribution over states.
 
