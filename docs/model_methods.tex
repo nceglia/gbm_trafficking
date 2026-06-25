@@ -117,11 +117,12 @@ clone-level observations across forward study steps.
 
 We use the following indices throughout.
 \begin{itemize}[leftmargin=1.4em, itemsep=2pt]
-  \item Patients: $i = 1,\ldots,I$.
+  \item Patients: $i = 1,\ldots,I$, with $I = 6$.
   \item TCR clonotypes within patient $i$: $c = 1,\ldots,C_i$.
   \item Shared study timepoints: $r \in \{1,\ldots,R\}$, ordered as
         $\tau_1 < \tau_2 < \cdots < \tau_R$. The timepoint labels are
-        comparable across patients.
+        comparable across patients. Currently $R = 6$; the cohort is being
+        extended with additional timepoints.
   \item Anatomical site: $s \in \Ssp$, with
         $\Ssp = \{\mathrm{PBMC},\, \mathrm{CSF},\, \mathrm{Tumor}\}$.
   \item Annotated T-cell phenotype state: $k \in \{1,\ldots,K\}$. In the
@@ -150,8 +151,8 @@ patient $i$, timepoint $r$, and tissue $s$, let
 \[
   d_{i,r,s} \in \Znn
 \]
-be the per-sample sequencing depth: the VDJ cell count for the Cell~Ranger run
-of that $(\text{patient},\text{timepoint},\text{tissue})$ sample. It is the
+be the per-sample sequencing depth: the number of TCR$^+$ T cells in that
+$(\text{patient},\text{timepoint},\text{tissue})$ sample. It is the
 Poisson exposure used below. Let
 \[
   m_{i,r,s} \in \{0,1\}
@@ -213,19 +214,20 @@ space are read directly off the count tensor at timepoints $r$ and $r+1$,
 \]
 so $x_{irc} \in \Znn^{L}$ and $y_{irc} \in \Znn^{L}$.
 
-The source enters the model only after dividing out the source sequencing
-depth. The \emph{depth-rescaled source} is
+The source enters the model as its depth-normalized composition. The
+\emph{depth-rescaled source}
 \[
   \tilde{x}_{irc}(z) = \frac{x_{irc}(z)}{\dsrc_{ir,s}},
   \qquad s = \mathrm{tissue}(z),
   \qquad \dsrc_{ir,s} = d_{i,r,s},
 \]
-i.e.\ each source count is divided by the source-timepoint depth of its tissue.
-It is treated as a fixed, known plug-in, not a random quantity: source abundance
-enters after dividing out source depth, and residual source-sampling variation
-is not modeled.
+is the fraction of the source sample's TCR$^+$ T cells in bin $z$ (tissue
+$s = \mathrm{tissue}(z)$). The per-sample depth $d$ is retained rather than
+normalized away, so that an observed destination zero can be read as contraction
+or clonal loss where depth was high versus undersampling where depth was
+low---the separation the depth offset provides.
 
-We retain clonotypes present at the \emph{source} end of the step,
+We keep every clonotype with at least one cell at the source timepoint $r$,
 \[
   \Csp_{ir}
   =
@@ -237,8 +239,9 @@ We retain clonotypes present at the \emph{source} end of the step,
   \qquad
   \Nsrc_{irc} = \sum_{z\in\Zsp} x_{irc}(z) .
 \]
-A destination total of zero is now a modeled observation---a contraction or
-death signal---not an exclusion criterion. This gives the data hierarchy
+A clone that is absent at the destination timepoint is kept: its absence is
+informative---contraction or clonal loss---not a reason to drop it. This gives
+the data hierarchy
 \[
   i
   \;\longrightarrow\;
@@ -247,8 +250,8 @@ death signal---not an exclusion criterion. This gives the data hierarchy
   c \in \Csp_{ir},
 \]
 patients contain valid forward steps, and each forward step has a retained set
-of source-present clonotypes. A \emph{clone-level forward observation} is the
-triple $(i,r,c)$; for compact notation we write
+of clonotypes present at the source timepoint. A \emph{clone-level forward
+observation} is the triple $(i,r,c)$; for compact notation we write
 \[
   j \;\equiv\; (i,r,c),
   \qquad
@@ -259,18 +262,17 @@ triple $(i,r,c)$; for compact notation we write
   y_j = y_{irc} .
 \]
 
-The destination vector $y_j$ keeps its per-tissue structure: each tissue
-sub-block $\{(s',k) : k = 1,\ldots,K\}$ of $y_j$ carries its own destination
-depth $d_{j,s'} = d_{i,\,r+1,\,s'}$ and missingness flag
-$m_{j,s'} = m_{i,\,r+1,\,s'}$.
+Each destination state $z'$ carries the destination depth and missingness flag
+of its tissue $s' = \mathrm{tissue}(z')$:
+$d_{j,s'} = d_{i,\,r+1,\,s'}$ and $m_{j,s'} = m_{i,\,r+1,\,s'}$.
 
 \subsection{Two kinds of destination zero}
 
 Destination zeros are part of the likelihood specification, and the two kinds
 are treated differently.
 \begin{enumerate}[leftmargin=2em, itemsep=3pt]
-  \item \textbf{Missing sample} ($m_{j,s'} = 0$). The tissue sub-block
-        $\{(s',k)\}$ was not profiled at the destination timepoint. It is
+  \item \textbf{Missing sample} ($m_{j,s'} = 0$). The destination states in
+        tissue $s'$ were not profiled at the destination timepoint. They are
         excluded from the likelihood entirely---masked out, never entered as a
         zero count.
   \item \textbf{Depth-zero} ($m_{j,s'} = 1$, clone not captured). A genuine
@@ -319,7 +321,7 @@ $d_{i,r,s}$                  & per-sample sequencing depth (Poisson exposure)\\
 $m_{i,r,s} \in \{0,1\}$      & sample missingness indicator\\
 $\Rsp_i$                     & valid forward steps for patient $i$ ($\subseteq\{1,\ldots,R-1\}$)\\
 $r \in \Rsp_i$               & forward step, from source timepoint $r$ to $r+1$\\
-$\Csp_{ir}$                  & clonotypes present at the source end of step $r$\\
+$\Csp_{ir}$                  & clonotypes present at the source timepoint of step $r$\\
 $j = (i_j,r_j,c_j)$          & clone-level observation, $j=1,\ldots,J$\\
 $x_j,\,y_j \in \Znn^{L}$     & source / destination count vectors\\
 $\tilde{x}_j$                & depth-rescaled source, $\tilde{x}_j(z)=x_j(z)/\dsrc_{j,s}$\\
@@ -348,23 +350,39 @@ matrix}
 whose rows are source states and whose columns are destination states. For
 source state $z = (a,u)$ and destination state $z' = (b,v)$, the entry $M_{zz'}$
 is the expected number of destination-$z'$ cells produced per source-$z$ cell
-over one forward step (one $8$-week interval):
+over one forward step:
 \[
   M_{zz'} = M_{(a,u),(b,v)}
   =
   \E[\,\text{cells in state } (b,v) \text{ at } r+1
         \text{ per cell in state } (a,u) \text{ at } r\,] .
 \]
+$M$ differs from a transition matrix only in that its rows are not constrained
+to sum to one (Section~\ref{sec:growth-factors}); the row sum is freed to carry
+growth.
 
 \subsection{Non-negative rows and growth factors}
+\label{sec:growth-factors}
 
 $M$ has non-negative entries, $M_{zz'} \geq 0$, and \emph{free} row sums---rows
 are not constrained to sum to one. The row sum
 \[
   g_z \;=\; \sum_{z'\in\Zsp} M_{zz'}
 \]
-is the net $8$-week growth factor of source state $z$: $g_z > 1$ is net
+is the net growth factor (per step) of source state $z$: $g_z > 1$ is net
 expansion of that state, $g_z < 1$ net contraction or death.
+
+Writing $g_z = \sum_{z'\in\Zsp} M_{zz'}$ and, wherever $g_z > 0$,
+$T_{zz'} = M_{zz'}/g_z$, the matrix factors uniquely as
+$M = \operatorname{diag}(g)\,T$ with $T$ row-stochastic. The two factors separate
+the processes: $T$ is the transition matrix---the destination distribution
+conditional on a source cell having a descendant---and $g$ is the per-state
+expansion or contraction a transition matrix alone discards. A conservative
+(row-stochastic) model is the special case $g_z \equiv 1$.
+
+Two caveats: $T_{z\cdot}$ is defined only where $g_z > 0$; and the recovered $T$
+is the destination conditional on a descendant, coinciding with a conservative
+transition matrix only when expansion is uniform across states.
 
 \subsection{Destination intensity vector}
 
@@ -398,7 +416,7 @@ different matrix; all steps are repeated observations of a common one-step
 forward process.
 
 % ======================================================================
-\section{Bayesian Reading of the Growth Matrix}
+\section{Bayesian Treatment of the Growth Matrix}
 % ======================================================================
 
 The matrix $M$ is a latent non-negative kernel of per-cell destination
@@ -406,7 +424,8 @@ intensities over the joint tissue--phenotype state space.
 
 \subsection{Forward generative reading}
 
-Read forward, the model is a Poisson superposition. Treating the depth-rescaled
+Read forward, the model is a Poisson superposition (independent Poissons sum to
+a Poisson with summed rates). Treating the depth-rescaled
 source as a population with $\tilde{x}_j(z)$ cells in each state $z$, each
 source cell in state $z$ independently emits a Poisson-distributed number of
 cells into each destination state $z'$ with mean $M_{zz'}$. Summing these
@@ -427,8 +446,9 @@ destination-$z'$ count is, by Poisson superposition,
   y_j(z') \;\sim\; \Pois\!\bigl( d_{j,s'}\, (\tilde{x}_j M)(z') \bigr),
   \qquad s' = \mathrm{tissue}(z'),
 \]
-evaluated only over non-missing destination sub-blocks ($m_{j,s'} = 1$). The
-latent matrix enters the likelihood only through the intensity
+evaluated only at destination states $z'$ whose tissue is non-missing
+($m_{j,s'} = 1$). The latent matrix enters the likelihood only through the
+intensity
 $\mu_j = \tilde{x}_j M$.
 \end{keybox}
 
@@ -467,7 +487,7 @@ Posterior draws of $M$ induce replicated destination counts
 \[
   y_j^{\mathrm{rep}}(z') \;\sim\; \Pois\!\bigl( d_{j,s'}\, \mu_j(z') \bigr)
 \]
-over the non-missing sub-blocks ($m_{j,s'} = 1$).
+over destination states with $m_{j,s'} = 1$.
 
 \subsection{Backward attribution}
 \label{sec:backward}
@@ -519,8 +539,8 @@ mass across tissue--phenotype states. It can be summarized as follows.
   \item \textbf{Intensity.} Push the source forward,
         $\mu_j = \tilde{x}_j M$.
 
-  \item \textbf{Observation.} For each non-missing destination sub-block
-        ($m_{j,s'} = 1$), draw the destination counts
+  \item \textbf{Observation.} For each destination state $z'$ whose tissue is
+        non-missing ($m_{j,s'} = 1$), draw the destination count
         \[
           y_j(z') \;\sim\; \Pois\!\bigl( d_{j,s'}\, \mu_j(z') \bigr),
           \qquad s' = \mathrm{tissue}(z') .
@@ -679,7 +699,7 @@ conjugate update is
   =
   b_z + \sum_{j} d_{j,s'}\, \tilde{x}_j(z),
 \]
-where both sums run over observations whose destination sub-block $s'$ is
+where both sums run over observations for which the tissue $s'$ of $z'$ is
 non-missing ($m_{j,s'} = 1$). The shape accumulates the expected number of
 $z\!\to\!z'$ cells allocated from the data; the rate accumulates the
 depth-weighted source exposure.
