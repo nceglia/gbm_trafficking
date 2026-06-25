@@ -77,7 +77,6 @@
 \newcommand{\Dsp}{\mathcal{D}}                    % data
 \newcommand{\simplex}[1]{\Delta^{#1}}
 \newcommand{\Nsrc}{N^{\mathrm{src}}}
-\newcommand{\Ndst}{N^{\mathrm{dst}}}              % retained for the (deferred) plate figure
 \newcommand{\dsrc}{d^{\mathrm{src}}}
 \newcommand{\E}{\mathbb{E}}
 \newcommand{\vq}{\mathfrak{q}}                    % variational distribution
@@ -587,9 +586,9 @@ Figure~\ref{fig:plate}.
     $M$ is shared across all patients and steps. The observation side nests
     patient $i$, step $r\in\Rsp_i$, clone $c\in\Csp_{ir}$, and tissue
     $s\in\Ssp$. The depth-rescaled source $\tilde{x}_{irc}$ is pushed through
-    $M$ to the intensity $\mu_{irc}=\tilde{x}_{irc}M$, and within each tissue
-    sub-block the destination counts $y_{irc}$ are a Poisson draw with mean
-    $d_{irs}\,\mu_{irc}$, gated by missingness $m_{irs}$. Double circles
+    $M$ to the intensity $\mu_{irc}=\tilde{x}_{irc}M$, and each destination count
+    $y_{irc}$ is a Poisson draw with mean $d_{irs}\,\mu_{irc}$ set by its tissue's
+    depth $d_{irs}$ and gated by its missingness $m_{irs}$. Double circles
     ($x_{irc}$, $y_{irc}$) mark observed quantities; solid dots
     ($(a_z, b_z)$, $d_{irs}$, $m_{irs}$) mark fixed inputs; the depth-rescaling
     $\tilde{x}_{irc}=\mathrm{Rescale}(x_{irc})$ is folded into the
@@ -753,43 +752,60 @@ tissue--phenotype space.
 \section{Posterior Summaries}
 % ======================================================================
 
-With the variational posterior fitted and $\widehat{M}$ in hand, the following
-quantities are read off it.
+The fitted $\widehat{M}$ yields, for any source tissue and phenotype, three
+per-step quantities---where a clone's mass traffics across tissues, whether it
+expands or contracts, and how its phenotype mix reshapes---each a dimensionless
+fraction or factor over one step, not a per-time rate.
 
-\subsection{Trafficking and growth}
+Define $\rho^a(u)$ as the empirical source-cell phenotype distribution in tissue
+$a$, pooled across clones and steps; it collapses source phenotypes in the
+tissue-level rows below.
 
-The fitted matrix $\widehat{M}$ admits two readings, on its off-diagonal tissue
-blocks and on its row sums.
+\begin{table}[h]
+\centering
+\small
+\renewcommand{\arraystretch}{1.4}
+\begin{tabular}{@{}p{2.15cm}p{2.35cm}p{3.2cm}p{5.3cm}@{}}
+\toprule
+\textbf{Quantity} & \textbf{Grain} & \textbf{Reads as} & \textbf{Expression}\\
+\midrule
+Traffic (resolved)
+  & (tissue, phenotype) $\to$ tissue
+  & fraction of mass, per step
+  & $\sum_{v} T_{(a,u),(b,v)}$\\
+Traffic (collapsed)
+  & tissue $\to$ tissue
+  & fraction of mass, per step
+  & $\sum_{u}\rho^a(u)\sum_{v} T_{(a,u),(b,v)}$\\
+Traffic rate
+  & tissue
+  & retention vs.\ out, per step
+  & stays $=(b{=}a)$, out $=\sum_{b\neq a}$; sum to $1$\\
+Expansion / contraction
+  & clone
+  & factor, per step ($>1$ expand, $<1$ contract, $\to 0$ clonal loss)
+  & $g_z=\sum_{z'}\widehat{M}_{zz'}$;\newline clone $=\sum_{z}\theta(z)\,g_z$\\
+Switching (resolved)
+  & (tissue, phenotype) $\to$ tissue
+  & phenotype distribution, per step
+  & $h_{a,u\to b}(v)=\dfrac{T_{(a,u),(b,v)}}{\sum_{v'} T_{(a,u),(b,v')}}$\\
+Switching (collapsed)
+  & tissue $\to$ tissue
+  & fraction of mass, per step
+  & $\sum_{u}\rho^a(u)\,h_{a,u\to b}(v)$\\
+Switch rate
+  & tissue route
+  & switched vs.\ kept, per step
+  & switched $=\sum_{v\neq u} h$, kept $=h(u)$\\
+\bottomrule
+\end{tabular}
+\caption{Per-step read-outs of the fitted growth matrix $\widehat{M}$.}
+\label{tab:readouts}
+\end{table}
 
-\emph{Trafficking.} For source state $z = (a,u)$ and a destination tissue
-$b \neq a$, the off-diagonal block sum
-\[
-  \tau_{z\to b} = \sum_{v=1}^{K} \widehat{M}_{(a,u),(b,v)}
-\]
-is the expected number of progeny of a source-$z$ cell that land in tissue $b$
-over the step; summing over destination tissues $b \neq a$ gives the total
-out-of-tissue trafficking from state $z$.
-
-\emph{Growth.} The full row sum (diagonal block included)
-\[
-  g_z = \sum_{z'\in\Zsp} \widehat{M}_{zz'}
-\]
-is the net per-cell progeny count of source state $z$ over the step.
-
-Off-diagonal block sums measure trafficking; the row sum, with the diagonal
-included, measures net growth.
-
-\subsection{Rate decomposition}
-
-To express the step as per-week rates, define the generator
-\[
-  B = \frac{1}{\Delta t}\,\log \widehat{M},
-  \qquad \Delta t = 8 \text{ weeks},
-\]
-the matrix logarithm of $\widehat{M}$ divided by the step length. The
-off-diagonal entries $B_{zz'} \geq 0$ ($z' \neq z$) are the per-week trafficking
-rates between states, and the row sums of $B$ are the net per-capita growth
-rates per week. As above, the off-diagonal entries carry trafficking and the row
-sums carry growth.
+Here $T$ and the per-state growth factor $g_z$ are the factors of
+$\widehat{M}=\operatorname{diag}(g)\,T$ from Section~\ref{sec:growth-factors},
+and $\theta(z)$ is a clone's source composition---its source cells as a
+distribution over states.
 
 \end{document}
