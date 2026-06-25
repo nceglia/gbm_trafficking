@@ -79,9 +79,7 @@
 \newcommand{\Nsrc}{N^{\mathrm{src}}}
 \newcommand{\dsrc}{d^{\mathrm{src}}}
 \newcommand{\E}{\mathbb{E}}
-\newcommand{\vq}{\mathfrak{q}}                    % variational distribution
 \DeclareMathOperator{\Cat}{Categorical}
-\DeclareMathOperator{\Mult}{Multinomial}
 \DeclareMathOperator{\Dir}{Dirichlet}
 \DeclareMathOperator{\Pois}{Poisson}
 \DeclareMathOperator{\Gam}{Gamma}
@@ -297,10 +295,7 @@ $\Zsp = \Ssp \times \{1,\ldots,K\}$, with $|\Zsp| = 33$.
 
 \subsection{Notation summary}
 
-Table~\ref{tab:notation} collects the core modeling symbols; the variational
-quantities used only for fitting (the Gamma parameters
-$\mathrm{shape}_{zz'},\mathrm{rate}_{zz'}$, the responsibilities $r_{jzz'}$, and
-$\psi$) are introduced where they are used in the inference section.
+Table~\ref{tab:notation} collects the core modeling symbols.
 
 \begin{table}[h]
 \centering
@@ -330,7 +325,6 @@ $T \in \Reals^{L\times L}$   & recovered transition matrix, $M=\operatorname{dia
 $g_z = \sum_{z'} M_{zz'}$    & per-state expansion factor\\
 $a_z,\,b_z$                  & Gamma prior shape / rate for row $z$\\
 $w_{jzz'}$                   & backward attribution probability\\
-$\xi_{jzz'}$                 & latent allocation count (computational)\\
 $\rho^a(u)$                  & empirical source-cell phenotype distribution in tissue $a$ (pooled)\\
 $\theta(z)$                  & clone source composition, source cells as a distribution over states\\
 $\Dsp$                       & full dataset\\
@@ -506,11 +500,9 @@ cell---is a posterior attribution. For observation $j$,
   \frac{\tilde{x}_j(z)\, M_{zz'}}{\mu_j(z')} ,
 \]
 the same form as the forward intensity with source and destination roles
-reversed. Because the destination counts are Poisson, these probabilities also
-induce a multinomial decomposition of each observed count $y_j(z')$ into latent
-source-to-destination allocation counts. Those counts are used only for fitting,
-so we introduce them together with the inference algorithm in
-Section~\ref{sec:inference-comp}.
+reversed. Being a function of $M$, it is a posterior read-out: evaluated at the
+fitted $\widehat{M}$, or per draw to carry uncertainty, it attributes observed
+destination cells back to their likely sources.
 
 % ======================================================================
 \section{Full Generative Story}
@@ -588,14 +580,12 @@ Figure~\ref{fig:plate}.
     ($x_{irc}$, $y_{irc}$) mark observed quantities; solid dots
     ($(a_z, b_z)$, $d_{irs}$, $m_{irs}$) mark fixed inputs; the depth-rescaling
     $\tilde{x}_{irc}=\mathrm{Rescale}(x_{irc})$ is folded into the
-    $x\!\to\!\mu$ edge. Latent allocation counts used for fitting are a
-    computational augmentation introduced in Section~\ref{sec:inference-comp}.}
+    $x\!\to\!\mu$ edge.}
   \label{fig:plate}
 \end{figure}
 
 % ======================================================================
 \section{Inference}
-\label{sec:inference-comp}
 % ======================================================================
 
 Inference estimates the posterior over the shared mean matrix $M$. The
@@ -613,136 +603,25 @@ summary is
 the posterior mean number of destination-$(b,v)$ cells produced per
 source-$(a,u)$ cell over one forward step.
 
-\subsection{Variational approximation}
+\subsection{Posterior sampling}
 
-We approximate $p(M \mid \Dsp)$ by mean-field variational inference. The
-difficulty is that an observed destination count in state $z'$ is a
-\emph{superposition} of contributions from every source state $z$, and these
-source-to-destination allocations are unobserved. Variational inference augments
-the model with latent allocation counts and fits a factorized approximation by
-coordinate ascent.
+The posterior is not available in closed form. By Poisson superposition the
+per-source allocations of each destination count marginalize exactly, leaving
+$M$ as the only unknown---a smooth target over its $L\times L$ entries, with no
+auxiliary allocation variables. We sample $M$ directly from $p(M \mid \Dsp)$,
+drawing $M^{(1)},\ldots,M^{(S)}$ by gradient-based Markov chain Monte Carlo; the
+log-posterior is differentiable in $M$ (the intensity $\mu_j = \tilde{x}_j M$ is
+linear in $M$, and the Gamma prior and Poisson likelihood are smooth on the
+positive orthant).
 
-\subsection{Latent allocation counts}
+\subsection{Estimated mean matrix and uncertainty}
 
-Let $\xi_{jzz'}$ be the unobserved number of destination-$z'$ cells in
-observation $j$ contributed by source state $z$. By Poisson superposition each
-source contribution is itself Poisson,
-$\xi_{jzz'} \sim \Pois\!\bigl( d_{j,s'}\, \tilde{x}_j(z)\, M_{zz'} \bigr)$
-independently, and they decompose each observed destination count,
-\[
-  \sum_{z\in\Zsp} \xi_{jzz'} = y_j(z') .
-\]
-Conditional on the total $y_j(z')$, the allocations are multinomial with
-probabilities equal to the backward attribution $w_{jzz'}$ of
-Section~\ref{sec:backward}; variational inference replaces these with an
-approximate responsibility $r_{jzz'}$.
-
-\subsection{Variational family}
-
-We adopt a mean-field factorization $\vq(M,\xi) = \vq(M)\,\vq(\xi)$. The mean
-matrix receives independent Gamma factors, one per entry,
-\[
-  \vq(M)
-  =
-  \prod_{z\in\Zsp}\prod_{z'\in\Zsp}
-    \Gam\!\bigl( M_{zz'};\, \mathrm{shape}_{zz'},\, \mathrm{rate}_{zz'} \bigr),
-\]
-and the allocation variables receive multinomial factors (a Poisson vector
-conditioned on its total),
-\[
-  \vq(\xi)
-  =
-  \prod_{j=1}^{J} \prod_{z'\,:\,m_{j,s'}=1}
-    \Mult\!\bigl( \xi_{j\cdot z'};\, y_j(z'),\, r_{j\cdot z'} \bigr),
-\]
-where $r_{jzz'}$ is the variational responsibility assigning destination state
-$z'$ in observation $j$ to source state $z$.
-
-\subsection{Coordinate updates}
-
-The algorithm alternates between updating the allocation responsibilities
-$r_{jzz'}$ and the Gamma parameters $(\mathrm{shape}_{zz'}, \mathrm{rate}_{zz'})$.
-
-\subsubsection{Allocation update}
-
-For each observation $j$, destination state $z'$ with $m_{j,s'}=1$, and source
-state $z$,
-\[
-  r_{jzz'} \propto \tilde{x}_j(z)\,
-  \exp\!\bigl( \E_{\vq}[\log M_{zz'}] \bigr),
-\]
-normalized over source states so that $\sum_{z\in\Zsp} r_{jzz'} = 1$ for each
-$j$ and $z'$ (the common depth $d_{j,s'}$ cancels in the normalization). Under
-the Gamma factor, the required expectation is
-\[
-  \E_{\vq}[\log M_{zz'}]
-  =
-  \psi(\mathrm{shape}_{zz'}) - \log(\mathrm{rate}_{zz'}),
-\]
-where $\psi$ is the digamma function.
-
-\subsubsection{Entry update}
-
-For each source state $z$ and destination state $z'$, the Gamma--Poisson
-conjugate update is
-\[
-  \mathrm{shape}_{zz'}
-  =
-  a_z + \sum_{j} y_j(z')\, r_{jzz'},
-  \qquad
-  \mathrm{rate}_{zz'}
-  =
-  b_z + \sum_{j} d_{j,s'}\, \tilde{x}_j(z),
-\]
-where both sums run over observations for which the tissue $s'$ of $z'$ is
-non-missing ($m_{j,s'} = 1$). The shape accumulates the expected number of
-$z\!\to\!z'$ cells allocated from the data; the rate accumulates the
-depth-weighted source exposure.
-
-\subsection{Optimization objective}
-
-The coordinate updates maximize the evidence lower bound (ELBO)
-\[
-  \mathcal{L}(\vq)
-  =
-  \E_{\vq}\!\left[ \log p(M,\xi,\Dsp) \right]
-  -
-  \E_{\vq}\!\left[ \log \vq(M,\xi) \right],
-\]
-and the algorithm iterates between the allocation update and the entry update
-until $\mathcal{L}(\vq)$ stabilizes.
-
-\subsection{Estimated mean matrix}
-
-After convergence, the fitted mean matrix is the variational posterior mean of
-each Gamma factor,
-\[
-  \widehat{M}_{zz'} = \E_{\vq}[M_{zz'}]
-  =
-  \frac{\mathrm{shape}_{zz'}}{\mathrm{rate}_{zz'}} ,
-\]
-explicitly \emph{not} normalized across destinations $z'$. The matrix
-$\widehat{M}$ is the estimated one-step mean matrix over the $33$-state
-tissue--phenotype space.
-
-\subsection{Algorithm summary}
-
-\begin{keybox}[title={Variational algorithm (CAVI)}]
-\begin{enumerate}[leftmargin=2em, itemsep=4pt]
-  \item \textbf{Initialize} the variational Gamma parameters
-        $(\mathrm{shape}, \mathrm{rate})$.
-  \item \textbf{Repeat until the ELBO $\mathcal{L}(\vq)$ converges:}
-    \begin{itemize}[leftmargin=1.4em, itemsep=2pt, topsep=2pt]
-      \item update the allocation responsibilities
-            $r_{jzz'} \propto \tilde{x}_j(z)\,\exp\!\bigl(\E_{\vq}[\log M_{zz'}]\bigr)$;
-      \item update the entry parameters
-            $\mathrm{shape}_{zz'} = a_z + \sum_{j} y_j(z')\, r_{jzz'}$,
-            $\mathrm{rate}_{zz'} = b_z + \sum_{j} d_{j,s'}\, \tilde{x}_j(z)$.
-    \end{itemize}
-  \item \textbf{Return} the posterior mean
-        $\widehat{M} = \E_{\vq}[M]$.
-\end{enumerate}
-\end{keybox}
+The fitted mean matrix is the posterior mean $\widehat{M} = \E[M \mid \Dsp]$,
+estimated by the sample average $\tfrac{1}{S}\sum_{s} M^{(s)}$; its row sums are
+free---$\widehat{M}$ is not normalized across destinations. Credible intervals
+for any entry follow from the sample quantiles. Every read-out below is a
+deterministic function of $M$, so evaluating it on each draw $M^{(s)}$ yields its
+full posterior, summarized by a posterior mean and credible interval.
 
 % ======================================================================
 \section{Posterior Summaries}
